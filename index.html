@@ -78,7 +78,8 @@
             return PERMISOS[rol] ? PERMISOS[rol].includes(permiso) : false;
         };
 
-        const CrearCheckList = ({ onAtras }) => {
+        const CrearCheckList = ({ onAtras, currentUser, currentRole }) => {
+            const [items, setItems] = React.useState([]);
             const [formData, setFormData] = React.useState({
                 actividades: '',
                 rolResponsable: '',
@@ -87,7 +88,6 @@
                 avance: '',
                 fechaPlaneada: '',
                 fechaReal: '',
-                comentarios: ''
             });
 
             const handleChange = (e) => {
@@ -95,77 +95,366 @@
                 setFormData(prev => ({ ...prev, [name]: value }));
             };
 
-            const handleSubmit = (e) => {
+            const handleAddItem = (e) => {
                 e.preventDefault();
-                const checklists = JSON.parse(localStorage.getItem('checklists_data')) || [];
-                checklists.push({ ...formData, id: Date.now() });
-                localStorage.setItem('checklists_data', JSON.stringify(checklists));
-                alert('CheckList creado con éxito.');
+                const newItem = {
+                    ...formData,
+                    id: Date.now() + Math.random().toString(36).substr(2, 5),
+                    comentarioAdmin: '',
+                    isAlert: false
+                };
+                setItems([...items, newItem]);
+                
+                // Clear form for next item
                 setFormData({
                     actividades: '', rolResponsable: '', entregable: '',
-                    nombreResponsable: '', avance: '', fechaPlaneada: '',
-                    fechaReal: '', comentarios: ''
+                    nombreResponsable: '', avance: '', fechaPlaneada: '', fechaReal: ''
                 });
+            };
+
+            const handleGuardarChecklist = () => {
+                if (items.length === 0) {
+                    alert('Debes agregar al menos un ítem al checklist antes de guardar.');
+                    return;
+                }
+
+                const newChecklist = {
+                    id: 'CHK-' + Date.now(),
+                    fechaCreacion: new Date().toISOString(),
+                    creador: currentUser,
+                    rolCreador: currentRole,
+                    comentarioGeneral: '',
+                    items: items
+                };
+
+                const checklists = JSON.parse(localStorage.getItem('checklists_data')) || [];
+                checklists.unshift(newChecklist);
+                localStorage.setItem('checklists_data', JSON.stringify(checklists));
+                
+                alert('¡Checklist Completo guardado con éxito!');
+                onAtras(); // Volver al listado
             };
 
             const inputClasses = "w-full bg-white/90 text-gray-900 border border-transparent focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400 rounded-lg px-4 py-2.5 outline-none transition-all duration-300";
             const labelClasses = "block text-sm font-semibold text-white/90 mb-1.5";
 
             return (
-                <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-2xl shadow-2xl text-white mt-8 mx-auto max-w-4xl transform transition-all duration-500 hover:shadow-yellow-500/10">
+                <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-2xl shadow-2xl text-white mt-8 mx-auto max-w-5xl transform transition-all duration-500 hover:shadow-yellow-500/10">
                     <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/20">
-                        <h2 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-yellow-500">Crear CheckList</h2>
-                        <button
-                            className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-300 flex items-center gap-2"
+                        <h2 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-yellow-500">Crear Nuevo Checklist</h2>
+                        <button 
+                            className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-300 flex items-center gap-2" 
                             onClick={onAtras}
                         >
-                            <span>&larr;</span> Volver al Inicio
+                            <span>&larr;</span> Volver al Listado
                         </button>
                     </div>
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 text-left">
-                            <div className="md:col-span-12">
-                                <label className={labelClasses}>Actividades</label>
-                                <textarea className={inputClasses} name="actividades" value={formData.actividades} onChange={handleChange} rows="2" required></textarea>
+
+                    {/* Fomulario para agregar ITEMS al checklist temporal */}
+                    <div className="bg-gray-900/40 p-6 rounded-xl border border-white/10 mb-8">
+                        <h3 className="text-xl font-bold text-yellow-400 mb-4 border-b border-white/10 pb-2">➕ Agregar Nuevo Ítem (Actividad)</h3>
+                        <form onSubmit={handleAddItem} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 text-left">
+                                <div className="md:col-span-12">
+                                    <label className={labelClasses}>Actividades / Descripción de la Tarea</label>
+                                    <textarea className={inputClasses} name="actividades" value={formData.actividades} onChange={handleChange} rows="2" required></textarea>
+                                </div>
+                                <div className="md:col-span-4">
+                                    <label className={labelClasses}>Rol Responsable</label>
+                                    <select className={inputClasses} name="rolResponsable" value={formData.rolResponsable} onChange={handleChange} required>
+                                        <option value="" className="text-gray-500">Seleccione un rol...</option>
+                                        <option value="Administrador" className="text-black">Administrador</option>
+                                        <option value="Responsable" className="text-black">Responsable</option>
+                                        <option value="Desarrollador" className="text-black">Desarrollador</option>
+                                    </select>
+                                </div>
+                                <div className="md:col-span-4">
+                                    <label className={labelClasses}>Nombre Responsable</label>
+                                    <input type="text" className={inputClasses} name="nombreResponsable" value={formData.nombreResponsable} onChange={handleChange} required />
+                                </div>
+                                <div className="md:col-span-4">
+                                    <label className={labelClasses}>Entregable</label>
+                                    <input type="text" className={inputClasses} name="entregable" value={formData.entregable} onChange={handleChange} required />
+                                </div>
+                                <div className="md:col-span-4">
+                                    <label className={labelClasses}>Avance (%)</label>
+                                    <input type="number" min="0" max="100" className={inputClasses} name="avance" value={formData.avance} onChange={handleChange} required />
+                                </div>
+                                <div className="md:col-span-4">
+                                    <label className={labelClasses}>Fecha Planeada</label>
+                                    <input type="date" className={inputClasses} name="fechaPlaneada" value={formData.fechaPlaneada} onChange={handleChange} required />
+                                </div>
+                                <div className="md:col-span-4">
+                                    <label className={labelClasses}>Fecha Real</label>
+                                    <input type="date" className={inputClasses} name="fechaReal" value={formData.fechaReal} onChange={handleChange} />
+                                </div>
                             </div>
-                            <div className="md:col-span-6">
-                                <label className={labelClasses}>Rol Responsable</label>
-                                <select className={inputClasses} name="rolResponsable" value={formData.rolResponsable} onChange={handleChange} required>
-                                    <option value="" className="text-gray-500">Seleccione un rol...</option>
-                                    <option value="Administrador" className="text-black">Administrador</option>
-                                    <option value="Responsable" className="text-black">Responsable</option>
-                                    <option value="Desarrollador" className="text-black">Desarrollador</option>
-                                </select>
+                            <div className="flex justify-end pt-2">
+                                <button type="submit" className="bg-blue-600 hover:bg-blue-500 border border-blue-400/50 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg flex items-center gap-2 transition-colors">
+                                    Añadir Ítem a la Lista
+                                </button>
                             </div>
-                            <div className="md:col-span-6">
-                                <label className={labelClasses}>Nombre Responsable</label>
-                                <input type="text" className={inputClasses} name="nombreResponsable" value={formData.nombreResponsable} onChange={handleChange} required />
+                        </form>
+                    </div>
+
+                    {/* Lista de Items Agregados Temporalmente */}
+                    <div className="mb-8">
+                        <h3 className="text-lg font-bold text-white mb-3">Ítems de este Checklist ({items.length})</h3>
+                        {items.length === 0 ? (
+                            <div className="text-center py-8 bg-black/20 rounded-xl border border-white/5 border-dashed">
+                                <p className="text-white/50">Aún no hay ítems en este checklist. Llena el formulario de arriba para empezar.</p>
                             </div>
-                            <div className="md:col-span-12">
-                                <label className={labelClasses}>Entregable</label>
-                                <input type="text" className={inputClasses} name="entregable" value={formData.entregable} onChange={handleChange} required />
+                        ) : (
+                            <div className="space-y-3">
+                                {items.map((it, idx) => (
+                                    <div key={idx} className="bg-white/5 p-4 rounded-lg border border-white/10 flex justify-between items-start">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="bg-white/20 text-xs font-bold px-2 py-0.5 rounded">#{idx + 1}</span>
+                                                <h4 className="font-bold text-yellow-400">{it.actividades}</h4>
+                                            </div>
+                                            <div className="text-sm text-white/70 flex gap-4 mt-2">
+                                                <span><strong className="text-white">Resp:</strong> {it.nombreResponsable} ({it.rolResponsable})</span>
+                                                <span><strong className="text-white">Avance:</strong> {it.avance}%</span>
+                                                <span><strong className="text-white">Entregable:</strong> {it.entregable}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                            <div className="md:col-span-4">
-                                <label className={labelClasses}>Avance (%)</label>
-                                <input type="number" min="0" max="100" className={inputClasses} name="avance" value={formData.avance} onChange={handleChange} required />
+                        )}
+                    </div>
+
+                    <button 
+                        onClick={handleGuardarChecklist}
+                        disabled={items.length === 0}
+                        className={`w-full font-extrabold text-lg py-4 rounded-xl shadow-lg transform transition-all duration-300 ${
+                            items.length > 0 
+                            ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white hover:shadow-[0_0_25px_rgba(34,197,94,0.6)] hover:-translate-y-0.5' 
+                            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        }`}
+                    >
+                        ✓ GUARDAR CHECKLIST COMPLETO
+                    </button>
+                </div>
+            );
+        };
+
+        const CheckListDetalle = ({ checklistId, onAtras, role }) => {
+            const [checklist, setChecklist] = React.useState(null);
+            const [localCommentModal, setLocalCommentModal] = React.useState({ open: false, itemId: null, text: '' });
+            const isAdmin = role === 'Administrador';
+
+            React.useEffect(() => {
+                const data = JSON.parse(localStorage.getItem('checklists_data')) || [];
+                const found = data.find(c => c.id === checklistId);
+                setChecklist(found);
+            }, [checklistId]);
+
+            const saveState = (updatedChecklist) => {
+                const data = JSON.parse(localStorage.getItem('checklists_data')) || [];
+                const newData = data.map(c => c.id === updatedChecklist.id ? updatedChecklist : c);
+                localStorage.setItem('checklists_data', JSON.stringify(newData));
+                setChecklist(updatedChecklist);
+            };
+
+            const toggleAlert = (itemId) => {
+                if (!isAdmin) return;
+                const updatedItems = checklist.items.map(it => 
+                    it.id === itemId ? { ...it, isAlert: !it.isAlert } : it
+                );
+                saveState({ ...checklist, items: updatedItems });
+            };
+
+            const openCommentModal = (item) => {
+                setLocalCommentModal({ open: true, itemId: item.id, text: item.comentarioAdmin || '' });
+            };
+
+            const saveItemComment = () => {
+                const updatedItems = checklist.items.map(it => 
+                    it.id === localCommentModal.itemId ? { ...it, comentarioAdmin: localCommentModal.text } : it
+                );
+                saveState({ ...checklist, items: updatedItems });
+                setLocalCommentModal({ open: false, itemId: null, text: '' });
+            };
+
+            const updateGeneralComment = (e) => {
+                saveState({ ...checklist, comentarioGeneral: e.target.value });
+            };
+
+            if (!checklist) return <div className="text-center text-white mt-20">Cargando detalles...</div>;
+
+            return (
+                <div className="max-w-6xl mx-auto animate-[fadeIn_0.3s_ease-out]">
+                    <div className="flex justify-between items-center bg-gray-900/60 backdrop-blur-md p-6 rounded-2xl border border-white/10 mb-6 shadow-xl">
+                        <div>
+                            <h2 className="text-3xl font-extrabold text-white mb-1"><span className="text-yellow-400">Detalle:</span> {checklist.id}</h2>
+                            <p className="text-white/60 text-sm">
+                                Creado el {new Date(checklist.fechaCreacion).toLocaleDateString()} por <strong>{checklist.creador}</strong>
+                            </p>
+                        </div>
+                        <button className="bg-white/10 hover:bg-white/20 border border-white/30 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2" onClick={onAtras}>
+                            &larr; Volver
+                        </button>
+                    </div>
+
+                    <div className="space-y-4 mb-8">
+                        {checklist.items.map((it, idx) => (
+                            <div key={it.id} className={`p-5 rounded-xl border transition-all ${it.isAlert ? 'bg-red-900/40 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-white/10 border-white/10'}`}>
+                                <div className="flex justify-between items-start gap-4 flex-wrap md:flex-nowrap">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className={`text-xs font-bold px-2 py-1 rounded ${it.isAlert ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'}`}>Ítem {idx + 1}</span>
+                                            <h4 className={`text-lg font-bold ${it.isAlert ? 'text-red-200' : 'text-white'}`}>{it.actividades}</h4>
+                                            {it.isAlert && <span className="animate-pulse text-red-400 flex items-center gap-1 text-sm font-bold">⚠️ ALERTA</span>}
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
+                                            <div><span className="text-white/50 block text-xs">Responsable</span><span className="text-white font-medium">{it.nombreResponsable}</span></div>
+                                            <div><span className="text-white/50 block text-xs">Rol</span><span className="text-white font-medium">{it.rolResponsable}</span></div>
+                                            <div><span className="text-white/50 block text-xs">Avance</span><span className="text-yellow-400 font-bold">{it.avance}%</span></div>
+                                            <div><span className="text-white/50 block text-xs">Entregable</span><span className="text-white font-medium">{it.entregable}</span></div>
+                                        </div>
+                                        {it.comentarioAdmin && (
+                                            <div className="mt-4 p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-lg">
+                                                <span className="text-yellow-400 text-xs font-bold uppercase tracking-wider block mb-1">Comentario Adm:</span>
+                                                <p className="text-white/90 text-sm whitespace-pre-wrap">{it.comentarioAdmin}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {isAdmin && (
+                                        <div className="flex items-center gap-4 bg-black/30 p-3 rounded-lg border border-dashed border-white/20">
+                                            <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-white/80 hover:text-white">
+                                                <input type="checkbox" className="w-5 h-5 accent-red-500" checked={it.isAlert} onChange={() => toggleAlert(it.id)} />
+                                                Marcar Alerta
+                                            </label>
+                                            <div className="w-px h-6 bg-white/20"></div>
+                                            <button onClick={() => openCommentModal(it)} className="bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-300 border border-yellow-500/50 py-1.5 px-3 rounded text-sm font-bold transition-colors">
+                                                💬 Comentario
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <div className="md:col-span-4">
-                                <label className={labelClasses}>Fecha Planeada</label>
-                                <input type="date" className={inputClasses} name="fechaPlaneada" value={formData.fechaPlaneada} onChange={handleChange} required />
+                        ))}
+                    </div>
+
+                    <div className="bg-gray-900/80 p-6 rounded-2xl border border-white/20 shadow-2xl mt-8">
+                        <h3 className="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">📝 Comentario General del Checklist</h3>
+                        {isAdmin ? (
+                            <div className="space-y-3">
+                                <textarea 
+                                    className="w-full bg-white/5 border border-white/20 rounded-xl p-4 text-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none transition-all" 
+                                    rows="3"
+                                    placeholder="Escribe un comentario general sobre todo el checklist..."
+                                    value={checklist.comentarioGeneral || ''}
+                                    onChange={updateGeneralComment}
+                                ></textarea>
+                                <p className="text-white/40 text-xs text-right">El comentario general se guarda automáticamente al escribir.</p>
                             </div>
-                            <div className="md:col-span-4">
-                                <label className={labelClasses}>Fecha Real</label>
-                                <input type="date" className={inputClasses} name="fechaReal" value={formData.fechaReal} onChange={handleChange} />
+                        ) : (
+                            <div className="p-4 bg-white/5 rounded-xl border border-white/10 min-h-[80px]">
+                                {checklist.comentarioGeneral ? (
+                                    <p className="text-white/90 whitespace-pre-wrap">{checklist.comentarioGeneral}</p>
+                                ) : (
+                                    <p className="text-white/40 italic">El administrador no ha dejado comentarios generales.</p>
+                                )}
                             </div>
-                            <div className="md:col-span-12">
-                                <label className={labelClasses}>Comentarios</label>
-                                <textarea className={inputClasses} name="comentarios" value={formData.comentarios} onChange={handleChange} rows="3"></textarea>
+                        )}
+                    </div>
+
+                    {/* Modal para comentario por item */}
+                    {localCommentModal.open && (
+                        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                            <div className="bg-gray-800 border border-white/20 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+                                <h3 className="text-xl font-bold text-white mb-4">Añadir Comentario a Tarea</h3>
+                                <textarea 
+                                    className="w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white outline-none mb-4 focus:border-yellow-400" 
+                                    rows="4"
+                                    value={localCommentModal.text}
+                                    onChange={(e) => setLocalCommentModal({ ...localCommentModal, text: e.target.value })}
+                                    placeholder="Escribe aquí las observaciones..."
+                                ></textarea>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => setLocalCommentModal({ open: false, itemId: null, text: '' })} className="px-4 py-2 rounded-lg text-white/70 hover:bg-white/10 font-medium">Cancelar</button>
+                                    <button onClick={saveItemComment} className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-6 py-2 rounded-lg shadow-lg">Guardar Comentario</button>
+                                </div>
                             </div>
                         </div>
-                        <button type="submit" className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-gray-900 font-extrabold text-lg py-3.5 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.4)] hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] transform hover:-translate-y-0.5 transition-all duration-300 mt-4">
-                            GUARDAR CHECKLIST
-                        </button>
-                    </form>
+                    )}
+                </div>
+            );
+        };
+
+        const CheckListAll = ({ onView, role }) => {
+            const [checklists, setChecklists] = React.useState([]);
+
+            React.useEffect(() => {
+                const data = JSON.parse(localStorage.getItem('checklists_data')) || [];
+                setChecklists(data);
+            }, []);
+
+            return (
+                <div className="max-w-7xl mx-auto animate-[fadeIn_0.4s_ease-out]">
+                    <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-black/20 p-6 rounded-2xl backdrop-blur-sm border border-white/10">
+                        <div>
+                            <h2 className="text-3xl font-black text-white flex items-center gap-3">
+                                📋 Listado de Checklists
+                                <span className="bg-yellow-400 text-black text-sm font-bold px-3 py-1 rounded-full">{checklists.length}</span>
+                            </h2>
+                            <p className="text-white/60 mt-1">Directorio consolidado de actividades.</p>
+                        </div>
+                        
+                        {(role === 'Administrador' || role === 'Desarrollador') && (
+                            <button 
+                                className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] hover:-translate-y-1 flex items-center gap-2" 
+                                onClick={() => onView('crear_checklist')}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                                </svg>
+                                Crear Nuevo CheckList
+                            </button>
+                        )}
+                    </div>
+
+                    {checklists.length === 0 ? (
+                        <div className="text-center py-20 bg-white/5 rounded-[2rem] border border-white/10 border-dashed backdrop-blur-sm">
+                            <div className="text-6xl mb-4">📁</div>
+                            <h3 className="text-2xl font-bold text-white mb-2">No hay Checklists</h3>
+                            <p className="text-white/50 max-w-sm mx-auto">No se ha creado ningún checklist productivo o de desarrollo aún.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {checklists.map((chk) => {
+                                const itemCount = chk.items?.length || 0;
+                                const hasAlerts = chk.items?.some(it => it.isAlert);
+                                
+                                return (
+                                    <div key={chk.id} className={`bg-gray-900/60 backdrop-blur-md rounded-2xl p-6 border transition-all hover:-translate-y-1 ${hasAlerts ? 'border-red-500/50 shadow-[0_5px_20px_rgba(239,68,68,0.2)]' : 'border-white/10 hover:shadow-xl hover:border-white/20'}`}>
+                                        <div className="flex justify-between items-start mb-4">
+                                            <span className="text-xs font-bold font-mono bg-white/10 text-white px-2 py-1 rounded">{chk.id}</span>
+                                            {hasAlerts && <span className="bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold px-2 py-1 rounded animate-pulse">ALERTA</span>}
+                                        </div>
+                                        <h3 className="text-lg font-bold text-white mb-1">Checklist de Actividades</h3>
+                                        <p className="text-sm text-yellow-400 mb-4 font-medium">{itemCount} {itemCount === 1 ? 'Ítem' : 'Ítems'} agrupados</p>
+                                        
+                                        <div className="bg-black/30 p-3 rounded-lg mb-5 text-sm border border-white/5">
+                                            <div className="flex justify-between mb-1"><span className="text-white/50">Creador:</span> <span className="text-white">{chk.creador}</span></div>
+                                            <div className="flex justify-between"><span className="text-white/50">Fecha:</span> <span className="text-white">{new Date(chk.fechaCreacion).toLocaleDateString()}</span></div>
+                                        </div>
+
+                                        <button 
+                                            onClick={() => onView('checklist_detalle', chk.id)}
+                                            className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-2.5 rounded-xl transition-colors"
+                                        >
+                                            Ver Detalles
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -204,7 +493,7 @@
                 <div className="flex justify-center items-center min-h-screen p-4">
                     <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-10 rounded-[2rem] shadow-[0_8px_32px_rgba(0,0,0,0.37)] w-full max-w-md transform transition-all hover:scale-[1.01]">
                         <div className="text-center mb-8">
-                            <h2 className="text-4xl font-black text-white tracking-tight drop-shadow-md">Cerrej&oacute;n</h2>
+                            <h2 className="text-4xl font-black text-white tracking-tight drop-shadow-md">Cerrejón</h2>
                             <p className="text-yellow-400/90 font-medium mt-1 uppercase tracking-widest text-sm">Plataforma de Operaciones</p>
                         </div>
 
@@ -259,7 +548,7 @@
                             <button className="w-full mt-8 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-400 hover:to-yellow-600 text-black font-extrabold py-3.5 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:shadow-[0_0_30px_rgba(234,179,8,0.5)] transform hover:-translate-y-1 transition-all duration-300" type="submit">
                                 INGRESAR AL SISTEMA
                             </button>
-                            <p className="mt-6 mb-0 text-center text-white/40 text-xs font-medium tracking-wide">&copy; 2026 Cerrej&oacute;n Minería de Colombia.</p>
+                            <p className="mt-6 mb-0 text-center text-white/40 text-xs font-medium tracking-wide">&copy; 2026 Cerrejón Minería de Colombia.</p>
                         </form>
                     </div>
                 </div>
@@ -267,33 +556,31 @@
         };
 
         const Dashboard = ({ user, role, onLogout }) => {
-            const [view, setView] = React.useState('home');
+            const [view, setView] = React.useState('checklist_all');
+            const [selectedChecklistId, setSelectedChecklistId] = React.useState(null);
+
+            const handleNavigate = (newView, id = null) => {
+                setView(newView);
+                setSelectedChecklistId(id);
+            };
 
             return (
                 <div className="h-screen flex flex-col overflow-hidden text-white pattern-bg">
                     {/* Native blur navigation */}
                     <nav className="bg-gray-900/60 backdrop-blur-xl border-b border-white/5 px-6 py-4 shadow-lg sticky top-0 z-50">
                         <div className="max-w-7xl mx-auto flex justify-between items-center">
-                            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setView('home')}>
+                            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => handleNavigate('home')}>
                                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-black font-black text-xl shadow-lg group-hover:rotate-12 transition-transform duration-300">
                                     C
                                 </div>
-                                <span className="text-xl font-bold text-white tracking-wide group-hover:text-yellow-400 transition-colors">Gestión Cerrej&oacute;n</span>
+                                <span className="text-xl font-bold text-white tracking-wide group-hover:text-yellow-400 transition-colors">Gestión Cerrejón</span>
                             </div>
 
                             <div className="flex items-center gap-6">
-                                {(role === 'Administrador' || role === 'Desarrollador') && (
-                                    <button
-                                        className="hidden md:flex items-center gap-2 bg-blue-600/90 hover:bg-blue-500 border border-blue-400/50 text-white font-semibold py-2 px-4 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.4)] transform hover:-translate-y-0.5 transition-all duration-300 text-sm"
-                                        onClick={() => setView('crear_checklist')}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                        </svg>
-                                        Crear CheckList
-                                    </button>
-                                )}
-                                <div className="hidden md:block flex-col text-right">
+                                <button className="text-sm font-semibold hover:text-yellow-400 transition-colors hidden md:block" onClick={() => handleNavigate('checklist_all')}>
+                                    Listar Checklists
+                                </button>
+                                <div className="hidden md:block flex-col text-right ml-4">
                                     <span className="text-white/60 text-[10px] font-semibold uppercase tracking-wider block leading-tight">Usuario Activo</span>
                                     <span className="text-white font-bold block text-sm">{user} <span className="text-yellow-400 text-xs bg-yellow-400/10 px-2 py-0.5 rounded-full ml-1 border border-yellow-400/20">{role}</span></span>
                                 </div>
@@ -309,59 +596,31 @@
                     </nav>
 
                     <main className="flex-1 overflow-y-auto p-4 md:p-8">
-                        <div className="max-w-7xl mx-auto">
-                            {view === 'home' && (
-                                <div className="flex flex-col items-center justify-center mt-8 md:mt-16 animate-[fadeIn_0.5s_ease-out]">
-                                    <div className="bg-white/10 backdrop-blur-2xl border border-white/10 p-10 rounded-[2rem] shadow-[0_15px_50px_rgba(0,0,0,0.5)] text-center max-w-2xl w-full">
-
-                                        <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-400/30">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                        </div>
-
-                                        <h1 className="text-4xl font-extrabold text-white mb-4 tracking-tight">¡Bienvenido al portal!</h1>
-                                        <p className="text-lg text-white/70 font-medium mb-8">Has accedido exitosamente a la red segura de la mina.</p>
-
-                                        <div className="bg-gray-900/40 border border-white/5 p-6 rounded-2xl text-left shadow-inner backdrop-blur-sm">
-                                            <h5 className="font-bold text-yellow-400 mb-4 pb-3 border-b border-white/10 flex items-center gap-2">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                                </svg>
-                                                Permisos activos para el rol {role}
-                                            </h5>
-                                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 text-white/90 text-sm">
-                                                {tienePermiso(role, 'control_total') && <li className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span className="text-green-400">✓</span> Control Total</li>}
-                                                {tienePermiso(role, 'ver_checklist_productivos') && <li className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span className="text-green-400">✓</span> Ver checklist productivos</li>}
-                                                {tienePermiso(role, 'gestionar_items_productivos') && <li className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span className="text-green-400">✓</span> Gestionar items productivos</li>}
-                                                {tienePermiso(role, 'ver_avances') && <li className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span className="text-green-400">✓</span> Ver avances</li>}
-                                                {tienePermiso(role, 'ver_checklist_desarrollo') && <li className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span className="text-green-400">✓</span> Ver checklist desarrollo</li>}
-                                                {tienePermiso(role, 'gestionar_checklist_desarrollo') && <li className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-lg border border-white/5"><span className="text-green-400">✓</span> Gestionar checklist desarrollo</li>}
-                                            </ul>
-                                        </div>
-
-                                        {/* Mobile view button */}
-                                        {(role === 'Administrador' || role === 'Desarrollador') && (
-                                            <button
-                                                className="mt-8 md:hidden w-full flex justify-center items-center gap-2 bg-blue-600 border border-blue-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-[0_0_15px_rgba(37,99,235,0.4)]"
-                                                onClick={() => setView('crear_checklist')}
-                                            >
-                                                + Crear CheckList
-                                            </button>
-                                        )}
+                        {view === 'home' && (
+                            <div className="max-w-7xl mx-auto flex flex-col items-center justify-center mt-8 md:mt-16 animate-[fadeIn_0.5s_ease-out]">
+                                <div className="bg-white/10 backdrop-blur-2xl border border-white/10 p-10 rounded-[2rem] shadow-[0_15px_50px_rgba(0,0,0,0.5)] text-center max-w-2xl w-full">
+                                    <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-400/30">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
                                     </div>
+                                    <h1 className="text-4xl font-extrabold text-white mb-4 tracking-tight">¡Bienvenido al portal!</h1>
+                                    <p className="text-lg text-white/70 font-medium mb-8">Has accedido exitosamente a la red segura de la mina.</p>
+                                    
+                                    <button onClick={() => handleNavigate('checklist_all')} className="bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold py-3.5 px-8 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all">
+                                        Ir al Panel de Checklists &rarr;
+                                    </button>
                                 </div>
-                            )}
+                            </div>
+                        )}
 
-                            {view === 'crear_checklist' && (
-                                <div className="animate-[fadeIn_0.3s_ease-out]">
-                                    <CrearCheckList onAtras={() => setView('home')} />
-                                </div>
-                            )}
-                        </div>
+                        {view === 'checklist_all' && <CheckListAll onView={handleNavigate} role={role} />}
+                        {view === 'crear_checklist' && <CrearCheckList currentUser={user} currentRole={role} onAtras={() => handleNavigate('checklist_all')} />}
+                        {view === 'checklist_detalle' && <CheckListDetalle checklistId={selectedChecklistId} role={role} onAtras={() => handleNavigate('checklist_all')} />}
+                        
                     </main>
 
-                    {/* Native CSS Animations & Pattern overlay */}
+                    {/* Native CSS Animations */}
                     <style dangerouslySetInnerHTML={{
                         __html: `
                         @keyframes fadeIn {
