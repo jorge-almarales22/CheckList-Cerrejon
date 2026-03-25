@@ -78,11 +78,86 @@
             return PERMISOS[rol] ? PERMISOS[rol].includes(permiso) : false;
         };
 
+        const PREDEFINED_ITEMS = [
+            "Crear estrategia de mantenimiento (Modelling para AMT o lista de MST para Ellipse) en el sistema (resultado de RCM) al equipo a incorporar. Nota: Si no se desarrolla el RCM antes de la puesta en operacion del equipo, el analista de la flota, o el rol responsable de la definicion de la estrategia, define la estrategia de mantenimiento con el soporte del fabricante (Eq. Nuevo) o plantea una estrategia de mantenimiento basado en la experiencia (Eq. Usado) [cite: 1]",
+            "Evaluar la capacidad de recurso operativo por la incorporación del nuevo activo [cite: 1]",
+            "Verificar Fecha de Llegada Equipo [cite: 1]",
+            "Solicitar la creacion del Equipo en el sistema Ellipse Nota: la solicitud la realiza el area que realiza la adquisicion del equipo, previa autorización del Superintendencia de Incorporación y Optimización de vida de Equipos. [cite: 1]",
+            "Crear el equipo en el sistema [cite: 1]",
+            "Crear componentes traceables (Mayores) en Ellipse [cite: 1]",
+            "Marcar los componentes fisicos traceables (Mayores) [cite: 1]",
+            "Definir Pool de Componentes Mayores Nota: Si se trata de la incorporacion de un equipo de una flota existente, se debe calcular el nuevo tamaño del pool o confirmar el tamaño existente. [cite: 1]",
+            "Programar Taller de Llantas (Si aplica) [cite: 1]",
+            "Programar intervencion del area de Telecomunicaciones para instalar (CTD, Radios, ITRACK, Anticolisión y MineCare) antes del ingreso del equipo a la operación, si aplica [cite: 1]",
+            "Programar pintura equipo - Cumplir estándar de señalización y numeracion [cite: 1]",
+            "Verificar marcación equipo y componentes [cite: 1]",
+            "Realizar pruebas de comisionamiento técnica con el contratista [cite: 1]",
+            "Pruebas de estanqueidad de los sistemas de admisión del motor, refrigeración, neumático e hidráulico [cite: 1]",
+            "Crear los formatos de puesta en marcha (commissioning) según recomendaciones de fabrica para dejar registro de las intervenciones y asegurar el registro. [cite: 1]",
+            "Realizar prueba de hermeticidad de la cabina del operador [cite: 1]",
+            "Realizar inspección de Calidad del equipo a incorporar [cite: 1]",
+            "Programar actividades de Fin de commissioning. Se debe coordinar con el mantenedor, se realiza entrega de guías de ajustes de las primeras 100hr de operación (calibraciones, retorqueos, muestra de aceite a las 50HR, revisión de fugas de fluidos, entre otros) [cite: 1]",
+            "Validar la instalación de los puntos de anclaje y restricción segun el estándar aplicable a cada flota. Nota: Tener en cuenta los estándares del fabricante y guias contenidas en la documentación controlada [cite: 1]",
+            "Validar que los equipos cumplen con Estándar para la Operación en Cerrejón [cite: 1]",
+            "Programar traslado de equipo con entrenamiento [cite: 1]",
+            "Avisar al departamento técnico para la verificación de productividad del equipo [cite: 1]",
+            "Validar que el equipo a incorporar (ensamblado nuevo o usado) fue creado y que cuenta con la estrategia cargada en el sistema. [cite: 1]",
+            "Validar que las ordenes de trabajo de instalacion de componentes mayores/menores fueron cerradas y que los movimientos de componentes fueron registrados con la respectiva OT [cite: 1]",
+            "Enviar correo de entrega del equipo al Operador, o a area mantenedora [cite: 1]"
+        ];
+
+        const calcularCumplimiento = (fechaCreacion, fechaPlaneada) => {
+            if (!fechaPlaneada || !fechaCreacion) return 0;
+            const start = new Date(fechaCreacion);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(fechaPlaneada);
+            end.setHours(0, 0, 0, 0);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const totalDiff = end.getTime() - start.getTime();
+            if (totalDiff <= 0) return 100;
+
+            const currentDiff = today.getTime() - start.getTime();
+            let percent = (currentDiff / totalDiff) * 100;
+
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+
+            return Math.round(percent);
+        };
+
+        const calcularPromedioChecklist = (items) => {
+            if (!items || items.length === 0) return 0;
+            let total = 0;
+            items.forEach(it => {
+                const start = it.fechaCreacionItem;
+                total += calcularCumplimiento(start, it.fechaPlaneada);
+            });
+            return Math.round(total / items.length);
+        };
+
         const CrearCheckList = ({ onAtras, currentUser, currentRole }) => {
-            const [items, setItems] = React.useState([]);
+            const [nombreChecklist, setNombreChecklist] = React.useState('');
+            const [items, setItems] = React.useState(() => {
+                const hoy = new Date().toISOString().split('T')[0];
+                return PREDEFINED_ITEMS.map((act, idx) => ({
+                    id: Date.now() + Math.random().toString(36).substr(2, 5) + idx,
+                    actividades: act,
+                    rolResponsable: 'Responsable',
+                    entregable: '',
+                    nombreResponsable: '',
+                    avance: '0',
+                    fechaPlaneada: '',
+                    fechaReal: '',
+                    fechaCreacionItem: hoy,
+                    comentarioAdmin: '',
+                    isAlert: false
+                }));
+            });
             const [formData, setFormData] = React.useState({
                 actividades: '',
-                rolResponsable: '',
+                rolResponsable: 'Responsable',
                 entregable: '',
                 nombreResponsable: '',
                 avance: '',
@@ -97,22 +172,33 @@
 
             const handleAddItem = (e) => {
                 e.preventDefault();
+                const hoy = new Date().toISOString().split('T')[0];
                 const newItem = {
                     ...formData,
+                    rolResponsable: 'Responsable',
                     id: Date.now() + Math.random().toString(36).substr(2, 5),
+                    fechaCreacionItem: hoy,
                     comentarioAdmin: '',
                     isAlert: false
                 };
                 setItems([...items, newItem]);
-                
+
                 // Clear form for next item
                 setFormData({
-                    actividades: '', rolResponsable: '', entregable: '',
+                    actividades: '', rolResponsable: 'Responsable', entregable: '',
                     nombreResponsable: '', avance: '', fechaPlaneada: '', fechaReal: ''
                 });
             };
 
+            const handleDeleteItem = (id) => {
+                setItems(items.filter(it => it.id !== id));
+            };
+
             const handleGuardarChecklist = () => {
+                if (!nombreChecklist.trim()) {
+                    alert('Por favor, ingresa el nombre del checklist.');
+                    return;
+                }
                 if (items.length === 0) {
                     alert('Debes agregar al menos un ítem al checklist antes de guardar.');
                     return;
@@ -120,6 +206,7 @@
 
                 const newChecklist = {
                     id: 'CHK-' + Date.now(),
+                    nombre: nombreChecklist,
                     fechaCreacion: new Date().toISOString(),
                     creador: currentUser,
                     rolCreador: currentRole,
@@ -130,7 +217,7 @@
                 const checklists = JSON.parse(localStorage.getItem('checklists_data')) || [];
                 checklists.unshift(newChecklist);
                 localStorage.setItem('checklists_data', JSON.stringify(checklists));
-                
+
                 alert('¡Checklist Completo guardado con éxito!');
                 onAtras(); // Volver al listado
             };
@@ -142,12 +229,18 @@
                 <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-2xl shadow-2xl text-white mt-8 mx-auto max-w-5xl transform transition-all duration-500 hover:shadow-yellow-500/10">
                     <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/20">
                         <h2 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-yellow-500">Crear Nuevo Checklist</h2>
-                        <button 
-                            className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-300 flex items-center gap-2" 
+                        <button
+                            className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-300 flex items-center gap-2"
                             onClick={onAtras}
                         >
                             <span>&larr;</span> Volver al Listado
                         </button>
+                    </div>
+
+                    {/* Input para Nombre del Checklist */}
+                    <div className="mb-6">
+                        <label className={labelClasses}>Nombre del Checklist</label>
+                        <input type="text" className={inputClasses + " text-lg font-bold"} placeholder="Ej. Incorporación de Equipo Nuevo" value={nombreChecklist} onChange={(e) => setNombreChecklist(e.target.value)} required />
                     </div>
 
                     {/* Fomulario para agregar ITEMS al checklist temporal */}
@@ -159,20 +252,11 @@
                                     <label className={labelClasses}>Actividades / Descripción de la Tarea</label>
                                     <textarea className={inputClasses} name="actividades" value={formData.actividades} onChange={handleChange} rows="2" required></textarea>
                                 </div>
-                                <div className="md:col-span-4">
-                                    <label className={labelClasses}>Rol Responsable</label>
-                                    <select className={inputClasses} name="rolResponsable" value={formData.rolResponsable} onChange={handleChange} required>
-                                        <option value="" className="text-gray-500">Seleccione un rol...</option>
-                                        <option value="Administrador" className="text-black">Administrador</option>
-                                        <option value="Responsable" className="text-black">Responsable</option>
-                                        <option value="Desarrollador" className="text-black">Desarrollador</option>
-                                    </select>
-                                </div>
-                                <div className="md:col-span-4">
+                                <div className="md:col-span-6">
                                     <label className={labelClasses}>Nombre Responsable</label>
                                     <input type="text" className={inputClasses} name="nombreResponsable" value={formData.nombreResponsable} onChange={handleChange} required />
                                 </div>
-                                <div className="md:col-span-4">
+                                <div className="md:col-span-6">
                                     <label className={labelClasses}>Entregable</label>
                                     <input type="text" className={inputClasses} name="entregable" value={formData.entregable} onChange={handleChange} required />
                                 </div>
@@ -213,26 +297,33 @@
                                                 <span className="bg-white/20 text-xs font-bold px-2 py-0.5 rounded">#{idx + 1}</span>
                                                 <h4 className="font-bold text-yellow-400">{it.actividades}</h4>
                                             </div>
-                                            <div className="text-sm text-white/70 flex gap-4 mt-2">
-                                                <span><strong className="text-white">Resp:</strong> {it.nombreResponsable} ({it.rolResponsable})</span>
-                                                <span><strong className="text-white">Avance:</strong> {it.avance}%</span>
-                                                <span><strong className="text-white">Entregable:</strong> {it.entregable}</span>
+                                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-3 text-sm">
+                                                <div><span className="text-white/50 block text-xs">Responsable</span><span className="text-white font-medium">{it.nombreResponsable || '-'} ({it.rolResponsable})</span></div>
+                                                <div><span className="text-white/50 block text-xs">Entregable</span><span className="text-white font-medium">{it.entregable || '-'}</span></div>
+                                                <div><span className="text-white/50 block text-xs">Fechas</span><span className="text-white font-medium block">P: {it.fechaPlaneada || '-'}</span><span className="text-white font-medium block">R: {it.fechaReal || '-'}</span></div>
+                                                <div>
+                                                    <span className="text-white/50 block text-xs">Cumplimiento (calc)</span>
+                                                    <span className="text-green-400 font-bold">{calcularCumplimiento(it.fechaCreacionItem, it.fechaPlaneada)}%</span>
+                                                    <span className="text-white/50 block text-xs mt-1">Avance real: <span className="text-yellow-400">{it.avance}%</span></span>
+                                                </div>
                                             </div>
                                         </div>
+                                        <button onClick={() => handleDeleteItem(it.id)} className="ml-4 bg-red-500/20 hover:bg-red-500/40 text-red-300 px-3 py-1.5 rounded text-xs font-bold transition-colors">
+                                            Eliminar
+                                        </button>
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
 
-                    <button 
+                    <button
                         onClick={handleGuardarChecklist}
                         disabled={items.length === 0}
-                        className={`w-full font-extrabold text-lg py-4 rounded-xl shadow-lg transform transition-all duration-300 ${
-                            items.length > 0 
-                            ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white hover:shadow-[0_0_25px_rgba(34,197,94,0.6)] hover:-translate-y-0.5' 
-                            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                        }`}
+                        className={`w-full font-extrabold text-lg py-4 rounded-xl shadow-lg transform transition-all duration-300 ${items.length > 0
+                                ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white hover:shadow-[0_0_25px_rgba(34,197,94,0.6)] hover:-translate-y-0.5'
+                                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                            }`}
                     >
                         ✓ GUARDAR CHECKLIST COMPLETO
                     </button>
@@ -260,7 +351,7 @@
 
             const toggleAlert = (itemId) => {
                 if (!isAdmin) return;
-                const updatedItems = checklist.items.map(it => 
+                const updatedItems = checklist.items.map(it =>
                     it.id === itemId ? { ...it, isAlert: !it.isAlert } : it
                 );
                 saveState({ ...checklist, items: updatedItems });
@@ -271,7 +362,7 @@
             };
 
             const saveItemComment = () => {
-                const updatedItems = checklist.items.map(it => 
+                const updatedItems = checklist.items.map(it =>
                     it.id === localCommentModal.itemId ? { ...it, comentarioAdmin: localCommentModal.text } : it
                 );
                 saveState({ ...checklist, items: updatedItems });
@@ -288,9 +379,9 @@
                 <div className="max-w-6xl mx-auto animate-[fadeIn_0.3s_ease-out]">
                     <div className="flex justify-between items-center bg-gray-900/60 backdrop-blur-md p-6 rounded-2xl border border-white/10 mb-6 shadow-xl">
                         <div>
-                            <h2 className="text-3xl font-extrabold text-white mb-1"><span className="text-yellow-400">Detalle:</span> {checklist.id}</h2>
+                            <h2 className="text-3xl font-extrabold text-white mb-1"><span className="text-yellow-400">Checklist:</span> {checklist.nombre || checklist.id}</h2>
                             <p className="text-white/60 text-sm">
-                                Creado el {new Date(checklist.fechaCreacion).toLocaleDateString()} por <strong>{checklist.creador}</strong>
+                                ID: {checklist.id} | Creado el {new Date(checklist.fechaCreacion).toLocaleDateString()} por <strong>{checklist.creador}</strong>
                             </p>
                         </div>
                         <button className="bg-white/10 hover:bg-white/20 border border-white/30 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2" onClick={onAtras}>
@@ -308,11 +399,15 @@
                                             <h4 className={`text-lg font-bold ${it.isAlert ? 'text-red-200' : 'text-white'}`}>{it.actividades}</h4>
                                             {it.isAlert && <span className="animate-pulse text-red-400 flex items-center gap-1 text-sm font-bold">⚠️ ALERTA</span>}
                                         </div>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
-                                            <div><span className="text-white/50 block text-xs">Responsable</span><span className="text-white font-medium">{it.nombreResponsable}</span></div>
-                                            <div><span className="text-white/50 block text-xs">Rol</span><span className="text-white font-medium">{it.rolResponsable}</span></div>
-                                            <div><span className="text-white/50 block text-xs">Avance</span><span className="text-yellow-400 font-bold">{it.avance}%</span></div>
-                                            <div><span className="text-white/50 block text-xs">Entregable</span><span className="text-white font-medium">{it.entregable}</span></div>
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-3 text-sm">
+                                            <div><span className="text-white/50 block text-xs">Responsable / Rol</span><span className="text-white font-medium">{it.nombreResponsable || '-'} ({it.rolResponsable})</span></div>
+                                            <div><span className="text-white/50 block text-xs">Entregable</span><span className="text-white font-medium">{it.entregable || '-'}</span></div>
+                                            <div><span className="text-white/50 block text-xs">Fechas</span><span className="text-white font-medium block">P: {it.fechaPlaneada || '-'}</span><span className="text-white font-medium block">R: {it.fechaReal || '-'}</span></div>
+                                            <div>
+                                                <span className="text-white/50 block text-xs">Nivel de Cumplimiento</span>
+                                                <span className="text-green-400 font-bold text-lg">{calcularCumplimiento(it.fechaCreacionItem || checklist.fechaCreacion, it.fechaPlaneada)}%</span>
+                                            </div>
+                                            <div><span className="text-white/50 block text-xs">Avance Real</span><span className="text-yellow-400 font-bold text-lg">{it.avance}%</span></div>
                                         </div>
                                         {it.comentarioAdmin && (
                                             <div className="mt-4 p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-lg">
@@ -321,7 +416,7 @@
                                             </div>
                                         )}
                                     </div>
-                                    
+
                                     {isAdmin && (
                                         <div className="flex items-center gap-4 bg-black/30 p-3 rounded-lg border border-dashed border-white/20">
                                             <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-white/80 hover:text-white">
@@ -343,8 +438,8 @@
                         <h3 className="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">📝 Comentario General del Checklist</h3>
                         {isAdmin ? (
                             <div className="space-y-3">
-                                <textarea 
-                                    className="w-full bg-white/5 border border-white/20 rounded-xl p-4 text-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none transition-all" 
+                                <textarea
+                                    className="w-full bg-white/5 border border-white/20 rounded-xl p-4 text-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none transition-all"
                                     rows="3"
                                     placeholder="Escribe un comentario general sobre todo el checklist..."
                                     value={checklist.comentarioGeneral || ''}
@@ -368,8 +463,8 @@
                         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
                             <div className="bg-gray-800 border border-white/20 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
                                 <h3 className="text-xl font-bold text-white mb-4">Añadir Comentario a Tarea</h3>
-                                <textarea 
-                                    className="w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white outline-none mb-4 focus:border-yellow-400" 
+                                <textarea
+                                    className="w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white outline-none mb-4 focus:border-yellow-400"
                                     rows="4"
                                     value={localCommentModal.text}
                                     onChange={(e) => setLocalCommentModal({ ...localCommentModal, text: e.target.value })}
@@ -404,14 +499,14 @@
                             </h2>
                             <p className="text-white/60 mt-1">Directorio consolidado de actividades.</p>
                         </div>
-                        
+
                         {(role === 'Administrador' || role === 'Desarrollador') && (
-                            <button 
-                                className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] hover:-translate-y-1 flex items-center gap-2" 
+                            <button
+                                className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] hover:-translate-y-1 flex items-center gap-2"
                                 onClick={() => onView('crear_checklist')}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                                    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
                                 </svg>
                                 Crear Nuevo CheckList
                             </button>
@@ -429,22 +524,26 @@
                             {checklists.map((chk) => {
                                 const itemCount = chk.items?.length || 0;
                                 const hasAlerts = chk.items?.some(it => it.isAlert);
-                                
+
                                 return (
                                     <div key={chk.id} className={`bg-gray-900/60 backdrop-blur-md rounded-2xl p-6 border transition-all hover:-translate-y-1 ${hasAlerts ? 'border-red-500/50 shadow-[0_5px_20px_rgba(239,68,68,0.2)]' : 'border-white/10 hover:shadow-xl hover:border-white/20'}`}>
                                         <div className="flex justify-between items-start mb-4">
-                                            <span className="text-xs font-bold font-mono bg-white/10 text-white px-2 py-1 rounded">{chk.id}</span>
+                                            {/* <span className="text-xs font-bold font-mono bg-white/10 text-white px-2 py-1 rounded">{chk.id}</span> */}
                                             {hasAlerts && <span className="bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold px-2 py-1 rounded animate-pulse">ALERTA</span>}
                                         </div>
-                                        <h3 className="text-lg font-bold text-white mb-1">Checklist de Actividades</h3>
+                                        <h3 className="text-lg font-bold text-white mb-1 line-clamp-1" title={chk.nombre}>{chk.nombre || "Checklist sin nombre"}</h3>
                                         <p className="text-sm text-yellow-400 mb-4 font-medium">{itemCount} {itemCount === 1 ? 'Ítem' : 'Ítems'} agrupados</p>
-                                        
+
                                         <div className="bg-black/30 p-3 rounded-lg mb-5 text-sm border border-white/5">
+                                            <div className="flex justify-between mb-2 pb-2 border-b border-white/10">
+                                                <span className="text-white/50">Cumplimiento Gral:</span>
+                                                <span className="text-green-400 font-bold">{calcularPromedioChecklist(chk.items)}%</span>
+                                            </div>
                                             <div className="flex justify-between mb-1"><span className="text-white/50">Creador:</span> <span className="text-white">{chk.creador}</span></div>
                                             <div className="flex justify-between"><span className="text-white/50">Fecha:</span> <span className="text-white">{new Date(chk.fechaCreacion).toLocaleDateString()}</span></div>
                                         </div>
 
-                                        <button 
+                                        <button
                                             onClick={() => onView('checklist_detalle', chk.id)}
                                             className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-2.5 rounded-xl transition-colors"
                                         >
@@ -606,7 +705,7 @@
                                     </div>
                                     <h1 className="text-4xl font-extrabold text-white mb-4 tracking-tight">¡Bienvenido al portal!</h1>
                                     <p className="text-lg text-white/70 font-medium mb-8">Has accedido exitosamente a la red segura de la mina.</p>
-                                    
+
                                     <button onClick={() => handleNavigate('checklist_all')} className="bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold py-3.5 px-8 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all">
                                         Ir al Panel de Checklists &rarr;
                                     </button>
@@ -617,7 +716,7 @@
                         {view === 'checklist_all' && <CheckListAll onView={handleNavigate} role={role} />}
                         {view === 'crear_checklist' && <CrearCheckList currentUser={user} currentRole={role} onAtras={() => handleNavigate('checklist_all')} />}
                         {view === 'checklist_detalle' && <CheckListDetalle checklistId={selectedChecklistId} role={role} onAtras={() => handleNavigate('checklist_all')} />}
-                        
+
                     </main>
 
                     {/* Native CSS Animations */}
