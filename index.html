@@ -79,31 +79,31 @@
         };
 
         const PREDEFINED_ITEMS = [
-            "Crear estrategia de mantenimiento (Modelling para AMT o lista de MST para Ellipse) en el sistema (resultado de RCM) al equipo a incorporar. Nota: Si no se desarrolla el RCM antes de la puesta en operacion del equipo, el analista de la flota, o el rol responsable de la definicion de la estrategia, define la estrategia de mantenimiento con el soporte del fabricante (Eq. Nuevo) o plantea una estrategia de mantenimiento basado en la experiencia (Eq. Usado) [cite: 1]",
-            "Evaluar la capacidad de recurso operativo por la incorporación del nuevo activo [cite: 1]",
-            "Verificar Fecha de Llegada Equipo [cite: 1]",
-            "Solicitar la creacion del Equipo en el sistema Ellipse Nota: la solicitud la realiza el area que realiza la adquisicion del equipo, previa autorización del Superintendencia de Incorporación y Optimización de vida de Equipos. [cite: 1]",
-            "Crear el equipo en el sistema [cite: 1]",
-            "Crear componentes traceables (Mayores) en Ellipse [cite: 1]",
-            "Marcar los componentes fisicos traceables (Mayores) [cite: 1]",
-            "Definir Pool de Componentes Mayores Nota: Si se trata de la incorporacion de un equipo de una flota existente, se debe calcular el nuevo tamaño del pool o confirmar el tamaño existente. [cite: 1]",
-            "Programar Taller de Llantas (Si aplica) [cite: 1]",
-            "Programar intervencion del area de Telecomunicaciones para instalar (CTD, Radios, ITRACK, Anticolisión y MineCare) antes del ingreso del equipo a la operación, si aplica [cite: 1]",
-            "Programar pintura equipo - Cumplir estándar de señalización y numeracion [cite: 1]",
-            "Verificar marcación equipo y componentes [cite: 1]",
-            "Realizar pruebas de comisionamiento técnica con el contratista [cite: 1]",
-            "Pruebas de estanqueidad de los sistemas de admisión del motor, refrigeración, neumático e hidráulico [cite: 1]",
-            "Crear los formatos de puesta en marcha (commissioning) según recomendaciones de fabrica para dejar registro de las intervenciones y asegurar el registro. [cite: 1]",
-            "Realizar prueba de hermeticidad de la cabina del operador [cite: 1]",
-            "Realizar inspección de Calidad del equipo a incorporar [cite: 1]",
-            "Programar actividades de Fin de commissioning. Se debe coordinar con el mantenedor, se realiza entrega de guías de ajustes de las primeras 100hr de operación (calibraciones, retorqueos, muestra de aceite a las 50HR, revisión de fugas de fluidos, entre otros) [cite: 1]",
-            "Validar la instalación de los puntos de anclaje y restricción segun el estándar aplicable a cada flota. Nota: Tener en cuenta los estándares del fabricante y guias contenidas en la documentación controlada [cite: 1]",
-            "Validar que los equipos cumplen con Estándar para la Operación en Cerrejón [cite: 1]",
-            "Programar traslado de equipo con entrenamiento [cite: 1]",
-            "Avisar al departamento técnico para la verificación de productividad del equipo [cite: 1]",
-            "Validar que el equipo a incorporar (ensamblado nuevo o usado) fue creado y que cuenta con la estrategia cargada en el sistema. [cite: 1]",
-            "Validar que las ordenes de trabajo de instalacion de componentes mayores/menores fueron cerradas y que los movimientos de componentes fueron registrados con la respectiva OT [cite: 1]",
-            "Enviar correo de entrega del equipo al Operador, o a area mantenedora [cite: 1]"
+            "Definición de la estrategia de mantenimiento (RCM) o basada en recomendaciones del fabricante.",
+            "Evaluación de la suficiencia del personal operativo para el nuevo activo.",
+            "Confirmación de la fecha de arribo del equipo a las instalaciones.",
+            "Gestión del alta administrativa del equipo en el software Ellipse.",
+            "Registro técnico y creación del activo en el sistema de gestión.",
+            "Identificación y carga de componentes mayores trazables en Ellipse.",
+            "Marcación física de los componentes críticos para seguimiento.",
+            "Cálculo y definición del inventario de repuestos para componentes mayores.",
+            "Programación de los servicios técnicos del taller de llantas.",
+            "Instalación de sistemas de telecomunicaciones, seguridad y monitoreo electrónico.",
+            "Aplicación de pintura y rotulación según el estándar de señalización.",
+            "Auditoría técnica de la marcación física del equipo y sus partes.",
+            "Ejecución de las pruebas de comisionamiento junto al contratista.",
+            "Pruebas de estanqueidad en sistemas de motor, refrigeración e hidráulicos.",
+            "Elaboración de protocolos de puesta en marcha basados en guías de fábrica.",
+            "Verificación de la hermeticidad y sellado de la cabina de operación.",
+            "Inspección de calidad integral del equipo antes de su ingreso.",
+            "Planificación de actividades técnicas para las primeras 100 horas de operación.",
+            "Validación de la seguridad en puntos de anclaje y restricción de la flota.",
+            "Certificación del cumplimiento de los estándares operativos de Cerrejón.",
+            "Logística de traslado del activo y capacitación del personal.",
+            "Auditoría de productividad inicial por parte del departamento técnico.",
+            "Verificación final del registro del equipo y su estrategia en el sistema.",
+            "Cierre de órdenes de trabajo y registro de movimientos de componentes.",
+            "Notificación oficial y entrega formal del activo al área usuaria."
         ];
 
         const calcularCumplimiento = (fechaCreacion, fechaPlaneada) => {
@@ -164,6 +164,12 @@
                 fechaPlaneada: '',
                 fechaReal: '',
             });
+
+            const [editingId, setEditingId] = React.useState(null);
+
+            const handleItemEdit = (id, field, value) => {
+                setItems(prev => prev.map(it => it.id === id ? { ...it, [field]: value } : it));
+            };
 
             const handleChange = (e) => {
                 const { name, value } = e.target;
@@ -291,26 +297,81 @@
                         ) : (
                             <div className="space-y-3">
                                 {items.map((it, idx) => (
-                                    <div key={idx} className="bg-white/5 p-4 rounded-lg border border-white/10 flex justify-between items-start">
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="bg-white/20 text-xs font-bold px-2 py-0.5 rounded">#{idx + 1}</span>
-                                                <h4 className="font-bold text-yellow-400">{it.actividades}</h4>
+                                    <div 
+                                        key={it.id} 
+                                        className={`bg-white/5 p-4 rounded-lg border ${editingId === it.id ? 'border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'border-white/10'} flex justify-between items-start transition-all`}
+                                        onDoubleClick={() => setEditingId(it.id)}
+                                    >
+                                        <div className="flex-1 mr-4">
+                                            <div className="flex items-start gap-2 mb-1">
+                                                <span className="bg-white/20 text-xs font-bold px-2 py-0.5 rounded mt-0.5">#{idx + 1}</span>
+                                                {editingId === it.id ? (
+                                                    <textarea 
+                                                        className="w-full bg-black/40 text-yellow-400 border border-yellow-400/50 rounded px-2 py-1 text-sm outline-none resize-none" 
+                                                        value={it.actividades} 
+                                                        onChange={(e) => handleItemEdit(it.id, 'actividades', e.target.value)} 
+                                                        rows="2"
+                                                        placeholder="Descripción de la actividad"
+                                                    />
+                                                ) : (
+                                                    <h4 className="font-bold text-yellow-400 leading-tight">{it.actividades}</h4>
+                                                )}
                                             </div>
                                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-3 text-sm">
-                                                <div><span className="text-white/50 block text-xs">Responsable</span><span className="text-white font-medium">{it.nombreResponsable || '-'} ({it.rolResponsable})</span></div>
-                                                <div><span className="text-white/50 block text-xs">Entregable</span><span className="text-white font-medium">{it.entregable || '-'}</span></div>
-                                                <div><span className="text-white/50 block text-xs">Fechas</span><span className="text-white font-medium block">P: {it.fechaPlaneada || '-'}</span><span className="text-white font-medium block">R: {it.fechaReal || '-'}</span></div>
+                                                <div>
+                                                    <span className="text-white/50 block text-xs">Responsable</span>
+                                                    {editingId === it.id ? (
+                                                        <input type="text" className="w-full bg-black/40 text-white border border-white/20 rounded px-2 py-1 text-xs outline-none mt-1" value={it.nombreResponsable} onChange={(e) => handleItemEdit(it.id, 'nombreResponsable', e.target.value)} placeholder="Nombre" />
+                                                    ) : (
+                                                        <span className="text-white font-medium">{it.nombreResponsable || '-'} ({it.rolResponsable})</span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <span className="text-white/50 block text-xs">Entregable</span>
+                                                    {editingId === it.id ? (
+                                                        <input type="text" className="w-full bg-black/40 text-white border border-white/20 rounded px-2 py-1 text-xs outline-none mt-1" value={it.entregable} onChange={(e) => handleItemEdit(it.id, 'entregable', e.target.value)} placeholder="Entregable" />
+                                                    ) : (
+                                                        <span className="text-white font-medium">{it.entregable || '-'}</span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <span className="text-white/50 block text-xs">Fechas</span>
+                                                    {editingId === it.id ? (
+                                                        <div className="space-y-1 mt-1">
+                                                            <div className="flex items-center gap-1 text-xs"><span className="w-4 font-bold">P:</span><input type="date" className="bg-black/40 text-white border border-white/40 rounded px-1 py-0.5 outline-none flex-1 focus:border-yellow-400" value={it.fechaPlaneada} onChange={(e) => handleItemEdit(it.id, 'fechaPlaneada', e.target.value)} /></div>
+                                                            <div className="flex items-center gap-1 text-xs"><span className="w-4 font-bold">R:</span><input type="date" className="bg-black/40 text-white border border-white/40 rounded px-1 py-0.5 outline-none flex-1 focus:border-yellow-400" value={it.fechaReal} onChange={(e) => handleItemEdit(it.id, 'fechaReal', e.target.value)} /></div>
+                                                        </div>
+                                                    ) : (
+                                                        <><span className="text-white font-medium block">P: {it.fechaPlaneada || '-'}</span><span className="text-white font-medium block">R: {it.fechaReal || '-'}</span></>
+                                                    )}
+                                                </div>
                                                 <div>
                                                     <span className="text-white/50 block text-xs">Cumplimiento (calc)</span>
                                                     <span className="text-green-400 font-bold">{calcularCumplimiento(it.fechaCreacionItem, it.fechaPlaneada)}%</span>
-                                                    <span className="text-white/50 block text-xs mt-1">Avance real: <span className="text-yellow-400">{it.avance}%</span></span>
+                                                    <span className="text-white/50 block text-xs mt-1">Avance real: 
+                                                    {editingId === it.id ? (
+                                                        <input type="number" className="w-16 ml-1 bg-black/40 text-yellow-400 border border-yellow-400/50 rounded px-1 outline-none inline-block text-xs" value={it.avance} onChange={(e) => handleItemEdit(it.id, 'avance', e.target.value)} min="0" max="100" />
+                                                    ) : (
+                                                        <span className="text-yellow-400 ml-1 font-bold">{it.avance}%</span>
+                                                    )}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <button onClick={() => handleDeleteItem(it.id)} className="ml-4 bg-red-500/20 hover:bg-red-500/40 text-red-300 px-3 py-1.5 rounded text-xs font-bold transition-colors">
-                                            Eliminar
-                                        </button>
+                                        <div className="flex flex-col gap-2 min-w-[80px]">
+                                            {editingId === it.id ? (
+                                                <button onClick={() => setEditingId(null)} className="bg-green-500/20 hover:bg-green-500/40 border border-green-500/50 text-green-300 px-3 py-1.5 rounded text-xs font-bold transition-colors w-full">
+                                                    Listo
+                                                </button>
+                                            ) : (
+                                                <button onClick={() => setEditingId(it.id)} className="bg-blue-500/20 hover:bg-blue-500/40 border border-blue-500/30 text-blue-300 px-3 py-1.5 rounded text-xs font-bold transition-colors w-full">
+                                                    Editar
+                                                </button>
+                                            )}
+                                            <button onClick={() => handleDeleteItem(it.id)} className="bg-red-500/20 hover:bg-red-500/40 border border-red-500/30 text-red-300 px-3 py-1.5 rounded text-xs font-bold transition-colors w-full">
+                                                Eliminar
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
