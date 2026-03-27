@@ -623,27 +623,50 @@
             const [user, setUser] = React.useState('');
             const [pswd, setPswd] = React.useState('');
             const [error, setError] = React.useState('');
-            const [role, setRole] = React.useState('Administrador');
+            const [isLoading, setIsLoading] = React.useState(false);
 
-            const handleSubmit = (e) => {
+            const handleSubmit = async (e) => {
                 e.preventDefault();
                 setError('');
+                setIsLoading(true);
 
-                const storedData = localStorage.getItem('userCerrejon');
-                if (!storedData) {
-                    setError('No se encontraron credenciales en el sistema local. Por favor crea el item "userCerrejon" en localStorage.');
-                    return;
-                }
+                // La nueva URL base y nombre de la lista
+                const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist";
+                const LIST_NAME = "UserCheckList";
+
+                // Filtramos usando las columnas 'User' y 'Password'
+                const url = `${SITE_URL}/_api/web/lists/getbytitle('${LIST_NAME}')/items?$filter=User eq '${user}' and Password eq '${pswd}'&$select=User,Rol`;
 
                 try {
-                    const credentials = JSON.parse(storedData);
-                    if (credentials.user === user && credentials.pswd === pswd) {
-                        onLogin(user, credentials.role || role);
+                    const res = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            "Accept": "application/json;odata=verbose"
+                        },
+                        // 🔥 MUY IMPORTANTE: Esto obliga al navegador a enviar tu sesión activa de Microsoft 365
+                        credentials: 'same-origin'
+                    });
+
+                    if (!res.ok) {
+                        const errorTxt = await res.text();
+                        console.error("Error de SharePoint:", errorTxt);
+                        throw new Error(`Acceso No Autorizado (HTTP ${res.status})`);
+                    }
+
+                    const data = await res.json();
+                    const results = data.d && data.d.results ? data.d.results : [];
+
+                    if (results.length > 0) {
+                        const userData = results[0];
+                        onLogin(userData.User, userData.Rol);
                     } else {
                         setError('Usuario o contraseña incorrectos.');
                     }
                 } catch (err) {
-                    setError('Error al leer la base de datos local.');
+                    console.error("Detalle del fallo:", err);
+                    setError('Acceso denegado. Asegúrate de ejecutar este archivo desde adentro de SharePoint.');
+                } finally {
+                    setIsLoading(false);
                 }
             };
 
@@ -674,6 +697,7 @@
                                     value={user}
                                     onChange={(e) => setUser(e.target.value)}
                                     required
+                                    disabled={isLoading}
                                 />
                                 <label htmlFor="inputUser" className="absolute left-4 -top-2.5 bg-gray-800/90 px-2 text-xs text-yellow-400 font-semibold rounded backdrop-blur-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-placeholder-shown:bg-transparent peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-yellow-400 peer-focus:bg-gray-800/90">Usuario</label>
                             </div>
@@ -687,26 +711,17 @@
                                     value={pswd}
                                     onChange={(e) => setPswd(e.target.value)}
                                     required
+                                    disabled={isLoading}
                                 />
                                 <label htmlFor="inputPswd" className="absolute left-4 -top-2.5 bg-gray-800/90 px-2 text-xs text-yellow-400 font-semibold rounded backdrop-blur-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-placeholder-shown:bg-transparent peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-yellow-400 peer-focus:bg-gray-800/90">Contraseña</label>
                             </div>
 
-                            <div className="relative pt-2">
-                                <label htmlFor="inputRole" className="block text-xs font-semibold text-white/70 mb-1 uppercase tracking-wider">Selecciona tu Rol (Pruebas)</label>
-                                <select
-                                    className="w-full bg-white/20 text-white border border-white/30 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 rounded-xl px-4 py-3 outline-none transition-all duration-300 appearance-none shadow-inner [&>option]:text-gray-900"
-                                    id="inputRole"
-                                    value={role}
-                                    onChange={(e) => setRole(e.target.value)}
-                                >
-                                    <option value="Administrador">Administrador</option>
-                                    <option value="Responsable">Responsable</option>
-                                    <option value="Desarrollador">Desarrollador</option>
-                                </select>
-                            </div>
-
-                            <button className="w-full mt-8 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-400 hover:to-yellow-600 text-black font-extrabold py-3.5 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:shadow-[0_0_30px_rgba(234,179,8,0.5)] transform hover:-translate-y-1 transition-all duration-300" type="submit">
-                                INGRESAR AL SISTEMA
+                            <button
+                                className={`w-full mt-8 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-extrabold py-3.5 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.3)] transition-all duration-300 ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:from-yellow-400 hover:to-yellow-600 hover:shadow-[0_0_30px_rgba(234,179,8,0.5)] transform hover:-translate-y-1'}`}
+                                type="submit"
+                                disabled={isLoading}
+                            >
+                                {isLoading ? 'VERIFICANDO...' : 'INGRESAR AL SISTEMA'}
                             </button>
                             <p className="mt-6 mb-0 text-center text-white/40 text-xs font-medium tracking-wide">&copy; 2026 Cerrejón Minería de Colombia.</p>
                         </form>
