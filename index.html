@@ -630,31 +630,36 @@
                 setError('');
                 setIsLoading(true);
 
-                // La nueva URL base y nombre de la lista
+                // 1. URL Base del sitio (sin la parte de /Lists/...) tal como indica el documento
                 const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist";
-                const LIST_NAME = "UserCheckList";
 
-                // Filtramos usando las columnas 'User' y 'Password'
-                const url = `${SITE_URL}/_api/web/lists/getbytitle('${LIST_NAME}')/items?$filter=User eq '${user}' and Password eq '${pswd}'&$select=User,Rol`;
+                // 2. El nombre exacto de la lista según indicó tu compañero
+                const LIST_NAME = "User-CheckList";
+
+                // 3. Construimos la URL siguiendo el patrón exacto de la página 2 del PDF:
+                // "/_api/web/lists/getbytitle('" + encodeURIComponent(listTitle) + "')/items"
+                const url = SITE_URL + "/_api/web/lists/getbytitle('" + encodeURIComponent(LIST_NAME) + "')/items?$filter=User eq '" + user + "' and Password eq '" + pswd + "'&$select=User,Rol";
 
                 try {
                     const res = await fetch(url, {
                         method: 'GET',
+                        // Cabeceras exactas del documento PDF
                         headers: {
                             "Accept": "application/json;odata=verbose"
                         },
-                        // 🔥 MUY IMPORTANTE: Esto obliga al navegador a enviar tu sesión activa de Microsoft 365
+                        // Mantenemos esto para que el navegador pase la sesión de Microsoft
                         credentials: 'same-origin'
                     });
 
+                    // Manejo de errores basado en el documento: if (!res.ok) throw new Error(...)
                     if (!res.ok) {
-                        const errorTxt = await res.text();
-                        console.error("Error de SharePoint:", errorTxt);
-                        throw new Error(`Acceso No Autorizado (HTTP ${res.status})`);
+                        throw new Error("HTTP " + res.status);
                     }
 
-                    const data = await res.json();
-                    const results = data.d && data.d.results ? data.d.results : [];
+                    const json = await res.json();
+
+                    // La estructura de respuesta según el PDF es json.d.results
+                    const results = (json.d && json.d.results) || [];
 
                     if (results.length > 0) {
                         const userData = results[0];
@@ -663,8 +668,8 @@
                         setError('Usuario o contraseña incorrectos.');
                     }
                 } catch (err) {
-                    console.error("Detalle del fallo:", err);
-                    setError('Acceso denegado. Asegúrate de ejecutar este archivo desde adentro de SharePoint.');
+                    console.error("Error en la petición REST:", err);
+                    setError('Error 404/Conexión: Verifica que estés ejecutando esto desde SharePoint.');
                 } finally {
                     setIsLoading(false);
                 }
@@ -729,7 +734,6 @@
                 </div>
             );
         };
-
         const Dashboard = ({ user, role, onLogout }) => {
             const [view, setView] = React.useState('checklist_all');
             const [selectedChecklistId, setSelectedChecklistId] = React.useState(null);
