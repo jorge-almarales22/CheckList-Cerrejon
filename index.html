@@ -8,50 +8,23 @@
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        body,
-        html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
+        body, html {
+            margin: 0; padding: 0; height: 100%;
             font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-image: url('./img/img-background.png');
-            /* fallback if local doesn't exist just gray */
             background-color: #1a202c;
-            /* dark fallback */
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            background-repeat: no-repeat;
+            background-size: cover; background-position: center;
+            background-attachment: fixed; background-repeat: no-repeat;
         }
-
-        /* Custom scrollbar for webkit */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.2);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
-        }
-
-        /* Prevent form autofill background change in WebKit */
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover,
-        input:-webkit-autofill:focus,
-        input:-webkit-autofill:active {
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
+        input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active {
             -webkit-box-shadow: 0 0 0 30px rgba(255, 255, 255, 0.9) inset !important;
             -webkit-text-fill-color: #1f2937 !important;
             transition: background-color 5000s ease-in-out 0s;
@@ -64,122 +37,124 @@
     <div id="root"></div>
 
     <script type="text/babel" data-presets="react">
+        const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist";
 
         const PERMISOS = {
             "Administrador": ["control_total", "ver_checklist_productivos", "gestionar_items_productivos", "ver_avances", "ver_checklist_desarrollo", "gestionar_checklist_desarrollo"],
             "Responsable": ["ver_checklist_productivos", "gestionar_items_productivos", "ver_avances"],
             "Desarrollador": ["ver_checklist_desarrollo", "gestionar_checklist_desarrollo"]
         };
+
         const tienePermiso = (rol, permiso) => {
             if (rol === "Administrador") return true;
             return PERMISOS[rol] ? PERMISOS[rol].includes(permiso) : false;
         };
 
-        const PREDEFINED_ITEMS = [
-            "Definici\u00f3n de la estrategia de mantenimiento (RCM) o basada en recomendaciones del fabricante.",
-            "Evaluaci\u00f3n de la suficiencia del personal operativo para el nuevo activo.",
-            "Confirmaci\u00f3n de la fecha de arribo del equipo a las instalaciones.",
-            "Gesti\u00f3n del alta administrativa del equipo en el software Ellipse.",
-            "Registro t\u00e9cnico y creaci\u00f3n del activo en el sistema de gesti\u00f3n.",
-            "Identificaci\u00f3n y carga de componentes mayores trazables en Ellipse.",
-            "Marcaci\u00f3n f\u00edsica de los componentes cr\u00edticos para seguimiento.",
-            "C\u00e1lculo y definici\u00f3n del inventario de repuestos para componentes mayores.",
-            "Programaci\u00f3n de los servicios t\u00e9cnicos del taller de llantas.",
-            "Instalaci\u00f3n de sistemas de telecomunicaciones, seguridad y monitoreo electr\u00f3nico.",
-            "Aplicaci\u00f3n de pintura y rotulaci\u00f3n seg\u00fan el est\u00e1ndar de se\u00f1alizaci\u00f3n.",
-            "Auditor\u00eda t\u00e9cnica de la marcaci\u00f3n f\u00edsica del equipo y sus partes.",
-            "Ejecuci\u00f3n de las pruebas de comisionamiento junto al contratista.",
-            "Pruebas de estanqueidad en sistemas de motor, refrigeraci\u00f3n e hidr\u00e1ulicos.",
-            "Elaboraci\u00f3n de protocolos de puesta en marcha basados en gu\u00edas de f\u00e1brica.",
-            "Verificaci\u00f3n de la hermeticidad y sellado de la cabina de operaci\u00f3n.",
-            "Inspecci\u00f3n de calidad integral del equipo antes de su ingreso.",
-            "Planificaci\u00f3n de actividades t\u00e9cnicas para las primeras 100 horas de operaci\u00f3n.",
-            "Validaci\u00f3n de la seguridad en puntos de anclaje y restricci\u00f3n de la flota.",
-            "Certificaci\u00f3n del cumplimiento de los est\u00e1ndares operativos de Cerrej\u00f3n.",
-            "Log\u00edstica de traslado del activo y capacitaci\u00f3n del personal.",
-            "Auditor\u00eda de productividad inicial por parte del departamento t\u00e9cnico.",
-            "Verificaci\u00f3n final del registro del equipo y su estrategia en el sistema.",
-            "Cierre de \u00f3rdenes de trabajo y registro de movimientos de componentes.",
-            "Notificaci\u00f3n oficial y entrega formal del activo al \u00e1rea usuaria."
-        ];
-
         const users = [
-            { user: 'angie.Zabala@cerrejon.com', Password: 'angie.Zabala@cerrejon.com', Rol: 'Responsable' },
-            { user: 'carlos.Duque@cerrejon.com', Password: 'carlos.Duque@cerrejon.com', Rol: 'Responsable' },
-            { user: 'fabian.Almenarez@cerrejon.com', Password: 'fabian.Almenarez@cerrejon.com', Rol: 'Responsable' },
-            { user: 'jean.mantilla@cerrejon.com', Password: 'jean.mantilla@cerrejon.com', Rol: 'Responsable' },
-            { user: 'jose.C.Barrios@cerrejon.com', Password: 'jose.C.Barrios@cerrejon.com', Rol: 'Responsable' },
-            { user: 'jose.Verdeza@cerrejon.com', Password: 'jose.Verdeza@cerrejon.com', Rol: 'Responsable' },
-            { user: 'manuel.Molina@cerrejon.com', Password: 'manuel.Molina@cerrejon.com', Rol: 'Responsable' },
-            { user: 'pedro.S.Gomez@cerrejon.com', Password: 'pedro.S.Gomez@cerrejon.com', Rol: 'Responsable' },
-            { user: 'randolf.caballero@cerrejon.com', Password: 'randolf.caballero@cerrejon.com', Rol: 'Responsable' },
+            { user: 'angie.Zabala@cerrejon.com', Rol: 'Responsable' },
+            { user: 'carlos.Duque@cerrejon.com', Rol: 'Responsable' },
+            { user: 'fabian.Almenarez@cerrejon.com', Rol: 'Responsable' },
+            { user: 'jean.mantilla@cerrejon.com', Rol: 'Responsable' },
+            { user: 'jose.C.Barrios@cerrejon.com', Rol: 'Responsable' },
+            { user: 'jose.Verdeza@cerrejon.com', Rol: 'Responsable' },
+            { user: 'manuel.Molina@cerrejon.com', Rol: 'Responsable' },
+            { user: 'pedro.S.Gomez@cerrejon.com', Rol: 'Responsable' },
+            { user: 'randolf.caballero@cerrejon.com', Rol: 'Responsable' },
         ];
 
-        const calcularCumplimiento = (fechaCreacion, fechaPlaneada) => {
-            if (!fechaPlaneada || !fechaCreacion) return 0;
-            const start = new Date(fechaCreacion);
-            start.setHours(0, 0, 0, 0);
-            const end = new Date(fechaPlaneada);
-            end.setHours(0, 0, 0, 0);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+        // SharePoint API Helpers
+        const getRequestDigest = async () => {
+            const res = await fetch(`${SITE_URL}/_api/contextinfo`, {
+                method: 'POST',
+                headers: { "Accept": "application/json;odata=verbose" },
+                credentials: 'same-origin'
+            });
+            const data = await res.json();
+            return data.d.GetContextWebInformation.FormDigestValue;
+        };
+
+        const getEntityType = async (listName) => {
+            const res = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('${listName}')`, {
+                headers: { "Accept": "application/json;odata=verbose" },
+                credentials: "same-origin"
+            });
+            const json = await res.json();
+            return json.d.ListItemEntityTypeFullName;
+        };
+
+        const saveToSPList = async (listName, data, digest) => {
+            const entityType = await getEntityType(listName);
+            const res = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('${listName}')/items`, {
+                method: 'POST',
+                headers: {
+                    "Accept": "application/json;odata=verbose",
+                    "Content-Type": "application/json;odata=verbose",
+                    "X-RequestDigest": digest
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ "__metadata": { "type": entityType }, ...data })
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status} error saving to ${listName}`);
+            return res.json();
+        };
+
+        const updateSPListItem = async (listName, itemId, data, digest) => {
+            const entityType = await getEntityType(listName);
+            const res = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('${listName}')/items(${itemId})`, {
+                method: 'POST',
+                headers: {
+                    "Accept": "application/json;odata=verbose",
+                    "Content-Type": "application/json;odata=verbose",
+                    "X-RequestDigest": digest,
+                    "X-HTTP-Method": "MERGE",
+                    "If-Match": "*"
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ "__metadata": { "type": entityType }, ...data })
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status} error updating ${listName}`);
+        };
+
+        const fileToBase64 = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        const calcularCumplimiento = (fechaInicio, fechaFin) => {
+            if (!fechaFin || !fechaInicio) return 0;
+            const start = new Date(fechaInicio); start.setHours(0, 0, 0, 0);
+            const end = new Date(fechaFin); end.setHours(0, 0, 0, 0);
+            const today = new Date(); today.setHours(0, 0, 0, 0);
 
             const totalDiff = end.getTime() - start.getTime();
             if (totalDiff <= 0) return 100;
-
             const currentDiff = today.getTime() - start.getTime();
             let percent = (currentDiff / totalDiff) * 100;
             if (percent < 0) percent = 0;
             if (percent > 100) percent = 100;
-
             return Math.round(percent);
         };
 
         const calcularPromedioChecklist = (items) => {
             if (!items || items.length === 0) return 0;
             let total = 0;
-            items.forEach(it => {
-                const start = it.fechaCreacionItem;
-                total += calcularCumplimiento(start, it.fechaPlaneada);
-            });
+            items.forEach(it => { total += calcularCumplimiento(it.FechaInicio, it.FechaFin); });
             return Math.round(total / items.length);
         };
+
+        // --- COMPONENTS ---
 
         const CrearCheckList = ({ onAtras, currentUser, currentRole }) => {
             const [nombreChecklist, setNombreChecklist] = React.useState('');
             const [isSaving, setIsSaving] = React.useState(false);
-            const [items, setItems] = React.useState(() => {
-                const hoy = new Date().toISOString().split('T')[0];
-                return PREDEFINED_ITEMS.map((act, idx) => ({
-                    id: Date.now() + Math.random().toString(36).substr(2, 5) + idx,
-                    actividades: act,
-                    rolResponsable: 'Responsable',
-                    entregable: '',
-                    nombreResponsable: '',
-                    avance: '0',
-                    fechaPlaneada: '',
-                    fechaReal: '',
-                    fechaCreacionItem: hoy,
-                    comentarioAdmin: '',
-                    isAlert: false
-                }));
-            });
+            const [items, setItems] = React.useState([]);
 
             const [formData, setFormData] = React.useState({
-                actividades: '',
-                rolResponsable: 'Responsable',
-                entregable: '',
-                nombreResponsable: '',
-                avance: '',
-                fechaPlaneada: '',
-                fechaReal: '',
+                actividades: '', rolResponsable: 'Responsable', entregable: '',
+                nombreResponsable: '', avance: '', fechaFin: '', fechaInicio: new Date().toISOString().split('T')[0],
             });
-
-            const [editingId, setEditingId] = React.useState(null);
-
-            const handleItemEdit = (id, field, value) => {
-                setItems(prev => prev.map(it => it.id === id ? { ...it, [field]: value } : it));
-            };
 
             const handleChange = (e) => {
                 const { name, value } = e.target;
@@ -188,129 +163,62 @@
 
             const handleAddItem = (e) => {
                 e.preventDefault();
-                const hoy = new Date().toISOString().split('T')[0];
                 const newItem = {
                     ...formData,
-                    rolResponsable: 'Responsable',
                     id: Date.now() + Math.random().toString(36).substr(2, 5),
-                    fechaCreacionItem: hoy,
-                    comentarioAdmin: '',
-                    isAlert: false
                 };
                 setItems([...items, newItem]);
-
-                // Clear form for next item
-                setFormData({
-                    actividades: '', rolResponsable: 'Responsable', entregable: '',
-                    nombreResponsable: '', avance: '', fechaPlaneada: '', fechaReal: ''
-                });
+                setFormData({ actividades: '', rolResponsable: 'Responsable', entregable: '', nombreResponsable: '', avance: '', fechaFin: '', fechaInicio: new Date().toISOString().split('T')[0] });
             };
 
-            const handleDeleteItem = (id) => {
-                setItems(items.filter(it => it.id !== id));
-            };
+            const handleDeleteItem = (id) => setItems(items.filter(it => it.id !== id));
 
             const handleGuardarChecklist = async () => {
-                if (!nombreChecklist.trim()) {
-                    alert('Por favor, ingresa el nombre del checklist.');
-                    return;
-                }
-                if (items.length === 0) {
-                    alert('Debes agregar al menos un \u00edtem al checklist antes de guardar.');
-                    return;
-                }
+                if (!nombreChecklist.trim()) { alert('Ingresa el nombre del checklist.'); return; }
+                if (items.length === 0) { alert('Agrega al menos un \u00edtem.'); return; }
 
                 setIsSaving(true);
-                const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist";
                 const newChecklistId = 'CHK-' + Date.now();
 
                 try {
-                    // 1. Obtener Request Digest para POST a SharePoint
-                    const digestRes = await fetch(`${SITE_URL}/_api/contextinfo`, {
-                        method: 'POST',
-                        headers: { "Accept": "application/json;odata=verbose" },
-                        credentials: 'same-origin'
-                    });
-                    const digestData = await digestRes.json();
-                    const digest = digestData.d.GetContextWebInformation.FormDigestValue;
+                    const digest = await getRequestDigest();
 
-                    // Función Helper para guardar en listas de SP
-                    const saveToSPList = async (listName, data) => {
-                        const listRes = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('${listName}')`, {
-                            headers: { "Accept": "application/json;odata=verbose" },
-                            credentials: "same-origin"
-                        });
-                        const listJson = await listRes.json();
-                        const entityTypeName = listJson.d.ListItemEntityTypeFullName;
-
-                        const res = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('${listName}')/items`, {
-                            method: 'POST',
-                            headers: {
-                                "Accept": "application/json;odata=verbose",
-                                "Content-Type": "application/json;odata=verbose",
-                                "X-RequestDigest": digest
-                            },
-                            credentials: 'same-origin',
-                            body: JSON.stringify({
-                                "__metadata": { "type": entityTypeName },
-                                ...data
-                            })
-                        });
-
-                        if (!res.ok) throw new Error(`HTTP ${res.status} al guardar en ${listName}`);
-                        return res.json();
-                    };
-
-                    // 1. Guardar en 'checklist-saved'
                     await saveToSPList('checklist-saved', {
                         Title: nombreChecklist,
                         Name: nombreChecklist,
                         ID_x002d_checklist: newChecklistId
-                    });
+                    }, digest);
 
-                    // 2. Guardar cada ítem en 'Items-CheckList'
                     for (const item of items) {
                         await saveToSPList('Items-CheckList', {
-                            Title: newChecklistId, // Usamos el ID del Checklist para relacionar el ítem
+                            Title: newChecklistId,
                             Descripcion: item.actividades,
                             NombreResponsable: item.nombreResponsable,
                             Entregable: item.entregable,
                             Avance: item.avance ? item.avance.toString() : "0",
-                            FechaInicio: item.fechaCreacionItem,
-                            FechaFin: item.fechaPlaneada
-                        });
+                            FechaInicio: item.fechaInicio,
+                            FechaFin: item.fechaFin,
+                            Alerta: "No",
+                            ComentarioAdm: "",
+                            ComentarioPropio: ""
+                        }, digest);
                     }
 
-                    // 3. Crear relación Many-to-Many en 'User-Checklist-Pivot'
                     const responsibles = [...new Set(items.map(it => it.nombreResponsable).filter(Boolean))];
                     for (const resp of responsibles) {
                         await saveToSPList('User-Checklist-Pivot', {
                             Title: `${newChecklistId} - ${resp}`,
                             User: resp,
                             Checklist_x002d_ID: newChecklistId
-                        });
+                        }, digest);
                     }
 
-                    // 4. Continuar guardando en localStorage para el UI rápido
-                    const newChecklist = {
-                        id: newChecklistId,
-                        nombre: nombreChecklist,
-                        fechaCreacion: new Date().toISOString(),
-                        creador: currentUser,
-                        rolCreador: currentRole,
-                        comentarioGeneral: '',
-                        items: items
-                    };
-                    const checklists = JSON.parse(localStorage.getItem('checklists_data')) || [];
-                    checklists.unshift(newChecklist);
-                    localStorage.setItem('checklists_data', JSON.stringify(checklists));
-
-                    alert('\u00a1Checklist Completo guardado con \u00e9xito en SharePoint!');
-                    onAtras(); // Volver al listado
+                    alert('\u00a1Checklist guardado con \u00e9xito en SharePoint!');
+                    onAtras();
 
                 } catch (error) {
-                    console.error("Error guardando en SharePoint:", error);
-                    alert("Ocurri\u00f3 un error guardando los datos en SharePoint. Revisa la consola para m\u00e1s detalles.");
+                    console.error("Error saving:", error);
+                    alert("Ocurri\u00f3 un error guardando en SharePoint.");
                 } finally {
                     setIsSaving(false);
                 }
@@ -320,41 +228,33 @@
             const labelClasses = "block text-sm font-semibold text-white/90 mb-1.5";
 
             return (
-                <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-2xl shadow-2xl text-white mt-8 mx-auto max-w-5xl transform transition-all duration-500 hover:shadow-yellow-500/10">
+                <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-2xl shadow-2xl text-white mt-8 mx-auto max-w-5xl">
                     <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/20">
-                        <h2 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-yellow-500">Crear Nuevo Checklist</h2>
-                        <button
-                            className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-300 flex items-center gap-2"
-                            onClick={onAtras}
-                        >
+                        <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">Crear Nuevo Checklist</h2>
+                        <button className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center gap-2" onClick={onAtras}>
                             <span>&larr;</span> Volver al Listado
                         </button>
                     </div>
 
-                    {/* Input para Nombre del Checklist */}
                     <div className="mb-6">
                         <label className={labelClasses}>Nombre del Checklist</label>
-                        <input type="text" className={inputClasses + " text-lg font-bold"} placeholder="Ej. Incorporaci&oacute;n de Equipo Nuevo" value={nombreChecklist} onChange={(e) => setNombreChecklist(e.target.value)} required />
+                        <input type="text" className={inputClasses + " text-lg font-bold"} placeholder="Ej. Nuevo Proyecto" value={nombreChecklist} onChange={(e) => setNombreChecklist(e.target.value)} required />
                     </div>
 
-                    {/* Fomulario para agregar ITEMS al checklist temporal */}
                     <div className="bg-gray-900/40 p-6 rounded-xl border border-white/10 mb-8">
-                        <h3 className="text-xl font-bold text-yellow-400 mb-4 border-b border-white/10 pb-2">&#10133; Agregar Nuevo &Iacute;tem (Actividad)</h3>
+                        <h3 className="text-xl font-bold text-yellow-400 mb-4 border-b border-white/10 pb-2">&#10133; Agregar Nuevo &Iacute;tem</h3>
                         <form onSubmit={handleAddItem} className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 text-left">
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                                 <div className="md:col-span-12">
-                                    <label className={labelClasses}>Actividades / Descripci&oacute;n de la Tarea</label>
+                                    <label className={labelClasses}>Descripci&oacute;n</label>
                                     <textarea className={inputClasses} name="actividades" value={formData.actividades} onChange={handleChange} rows="2" required></textarea>
                                 </div>
                                 <div className="md:col-span-6">
-                                    <label className={labelClasses}>Nombre Responsable</label>
-                                    {/* Aplicado Tailwind inputClasses al select */}
-                                    <select className={inputClasses + " cursor-pointer appearance-none"} name="nombreResponsable" value={formData.nombreResponsable} onChange={handleChange}>
+                                    <label className={labelClasses}>Responsable</label>
+                                    <select className={inputClasses + " cursor-pointer"} name="nombreResponsable" value={formData.nombreResponsable} onChange={handleChange} required>
                                         <option value="">Seleccionar Responsable</option>
                                         {users.map((usuario) => (
-                                            <option key={usuario.user} value={usuario.user}>
-                                                {usuario.user}
-                                            </option>
+                                            <option key={usuario.user} value={usuario.user}>{usuario.user}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -367,181 +267,152 @@
                                     <input type="number" min="0" max="100" className={inputClasses} name="avance" value={formData.avance} onChange={handleChange} required />
                                 </div>
                                 <div className="md:col-span-4">
-                                    <label className={labelClasses}>Fecha Planeada</label>
-                                    <input type="date" className={inputClasses} name="fechaPlaneada" value={formData.fechaPlaneada} onChange={handleChange} required />
+                                    <label className={labelClasses}>Fecha Inicio</label>
+                                    <input type="date" className={inputClasses} name="fechaInicio" value={formData.fechaInicio} onChange={handleChange} required />
                                 </div>
                                 <div className="md:col-span-4">
-                                    <label className={labelClasses}>Fecha Real</label>
-                                    <input type="date" className={inputClasses} name="fechaReal" value={formData.fechaReal} onChange={handleChange} />
+                                    <label className={labelClasses}>Fecha Fin</label>
+                                    <input type="date" className={inputClasses} name="fechaFin" value={formData.fechaFin} onChange={handleChange} required />
                                 </div>
                             </div>
                             <div className="flex justify-end pt-2">
-                                <button type="submit" className="bg-blue-600 hover:bg-blue-500 border border-blue-400/50 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg flex items-center gap-2 transition-colors">
-                                    A&ntilde;adir &Iacute;tem a la Lista
-                                </button>
+                                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg">A&ntilde;adir &Iacute;tem</button>
                             </div>
                         </form>
                     </div>
 
-                    {/* Lista de Items Agregados Temporalmente */}
                     <div className="mb-8">
-                        <h3 className="text-lg font-bold text-white mb-3">&Iacute;tems de este Checklist ({items.length})</h3>
-                        {items.length === 0 ?
-                            (
-                                <div className="text-center py-8 bg-black/20 rounded-xl border border-white/5 border-dashed">
-                                    <p className="text-white/50">A&uacute;n no hay &iacute;tems en este checklist. Llena el formulario de arriba para empezar.</p>
+                        <h3 className="text-lg font-bold text-white mb-3">&Iacute;tems ({items.length})</h3>
+                        <div className="space-y-3">
+                            {items.map((it, idx) => (
+                                <div key={it.id} className="bg-white/5 p-4 rounded-lg border border-white/10 flex justify-between items-center">
+                                    <div>
+                                        <h4 className="font-bold text-yellow-400">{it.actividades}</h4>
+                                        <div className="text-xs text-white/70 mt-1">Responsable: {it.nombreResponsable} | Fechas: {it.fechaInicio} a {it.fechaFin} | Avance: {it.avance}%</div>
+                                    </div>
+                                    <button onClick={() => handleDeleteItem(it.id)} className="bg-red-500/20 text-red-300 px-3 py-1.5 rounded text-xs font-bold hover:bg-red-500/40">Eliminar</button>
                                 </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {items.map((it, idx) => (
-                                        <div
-                                            key={it.id}
-                                            className={`bg-white/5 p-4 rounded-lg border ${editingId === it.id ? 'border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'border-white/10'} flex justify-between items-start transition-all`}
-                                            onDoubleClick={() => setEditingId(it.id)}
-                                        >
-                                            <div className="flex-1 mr-4">
-                                                <div className="flex items-start gap-2 mb-1">
-                                                    <span className="bg-white/20 text-xs font-bold px-2 py-0.5 rounded mt-0.5">#{idx + 1}</span>
-                                                    {editingId === it.id ? (
-                                                        <textarea
-                                                            className="w-full bg-black/40 text-yellow-400 border border-yellow-400/50 rounded px-2 py-1 text-sm outline-none resize-none"
-                                                            value={it.actividades}
-                                                            onChange={(e) => handleItemEdit(it.id, 'actividades', e.target.value)}
-                                                            rows="2"
-                                                            placeholder="Descripci\u00f3n de la actividad"
-                                                        />
-                                                    ) : (
-                                                        <h4 className="font-bold text-yellow-400 leading-tight">{it.actividades}</h4>
-                                                    )}
-                                                </div>
-                                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-3 text-sm">
-                                                    <div>
-                                                        <span className="text-white/50 block text-xs">Responsable</span>
-                                                        {editingId === it.id ?
-                                                            (
-                                                                <input type="text" className="w-full bg-black/40 text-white border border-white/20 rounded px-2 py-1 text-xs outline-none mt-1" value={it.nombreResponsable} onChange={(e) => handleItemEdit(it.id, 'nombreResponsable', e.target.value)} placeholder="Nombre" />
-                                                            ) : (
-                                                                <span className="text-white font-medium">{it.nombreResponsable || '-'} ({it.rolResponsable})</span>
-                                                            )}
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-white/50 block text-xs">Entregable</span>
-                                                        {editingId === it.id ?
-                                                            (
-                                                                <input type="text" className="w-full bg-black/40 text-white border border-white/20 rounded px-2 py-1 text-xs outline-none mt-1" value={it.entregable} onChange={(e) => handleItemEdit(it.id, 'entregable', e.target.value)} placeholder="Entregable" />
-                                                            ) : (
-                                                                <span className="text-white font-medium">{it.entregable || '-'}</span>
-                                                            )}
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-white/50 block text-xs">Fechas</span>
-                                                        {editingId === it.id ?
-                                                            (
-                                                                <div className="space-y-1 mt-1">
-                                                                    <div className="flex items-center gap-1 text-xs"><span className="w-4 font-bold">P:</span><input type="date" className="bg-black/40 text-white border border-white/40 rounded px-1 py-0.5 outline-none flex-1 focus:border-yellow-400" value={it.fechaPlaneada} onChange={(e) => handleItemEdit(it.id, 'fechaPlaneada', e.target.value)} /></div>
-                                                                    <div className="flex items-center gap-1 text-xs"><span className="w-4 font-bold">R:</span><input type="date" className="bg-black/40 text-white border border-white/40 rounded px-1 py-0.5 outline-none flex-1 focus:border-yellow-400" value={it.fechaReal} onChange={(e) => handleItemEdit(it.id, 'fechaReal', e.target.value)} /></div>
-                                                                </div>
-                                                            ) : (
-                                                                <><span className="text-white font-medium block">P: {it.fechaPlaneada || '-'}</span><span className="text-white font-medium block">R: {it.fechaReal || '-'}</span></>
-                                                            )}
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-white/50 block text-xs">Cumplimiento (calc)</span>
-                                                        <span className="text-green-400 font-bold">{calcularCumplimiento(it.fechaCreacionItem, it.fechaPlaneada)}%</span>
-                                                        <span className="text-white/50 block text-xs mt-1">Avance real:
-                                                            {editingId === it.id ?
-                                                                (
-                                                                    <input type="number" className="w-16 ml-1 bg-black/40 text-yellow-400 border border-yellow-400/50 rounded px-1 outline-none inline-block text-xs" value={it.avance} onChange={(e) => handleItemEdit(it.id, 'avance', e.target.value)} min="0" max="100" />
-                                                                ) : (
-                                                                    <span className="text-yellow-400 ml-1 font-bold">{it.avance}%</span>
-                                                                )}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex flex-col gap-2 min-w-[80px]">
-                                                {editingId === it.id ?
-                                                    (
-                                                        <button onClick={() => setEditingId(null)} className="bg-green-500/20 hover:bg-green-500/40 border border-green-500/50 text-green-300 px-3 py-1.5 rounded text-xs font-bold transition-colors w-full">
-                                                            Listo
-                                                        </button>
-                                                    ) : (
-                                                        <button onClick={() => setEditingId(it.id)} className="bg-blue-500/20 hover:bg-blue-500/40 border border-blue-500/30 text-blue-300 px-3 py-1.5 rounded text-xs font-bold transition-colors w-full">
-                                                            Editar
-                                                        </button>
-                                                    )}
-                                                <button onClick={() => handleDeleteItem(it.id)} className="bg-red-500/20 hover:bg-red-500/40 border border-red-500/30 text-red-300 px-3 py-1.5 rounded text-xs font-bold transition-colors w-full">
-                                                    Eliminar
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                            ))}
+                        </div>
                     </div>
 
-                    <button
-                        onClick={handleGuardarChecklist}
-                        disabled={items.length === 0 || isSaving}
-                        className={`w-full font-extrabold text-lg py-4 rounded-xl shadow-lg transform transition-all duration-300 ${(items.length > 0 && !isSaving)
-                            ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white hover:shadow-[0_0_25px_rgba(34,197,94,0.6)] hover:-translate-y-0.5'
-                            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                            }`}
-                    >
-                        {isSaving ? 'GUARDANDO EN SHAREPOINT...' : '\u2713 GUARDAR CHECKLIST COMPLETO'}
+                    <button onClick={handleGuardarChecklist} disabled={items.length === 0 || isSaving} className={`w-full font-extrabold text-lg py-4 rounded-xl shadow-lg transition-all ${items.length > 0 && !isSaving ? 'bg-gradient-to-r from-green-500 to-green-600 hover:-translate-y-0.5' : 'bg-gray-600 cursor-not-allowed'}`}>
+                        {isSaving ? 'GUARDANDO...' : '\u2713 GUARDAR CHECKLIST'}
                     </button>
                 </div>
             );
         };
 
-        const CheckListDetalle = ({ checklistId, onAtras, role }) => {
+        const CheckListDetalle = ({ checklistId, onAtras, role, currentUser }) => {
             const [checklist, setChecklist] = React.useState(null);
-            const [localCommentModal, setLocalCommentModal] = React.useState({ open: false, itemId: null, text: '' });
+            const [loading, setLoading] = React.useState(true);
+            const [editingId, setEditingId] = React.useState(null);
+            const [editForm, setEditForm] = React.useState({});
+            
             const isAdmin = role === 'Administrador';
+
             React.useEffect(() => {
-                const data = JSON.parse(localStorage.getItem('checklists_data')) || [];
-                const found = data.find(c => c.id === checklistId);
-                setChecklist(found);
+                const fetchDetails = async () => {
+                    try {
+                        const listRes = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('checklist-saved')/items?$filter=ID_x002d_checklist eq '${checklistId}'`, {
+                            headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
+                        });
+                        const listJson = await listRes.json();
+                        const chkData = listJson.d.results[0];
+
+                        const itemsRes = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('Items-CheckList')/items?$filter=Title eq '${checklistId}'`, {
+                            headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
+                        });
+                        const itemsJson = await itemsRes.json();
+
+                        if (chkData) {
+                            setChecklist({
+                                ...chkData,
+                                items: itemsJson.d.results
+                            });
+                        }
+                    } catch (error) {
+                        console.error("Error loading details:", error);
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+                fetchDetails();
             }, [checklistId]);
-            const saveState = (updatedChecklist) => {
-                const data = JSON.parse(localStorage.getItem('checklists_data')) || [];
-                const newData = data.map(c => c.id === updatedChecklist.id ? updatedChecklist : c);
-                localStorage.setItem('checklists_data', JSON.stringify(newData));
-                setChecklist(updatedChecklist);
-            };
-            const toggleAlert = (itemId) => {
-                if (!isAdmin) return;
-                const updatedItems = checklist.items.map(it =>
-                    it.id === itemId ? { ...it, isAlert: !it.isAlert } : it
-                );
-                saveState({ ...checklist, items: updatedItems });
+
+            const handleFileUpload = async (itemId, e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    const base64 = await fileToBase64(file);
+                    const digest = await getRequestDigest();
+                    
+                    await updateSPListItem('Items-CheckList', itemId, {
+                        Evidencias: base64,
+                        Avance: "100"
+                    }, digest);
+
+                    // Update UI locally
+                    setChecklist(prev => ({
+                        ...prev,
+                        items: prev.items.map(it => it.Id === itemId ? { ...it, Evidencias: base64, Avance: "100" } : it)
+                    }));
+                    alert('Evidencia cargada. Avance actualizado al 100%');
+                } catch (error) {
+                    alert('Error subiendo evidencia.');
+                    console.error(error);
+                }
             };
 
-            const openCommentModal = (item) => {
-                setLocalCommentModal({ open: true, itemId: item.id, text: item.comentarioAdmin || '' });
+            const handleStartEdit = (item) => {
+                setEditingId(item.Id);
+                setEditForm({ ...item });
             };
 
-            const saveItemComment = () => {
-                const updatedItems = checklist.items.map(it =>
-                    it.id === localCommentModal.itemId ? { ...it, comentarioAdmin: localCommentModal.text } : it
-                );
-                saveState({ ...checklist, items: updatedItems });
-                setLocalCommentModal({ open: false, itemId: null, text: '' });
-            };
-            const updateGeneralComment = (e) => {
-                saveState({ ...checklist, comentarioGeneral: e.target.value });
+            const handleSaveEdit = async () => {
+                try {
+                    const digest = await getRequestDigest();
+                    await updateSPListItem('Items-CheckList', editForm.Id, {
+                        Descripcion: editForm.Descripcion,
+                        FechaInicio: editForm.FechaInicio,
+                        FechaFin: editForm.FechaFin,
+                        Avance: editForm.Avance,
+                        ComentarioAdm: editForm.ComentarioAdm,
+                        ComentarioPropio: editForm.ComentarioPropio,
+                        Alerta: editForm.Alerta
+                    }, digest);
+
+                    setChecklist(prev => ({
+                        ...prev,
+                        items: prev.items.map(it => it.Id === editForm.Id ? editForm : it)
+                    }));
+                    setEditingId(null);
+                } catch (error) {
+                    alert("Error guardando cambios.");
+                    console.error(error);
+                }
             };
 
-            if (!checklist) return <div className="text-center text-white mt-20">Cargando detalles...</div>;
+            const toggleAlert = async (item) => {
+                const newAlerta = item.Alerta === "Si" ? "No" : "Si";
+                try {
+                    const digest = await getRequestDigest();
+                    await updateSPListItem('Items-CheckList', item.Id, { Alerta: newAlerta }, digest);
+                    setChecklist(prev => ({
+                        ...prev,
+                        items: prev.items.map(it => it.Id === item.Id ? { ...it, Alerta: newAlerta } : it)
+                    }));
+                } catch(error) { console.error(error); }
+            };
+
+            if (loading) return <div className="text-center text-white mt-20">Cargando detalles desde SharePoint...</div>;
+            if (!checklist) return <div className="text-center text-white mt-20">Checklist no encontrado.</div>;
 
             return (
                 <div className="max-w-6xl mx-auto animate-[fadeIn_0.3s_ease-out]">
                     <div className="flex justify-between items-center bg-gray-900/60 backdrop-blur-md p-6 rounded-2xl border border-white/10 mb-6 shadow-xl">
                         <div>
-                            <h2 className="text-3xl font-extrabold text-white mb-1"><span className="text-yellow-400"></span> {checklist.nombre || checklist.id}</h2>
-                            <p className="text-white/60 text-sm">
-                                ID: {checklist.id} | Creado el {new Date(checklist.fechaCreacion).toLocaleDateString()} por <strong>{checklist.creador}</strong>
-                            </p>
+                            <h2 className="text-3xl font-extrabold text-white mb-1"><span className="text-yellow-400">Checklist:</span> {checklist.Name}</h2>
                         </div>
                         <button className="bg-white/10 hover:bg-white/20 border border-white/30 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2" onClick={onAtras}>
                             &larr; Volver
@@ -549,105 +420,135 @@
                     </div>
 
                     <div className="space-y-4 mb-8">
-                        {checklist.items.map((it, idx) => (
-                            <div key={it.id} className={`p-5 rounded-xl border transition-all ${it.isAlert ? 'bg-red-900/40 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-white/10 border-white/10'}`}>
-                                <div className="flex justify-between items-start gap-4 flex-wrap md:flex-nowrap">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <span className={`text-xs font-bold px-2 py-1 rounded ${it.isAlert ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'}`}>&Iacute;tem {idx + 1}</span>
-                                            <h4 className={`text-lg font-bold ${it.isAlert ? 'text-red-200' : 'text-white'}`}>{it.actividades}</h4>
-                                            {it.isAlert && <span className="animate-pulse text-red-400 flex items-center gap-1 text-sm font-bold">&#9888; ALERTA</span>}
-                                        </div>
-                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-3 text-sm">
-                                            <div><span className="text-white/50 block text-xs">Responsable / Rol</span><span className="text-white font-medium">{it.nombreResponsable || '-'} ({it.rolResponsable})</span></div>
-                                            <div><span className="text-white/50 block text-xs">Entregable</span><span className="text-white font-medium">{it.entregable || '-'}</span></div>
-                                            <div><span className="text-white/50 block text-xs">Fechas</span><span className="text-white font-medium block">P: {it.fechaPlaneada || '-'}</span><span className="text-white font-medium block">R: {it.fechaReal || '-'}</span></div>
-                                            <div>
-                                                <span className="text-white/50 block text-xs">Nivel de Cumplimiento</span>
-                                                <span className="text-green-400 font-bold text-lg">{calcularCumplimiento(it.fechaCreacionItem || checklist.fechaCreacion, it.fechaPlaneada)}%</span>
+                        {checklist.items.map((it, idx) => {
+                            const isEditing = editingId === it.Id;
+                            const currentItem = isEditing ? editForm : it;
+                            const isMyTask = currentUser === it.NombreResponsable;
+                            const showAlert = it.Alerta === "Si";
+
+                            return (
+                                <div key={it.Id} className={`p-5 rounded-xl border transition-all ${showAlert ? 'bg-red-900/40 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-white/10 border-white/10'}`}>
+                                    <div className="flex justify-between items-start gap-4 flex-wrap md:flex-nowrap">
+                                        <div className="flex-1 w-full">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`text-xs font-bold px-2 py-1 rounded ${showAlert ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'}`}>&Iacute;tem {idx + 1}</span>
+                                                    {isEditing ? (
+                                                        <input type="text" className="bg-black/50 text-white border border-white/30 px-2 py-1 rounded w-full" value={currentItem.Descripcion} onChange={e => setEditForm({...editForm, Descripcion: e.target.value})} />
+                                                    ) : (
+                                                        <h4 className={`text-lg font-bold ${showAlert ? 'text-red-200' : 'text-white'}`}>{it.Descripcion}</h4>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    {isEditing ? (
+                                                        <button onClick={handleSaveEdit} className="bg-green-500 hover:bg-green-400 text-black font-bold px-3 py-1 rounded text-sm">Guardar Cambios</button>
+                                                    ) : (
+                                                        (isAdmin || isMyTask) && <button onClick={() => handleStartEdit(it)} className="bg-white/10 hover:bg-white/20 text-white font-bold px-3 py-1 rounded text-sm border border-white/20">Editar Valores</button>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div><span className="text-white/50 block text-xs">Avance Real</span><span className="text-yellow-400 font-bold text-lg">{it.avance}%</span></div>
-                                        </div>
-                                        {it.comentarioAdmin && (
-                                            <div className="mt-4 p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-lg">
-                                                <span className="text-yellow-400 text-xs font-bold uppercase tracking-wider block mb-1">Comentario Adm:</span>
-                                                <p className="text-white/90 text-sm whitespace-pre-wrap">{it.comentarioAdmin}</p>
+                                            
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
+                                                <div><span className="text-white/50 block text-xs">Responsable</span><span className="text-white font-medium">{it.NombreResponsable}</span></div>
+                                                <div>
+                                                    <span className="text-white/50 block text-xs">Fechas</span>
+                                                    {isEditing ? (
+                                                        <div className="flex flex-col gap-1">
+                                                            <input type="date" className="bg-black/50 text-white border border-white/30 px-1 text-xs" value={currentItem.FechaInicio ? currentItem.FechaInicio.substring(0,10) : ''} onChange={e => setEditForm({...editForm, FechaInicio: e.target.value})} title="Fecha Inicio" />
+                                                            <input type="date" className="bg-black/50 text-white border border-white/30 px-1 text-xs" value={currentItem.FechaFin ? currentItem.FechaFin.substring(0,10) : ''} onChange={e => setEditForm({...editForm, FechaFin: e.target.value})} title="Fecha Fin" />
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-white font-medium block">I: {it.FechaInicio ? it.FechaInicio.substring(0,10) : '-'} <br/> F: {it.FechaFin ? it.FechaFin.substring(0,10) : '-'}</span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <span className="text-white/50 block text-xs">Avance Real</span>
+                                                    {isEditing ? (
+                                                         <input type="number" max="100" className="w-16 bg-black/50 text-white border border-white/30 px-1" value={currentItem.Avance || 0} onChange={e => setEditForm({...editForm, Avance: e.target.value})} />
+                                                    ) : (
+                                                        <span className="text-yellow-400 font-bold text-lg">{it.Avance || 0}%</span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <span className="text-white/50 block text-xs">Evidencia</span>
+                                                    {isMyTask ? (
+                                                        <input type="file" className="text-xs text-white/70 w-full" onChange={(e) => handleFileUpload(it.Id, e)} accept="image/*,.pdf" />
+                                                    ) : (
+                                                        it.Evidencias ? <span className="text-green-400 font-bold">&#10003; Cargada</span> : <span className="text-white/30">Sin cargar</span>
+                                                    )}
+                                                </div>
                                             </div>
-                                        )}
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                                {/* Comentarios del Administrador */}
+                                                <div className="bg-black/20 p-3 rounded border border-white/10">
+                                                    <span className="text-yellow-400 text-xs font-bold uppercase block mb-1">Nota Administrador:</span>
+                                                    {isEditing && isAdmin ? (
+                                                        <textarea className="w-full bg-black/50 text-white border border-white/30 p-1 text-sm rounded" rows="2" value={currentItem.ComentarioAdm || ''} onChange={e => setEditForm({...editForm, ComentarioAdm: e.target.value})}></textarea>
+                                                    ) : (
+                                                        <p className="text-white/90 text-sm whitespace-pre-wrap">{it.ComentarioAdm || <span className="text-white/30 italic">Sin comentarios</span>}</p>
+                                                    )}
+                                                    {isAdmin && !isEditing && (
+                                                        <button onClick={() => toggleAlert(it)} className={`mt-2 text-xs font-bold px-2 py-1 rounded border ${showAlert ? 'bg-red-500/20 text-red-300 border-red-500/50' : 'bg-gray-500/20 text-gray-300 border-gray-500/50'}`}>
+                                                            {showAlert ? 'Quitar Alerta' : 'Marcar Alerta'}
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {/* Comentarios del Responsable */}
+                                                <div className="bg-blue-900/20 p-3 rounded border border-blue-500/20">
+                                                    <span className="text-blue-300 text-xs font-bold uppercase block mb-1">Comentario Responsable:</span>
+                                                    {isEditing && isMyTask ? (
+                                                        <textarea className="w-full bg-black/50 text-white border border-white/30 p-1 text-sm rounded" rows="2" value={currentItem.ComentarioPropio || ''} onChange={e => setEditForm({...editForm, ComentarioPropio: e.target.value})}></textarea>
+                                                    ) : (
+                                                        <p className="text-white/90 text-sm whitespace-pre-wrap">{it.ComentarioPropio || <span className="text-white/30 italic">Sin comentarios</span>}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-
-                                    {isAdmin && (
-                                        <div className="flex items-center gap-4 bg-black/30 p-3 rounded-lg border border-dashed border-white/20">
-                                            <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-white/80 hover:text-white">
-                                                <input type="checkbox" className="w-5 h-5 accent-red-500" checked={it.isAlert} onChange={() => toggleAlert(it.id)} />
-                                                Marcar Alerta
-                                            </label>
-                                            <div className="w-px h-6 bg-white/20"></div>
-                                            <button onClick={() => openCommentModal(it)} className="bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-300 border border-yellow-500/50 py-1.5 px-3 rounded text-sm font-bold transition-colors">
-                                                &#128172; Comentario
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
-
-                    <div className="bg-gray-900/80 p-6 rounded-2xl border border-white/20 shadow-2xl mt-8">
-                        <h3 className="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">&#128221; Comentario General del Checklist</h3>
-                        {isAdmin ?
-                            (
-                                <div className="space-y-3">
-                                    <textarea
-                                        className="w-full bg-white/5 border border-white/20 rounded-xl p-4 text-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none transition-all"
-                                        rows="3"
-                                        placeholder="Escribe un comentario general sobre todo el checklist..."
-                                        value={checklist.comentarioGeneral || ''}
-                                        onChange={updateGeneralComment}
-                                    ></textarea>
-                                    <p className="text-white/40 text-xs text-right">El comentario general se guarda autom&aacute;ticamente al escribir.</p>
-                                </div>
-                            ) : (
-                                <div className="p-4 bg-white/5 rounded-xl border border-white/10 min-h-[80px]">
-                                    {checklist.comentarioGeneral ?
-                                        (
-                                            <p className="text-white/90 whitespace-pre-wrap">{checklist.comentarioGeneral}</p>
-                                        ) : (
-                                            <p className="text-white/40 italic">El administrador no ha dejado comentarios generales.</p>
-                                        )}
-                                </div>
-                            )}
-                    </div>
-
-                    {/* Modal para comentario por item */}
-                    {localCommentModal.open && (
-                        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                            <div className="bg-gray-800 border border-white/20 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-                                <h3 className="text-xl font-bold text-white mb-4">A&ntilde;adir Comentario a Tarea</h3>
-                                <textarea
-                                    className="w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white outline-none mb-4 focus:border-yellow-400"
-                                    rows="4"
-                                    value={localCommentModal.text}
-                                    onChange={(e) => setLocalCommentModal({ ...localCommentModal, text: e.target.value })}
-                                    placeholder="Escribe aqu\u00ed las observaciones..."
-                                ></textarea>
-                                <div className="flex justify-end gap-3">
-                                    <button onClick={() => setLocalCommentModal({ open: false, itemId: null, text: '' })} className="px-4 py-2 rounded-lg text-white/70 hover:bg-white/10 font-medium">Cancelar</button>
-                                    <button onClick={saveItemComment} className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-6 py-2 rounded-lg shadow-lg">Guardar Comentario</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             );
         };
 
         const CheckListAll = ({ onView, role }) => {
             const [checklists, setChecklists] = React.useState([]);
+            const [loading, setLoading] = React.useState(true);
+
             React.useEffect(() => {
-                const data = JSON.parse(localStorage.getItem('checklists_data')) || [];
-                setChecklists(data);
+                const fetchData = async () => {
+                    try {
+                        const resChk = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('checklist-saved')/items`, {
+                            headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
+                        });
+                        const dataChk = await resChk.json();
+                        
+                        const resItems = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('Items-CheckList')/items`, {
+                            headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
+                        });
+                        const dataItems = await resItems.json();
+
+                        const combined = dataChk.d.results.map(chk => ({
+                            ...chk,
+                            items: dataItems.d.results.filter(it => it.Title === chk.ID_x002d_checklist)
+                        }));
+
+                        setChecklists(combined.reverse());
+                    } catch (error) {
+                        console.error("Error fetching data:", error);
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+                fetchData();
             }, []);
+
+            if (loading) return <div className="text-center text-white mt-20">Sincronizando con SharePoint...</div>;
+
             return (
                 <div className="max-w-7xl mx-auto animate-[fadeIn_0.4s_ease-out]">
                     <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-black/20 p-6 rounded-2xl backdrop-blur-sm border border-white/10">
@@ -656,64 +557,48 @@
                                 &#128203; Listado de Checklists
                                 <span className="bg-yellow-400 text-black text-sm font-bold px-3 py-1 rounded-full">{checklists.length}</span>
                             </h2>
-                            <p className="text-white/60 mt-1">Directorio consolidado de actividades.</p>
+                            <p className="text-white/60 mt-1">Directorio consolidado de actividades desde SharePoint.</p>
                         </div>
 
                         {(role === 'Administrador' || role === 'Desarrollador') && (
-                            <button
-                                className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] hover:-translate-y-1 flex items-center gap-2"
-                                onClick={() => onView('crear_checklist')}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                                </svg>
+                            <button className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:-translate-y-1" onClick={() => onView('crear_checklist')}>
                                 Crear Nuevo CheckList
                             </button>
                         )}
                     </div>
 
-                    {checklists.length === 0 ?
-                        (
-                            <div className="text-center py-20 bg-white/5 rounded-[2rem] border border-white/10 border-dashed backdrop-blur-sm">
-                                <div className="text-6xl mb-4">&#128193;</div>
-                                <h3 className="text-2xl font-bold text-white mb-2">No hay Checklists</h3>
-                                <p className="text-white/50 max-w-sm mx-auto">No se ha creado ning&uacute;n checklist productivo o de desarrollo a&uacute;n.</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {checklists.map((chk) => {
-                                    const itemCount = chk.items?.length || 0;
-                                    const hasAlerts = chk.items?.some(it => it.isAlert);
+                    {checklists.length === 0 ? (
+                        <div className="text-center py-20 bg-white/5 rounded-[2rem] border border-white/10 border-dashed backdrop-blur-sm">
+                            <h3 className="text-2xl font-bold text-white mb-2">No hay Checklists</h3>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {checklists.map((chk) => {
+                                const itemCount = chk.items?.length || 0;
+                                const hasAlerts = chk.items?.some(it => it.Alerta === "Si");
 
-                                    return (
-                                        <div key={chk.id} className={`bg-gray-900/60 backdrop-blur-md rounded-2xl p-6 border transition-all hover:-translate-y-1 ${hasAlerts ? 'border-red-500/50 shadow-[0_5px_20px_rgba(239,68,68,0.2)]' : 'border-white/10 hover:shadow-xl hover:border-white/20'}`}>
-                                            <div className="flex justify-between items-start mb-4">
-                                                {/* <span className="text-xs font-bold font-mono bg-white/10 text-white px-2 py-1 rounded">{chk.id}</span> */}
-                                                {hasAlerts && <span className="bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold px-2 py-1 rounded animate-pulse">ALERTA</span>}
-                                            </div>
-                                            <h3 className="text-lg font-bold text-white mb-1 line-clamp-1" title={chk.nombre}>{chk.nombre || "Checklist sin nombre"}</h3>
-                                            <p className="text-sm text-yellow-400 mb-4 font-medium">{itemCount} {itemCount === 1 ? '&Iacute;tem' : '&Iacute;tems'} agrupados</p>
-
-                                            <div className="bg-black/30 p-3 rounded-lg mb-5 text-sm border border-white/5">
-                                                <div className="flex justify-between mb-2 pb-2 border-b border-white/10">
-                                                    <span className="text-white/50">Cumplimiento Gral:</span>
-                                                    <span className="text-green-400 font-bold">{calcularPromedioChecklist(chk.items)}%</span>
-                                                </div>
-                                                <div className="flex justify-between mb-1"><span className="text-white/50">Creador:</span> <span className="text-white">{chk.creador}</span></div>
-                                                <div className="flex justify-between"><span className="text-white/50">Fecha:</span> <span className="text-white">{new Date(chk.fechaCreacion).toLocaleDateString()}</span></div>
-                                            </div>
-
-                                            <button
-                                                onClick={() => onView('checklist_detalle', chk.id)}
-                                                className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-2.5 rounded-xl transition-colors"
-                                            >
-                                                Ver Detalles
-                                            </button>
+                                return (
+                                    <div key={chk.Id} className={`bg-gray-900/60 backdrop-blur-md rounded-2xl p-6 border transition-all hover:-translate-y-1 ${hasAlerts ? 'border-red-500/50 shadow-[0_5px_20px_rgba(239,68,68,0.2)]' : 'border-white/10 hover:shadow-xl'}`}>
+                                        <div className="flex justify-between items-start mb-4">
+                                            {hasAlerts && <span className="bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold px-2 py-1 rounded animate-pulse">ALERTA</span>}
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                                        <h3 className="text-lg font-bold text-white mb-1 line-clamp-1">{chk.Name || "Sin nombre"}</h3>
+                                        <p className="text-sm text-yellow-400 mb-4 font-medium">{itemCount} &Iacute;tems agrupados</p>
+                                        <div className="bg-black/30 p-3 rounded-lg mb-5 text-sm border border-white/5">
+                                            <div className="flex justify-between mb-2 pb-2 border-b border-white/10">
+                                                <span className="text-white/50">Cumplimiento Gral:</span>
+                                                <span className="text-green-400 font-bold">{calcularPromedioChecklist(chk.items)}%</span>
+                                            </div>
+                                            <div className="flex justify-between"><span className="text-white/50">ID:</span> <span className="text-white">{chk.ID_x002d_checklist}</span></div>
+                                        </div>
+                                        <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-2.5 rounded-xl transition-colors">
+                                            Ver Detalles
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -723,40 +608,28 @@
             const [pswd, setPswd] = React.useState('');
             const [error, setError] = React.useState('');
             const [isLoading, setIsLoading] = React.useState(false);
+
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 setError('');
                 setIsLoading(true);
 
-                // 1. URL Base del sitio
-                const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist";
-                // 2. Nombre exacto de la lista
                 const LIST_NAME = "User-CheckList";
                 const url = SITE_URL + "/_api/web/lists/getbytitle('" + encodeURIComponent(LIST_NAME) + "')/items?$filter=User eq '" + user + "' and Password eq '" + pswd + "'&$select=User,Rol";
                 try {
-                    const res = await fetch(url, {
-                        method: 'GET',
-                        headers: {
-                            "Accept": "application/json;odata=verbose"
-                        },
-                        credentials: 'same-origin'
-                    });
-                    if (!res.ok) {
-                        throw new Error("HTTP " + res.status);
-                    }
-
+                    const res = await fetch(url, { method: 'GET', headers: { "Accept": "application/json;odata=verbose" }, credentials: 'same-origin' });
+                    if (!res.ok) throw new Error("HTTP " + res.status);
                     const json = await res.json();
                     const results = (json.d && json.d.results) || [];
 
                     if (results.length > 0) {
-                        const userData = results[0];
-                        onLogin(userData.User, userData.Rol);
+                        onLogin(results[0].User, results[0].Rol);
                     } else {
                         setError('Usuario o contrase\u00f1a incorrectos.');
                     }
                 } catch (err) {
-                    console.error("Error en la petici\u00f3n REST:", err);
-                    setError('Error 404/Conexi\u00f3n: Verifica que est\u00e9s ejecutando esto desde SharePoint.');
+                    console.error("REST Error:", err);
+                    setError('Error 404/Conexi\u00f3n. Ejecuta desde SharePoint.');
                 } finally {
                     setIsLoading(false);
                 }
@@ -769,51 +642,19 @@
                             <h2 className="text-4xl font-black text-white tracking-tight drop-shadow-md">Cerrej&oacute;n</h2>
                             <p className="text-yellow-400/90 font-medium mt-1 uppercase tracking-widest text-sm">Plataforma de Operaciones</p>
                         </div>
-
-                        {error && (
-                            <div className="bg-red-500/20 border border-red-500/50 backdrop-blur-md text-red-100 px-4 py-3 rounded-xl mb-6 shadow-inner flex items-center gap-3 animate-pulse">
-                                <span>&#9888;</span>
-                                <span className="text-sm font-medium">{error}</span>
-                            </div>
-                        )}
-
+                        {error && <div className="bg-red-500/20 border border-red-500/50 text-red-100 px-4 py-3 rounded-xl mb-6 shadow-inner flex items-center gap-3 animate-pulse"><span>&#9888;</span><span className="text-sm font-medium">{error}</span></div>}
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div className="relative">
-                                <input
-                                    type="text"
-                                    className={inputClasses}
-                                    id="inputUser"
-                                    placeholder="Usuario"
-                                    value={user}
-                                    onChange={(e) => setUser(e.target.value)}
-                                    required
-                                    disabled={isLoading}
-                                />
+                                <input type="text" className={inputClasses} id="inputUser" placeholder="Usuario" value={user} onChange={(e) => setUser(e.target.value)} required disabled={isLoading} />
                                 <label htmlFor="inputUser" className="absolute left-4 -top-2.5 bg-gray-800/90 px-2 text-xs text-yellow-400 font-semibold rounded backdrop-blur-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-placeholder-shown:bg-transparent peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-yellow-400 peer-focus:bg-gray-800/90">Usuario</label>
                             </div>
-
                             <div className="relative">
-                                <input
-                                    type="password"
-                                    className={inputClasses}
-                                    id="inputPswd"
-                                    placeholder="Contrase\u00f1a"
-                                    value={pswd}
-                                    onChange={(e) => setPswd(e.target.value)}
-                                    required
-                                    disabled={isLoading}
-                                />
+                                <input type="password" className={inputClasses} id="inputPswd" placeholder="Contrase\u00f1a" value={pswd} onChange={(e) => setPswd(e.target.value)} required disabled={isLoading} />
                                 <label htmlFor="inputPswd" className="absolute left-4 -top-2.5 bg-gray-800/90 px-2 text-xs text-yellow-400 font-semibold rounded backdrop-blur-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-placeholder-shown:bg-transparent peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-yellow-400 peer-focus:bg-gray-800/90">Contrase&ntilde;a</label>
                             </div>
-
-                            <button
-                                className={`w-full mt-8 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-extrabold py-3.5 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.3)] transition-all duration-300 ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:from-yellow-400 hover:to-yellow-600 hover:shadow-[0_0_30px_rgba(234,179,8,0.5)] transform hover:-translate-y-1'}`}
-                                type="submit"
-                                disabled={isLoading}
-                            >
+                            <button className={`w-full mt-8 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-extrabold py-3.5 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.3)] transition-all duration-300 ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-1'}`} type="submit" disabled={isLoading}>
                                 {isLoading ? 'VERIFICANDO...' : 'INGRESAR AL SISTEMA'}
                             </button>
-                            <p className="mt-6 mb-0 text-center text-white/40 text-xs font-medium tracking-wide">&copy; 2026 Cerrej&oacute;n Miner&iacute;a de Colombia.</p>
                         </form>
                     </div>
                 </div>
@@ -831,31 +672,20 @@
 
             return (
                 <div className="h-screen flex flex-col overflow-hidden text-white pattern-bg">
-                    {/* Native blur navigation */}
                     <nav className="bg-gray-900/60 backdrop-blur-xl border-b border-white/5 px-6 py-4 shadow-lg sticky top-0 z-50">
                         <div className="max-w-7xl mx-auto flex justify-between items-center">
                             <div className="flex items-center gap-3 cursor-pointer group" onClick={() => handleNavigate('home')}>
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-black font-black text-xl shadow-lg group-hover:rotate-12 transition-transform duration-300">
-                                    C
-                                </div>
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-black font-black text-xl shadow-lg group-hover:rotate-12 transition-transform duration-300">C</div>
                                 <span className="text-xl font-bold text-white tracking-wide group-hover:text-yellow-400 transition-colors">Gesti&oacute;n Cerrej&oacute;n</span>
                             </div>
-
                             <div className="flex items-center gap-6">
-                                <button className="text-sm font-semibold hover:text-yellow-400 transition-colors hidden md:block" onClick={() => handleNavigate('checklist_all')}>
-                                    Listar Checklists
-                                </button>
+                                <button className="text-sm font-semibold hover:text-yellow-400 transition-colors hidden md:block" onClick={() => handleNavigate('checklist_all')}>Listar Checklists</button>
                                 <div className="hidden md:block flex-col text-right ml-4">
                                     <span className="text-white/60 text-[10px] font-semibold uppercase tracking-wider block leading-tight">Usuario Activo</span>
                                     <span className="text-white font-bold block text-sm">{user} <span className="text-yellow-400 text-xs bg-yellow-400/10 px-2 py-0.5 rounded-full ml-1 border border-yellow-400/20">{role}</span></span>
                                 </div>
                                 <div className="h-8 w-px bg-white/20 hidden md:block"></div>
-                                <button
-                                    className="text-white/80 hover:text-red-400 font-semibold text-sm transition-colors py-2 px-3 rounded-lg hover:bg-red-400/10"
-                                    onClick={onLogout}
-                                >
-                                    Cerrar Sesi&oacute;n
-                                </button>
+                                <button className="text-white/80 hover:text-red-400 font-semibold text-sm py-2 px-3 rounded-lg hover:bg-red-400/10" onClick={onLogout}>Cerrar Sesi&oacute;n</button>
                             </div>
                         </div>
                     </nav>
@@ -864,34 +694,20 @@
                         {view === 'home' && (
                             <div className="max-w-7xl mx-auto flex flex-col items-center justify-center mt-8 md:mt-16 animate-[fadeIn_0.5s_ease-out]">
                                 <div className="bg-white/10 backdrop-blur-2xl border border-white/10 p-10 rounded-[2rem] shadow-[0_15px_50px_rgba(0,0,0,0.5)] text-center max-w-2xl w-full">
-                                    <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-400/30">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
                                     <h1 className="text-4xl font-extrabold text-white mb-4 tracking-tight">&iexcl;Bienvenido al portal!</h1>
-                                    <p className="text-lg text-white/70 font-medium mb-8">Has accedido exitosamente a la red segura de la mina.</p>
-
-                                    <button onClick={() => handleNavigate('checklist_all')} className="bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold py-3.5 px-8 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all">
+                                    <button onClick={() => handleNavigate('checklist_all')} className="bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold py-3.5 px-8 rounded-xl transition-all">
                                         Ir al Panel de Checklists &rarr;
                                     </button>
                                 </div>
                             </div>
                         )}
-
                         {view === 'checklist_all' && <CheckListAll onView={handleNavigate} role={role} />}
                         {view === 'crear_checklist' && <CrearCheckList currentUser={user} currentRole={role} onAtras={() => handleNavigate('checklist_all')} />}
-                        {view === 'checklist_detalle' && <CheckListDetalle checklistId={selectedChecklistId} role={role} onAtras={() => handleNavigate('checklist_all')} />}
-
+                        {view === 'checklist_detalle' && <CheckListDetalle checklistId={selectedChecklistId} role={role} currentUser={user} onAtras={() => handleNavigate('checklist_all')} />}
                     </main>
 
-                    {/* Native CSS Animations */}
-                    <style dangerouslySetInnerHTML={{
-                        __html: `
-                        @keyframes fadeIn {
-                            from { opacity: 0; transform: translateY(15px); }
-                            to { opacity: 1; transform: translateY(0); }
-                        }
+                    <style dangerouslySetInnerHTML={{ __html: `
+                        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
                     `}} />
                 </div>
             );
@@ -901,27 +717,13 @@
             const [isLoggedIn, setIsLoggedIn] = React.useState(false);
             const [currentUser, setCurrentUser] = React.useState('');
             const [currentRole, setCurrentRole] = React.useState('');
-            const handleLogin = (user, role) => {
-                setIsLoggedIn(true);
-                setCurrentUser(user);
-                setCurrentRole(role);
-            };
-
-            const handleLogout = () => {
-                setIsLoggedIn(false);
-                setCurrentUser('');
-                setCurrentRole('');
-            };
-
+            const handleLogin = (user, role) => { setIsLoggedIn(true); setCurrentUser(user); setCurrentRole(role); };
+            const handleLogout = () => { setIsLoggedIn(false); setCurrentUser(''); setCurrentRole(''); };
             return isLoggedIn ? <Dashboard user={currentUser} role={currentRole} onLogout={handleLogout} /> : <Login onLogin={handleLogin} />;
         };
 
         const rootContainer = document.getElementById('root');
-        if (rootContainer) {
-            const root = ReactDOM.createRoot(rootContainer);
-            root.render(<App />);
-        }
+        if (rootContainer) { const root = ReactDOM.createRoot(rootContainer); root.render(<App />); }
     </script>
 </body>
-
 </html>
