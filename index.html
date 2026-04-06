@@ -174,11 +174,94 @@
 
         // --- COMPONENTS ---
 
+        // Nuevo Componente de Gantt Chart
+        const GanttChart = ({ items }) => {
+            if (!items || items.length === 0) return null;
+
+            // Encontrar las fechas límite para construir la línea de tiempo
+            const validItems = items.filter(it => it.FechaInicio && it.FechaFin);
+            if (validItems.length === 0) return (
+                <div className="bg-gray-900/80 p-6 rounded-2xl border border-white/20 shadow-2xl mt-8 text-center text-white/50">
+                    No hay tareas con Fechas de Inicio y Fin v&aacute;lidas para generar el Diagrama de Gantt.
+                </div>
+            );
+
+            const minDate = new Date(Math.min(...validItems.map(it => new Date(it.FechaInicio))));
+            const maxDate = new Date(Math.max(...validItems.map(it => new Date(it.FechaFin))));
+            
+            // Total de días del proyecto (evitar div por cero si empieza y termina el mismo día)
+            let totalDays = (maxDate - minDate) / (1000 * 60 * 60 * 24);
+            if (totalDays === 0) totalDays = 1;
+
+            return (
+                <div className="bg-gray-900/80 p-6 rounded-2xl border border-white/20 shadow-2xl mt-8 overflow-x-auto animate-[fadeIn_0.5s_ease-out]">
+                    <h3 className="text-xl font-bold text-yellow-400 mb-6 flex items-center gap-2">
+                        &#128200; Diagrama de Gantt del Checklist
+                    </h3>
+                    
+                    <div className="min-w-[600px] pb-4">
+                        {/* Cabecera del Tiempo */}
+                        <div className="flex justify-between text-xs font-bold text-white/50 mb-3 px-[200px] border-b border-white/10 pb-2">
+                            <span>Inicio Global: {minDate.toISOString().split('T')[0]}</span>
+                            <span>Fin Global: {maxDate.toISOString().split('T')[0]}</span>
+                        </div>
+
+                        {/* Listado de Tareas */}
+                        <div className="space-y-3 relative">
+                            {validItems.map((it, idx) => {
+                                const start = new Date(it.FechaInicio);
+                                const end = new Date(it.FechaFin);
+                                
+                                // Cálculos posicionales
+                                const leftDays = (start - minDate) / (1000 * 60 * 60 * 24);
+                                let durationDays = (end - start) / (1000 * 60 * 60 * 24);
+                                if (durationDays < 1) durationDays = 1; // Para que se vea al menos un bloque
+                                
+                                const leftPercent = (leftDays / totalDays) * 100;
+                                const widthPercent = (durationDays / totalDays) * 100;
+                                const avance = parseInt(it.Avance) || 0;
+
+                                return (
+                                    <div key={it.Id} className="flex items-center gap-4 text-sm group">
+                                        {/* Nombre de la Tarea Fijo a la Izquierda */}
+                                        <div className="w-[180px] flex-shrink-0 text-white/80 truncate font-medium text-xs" title={it.Descripcion}>
+                                            <span className="text-white/40 mr-1">{idx + 1}.</span> {it.Descripcion}
+                                        </div>
+                                        
+                                        {/* Contenedor de la Pista (Track) */}
+                                        <div className="flex-1 bg-white/5 h-8 rounded-lg relative overflow-hidden">
+                                            {/* Barra de la Tarea */}
+                                            <div 
+                                                className="absolute h-full bg-blue-600/30 border border-blue-400/50 rounded flex flex-col justify-center overflow-hidden transition-all duration-300 group-hover:bg-blue-500/40 shadow-inner"
+                                                style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
+                                                title={`Responsable: ${it.NombreResponsable} \nFechas: ${it.FechaInicio.substring(0,10)} a ${it.FechaFin.substring(0,10)}`}
+                                            >
+                                                {/* Indicador de Progreso Interno */}
+                                                <div 
+                                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-green-500/60 to-green-400/80 transition-all duration-500" 
+                                                    style={{ width: `${avance}%` }}
+                                                ></div>
+                                                
+                                                {/* Etiqueta de Porcentaje */}
+                                                <span className="relative z-10 text-[10px] font-bold text-white px-2 drop-shadow-md truncate">
+                                                    {avance}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const CrearCheckList = ({ onAtras, currentUser, currentRole }) => {
             const [nombreChecklist, setNombreChecklist] = React.useState('');
             const [isSaving, setIsSaving] = React.useState(false);
             
-            // Cargar los items predefinidos como en la versión original
+            // Cargar los items predefinidos
             const [items, setItems] = React.useState(() => {
                 const hoy = new Date().toISOString().split('T')[0];
                 return PREDEFINED_ITEMS.map((act, idx) => ({
@@ -499,6 +582,7 @@
                     const digest = await getRequestDigest();
                     await updateSPListItem('Items-CheckList', editForm.Id, {
                         Descripcion: editForm.Descripcion,
+                        NombreResponsable: editForm.NombreResponsable,
                         FechaInicio: editForm.FechaInicio,
                         FechaFin: editForm.FechaFin,
                         Avance: editForm.Avance,
@@ -556,7 +640,7 @@
                                     <div className="flex justify-between items-start gap-4 flex-wrap md:flex-nowrap">
                                         <div className="flex-1 w-full">
                                             <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-3 w-3/4">
                                                     <span className={`text-xs font-bold px-2 py-1 rounded ${showAlert ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'}`}>&Iacute;tem {idx + 1}</span>
                                                     {isEditing ? (
                                                         <input type="text" className="bg-black/50 text-white border border-white/30 px-2 py-1 rounded w-full" value={currentItem.Descripcion} onChange={e => setEditForm({...editForm, Descripcion: e.target.value})} />
@@ -564,32 +648,49 @@
                                                         <h4 className={`text-lg font-bold ${showAlert ? 'text-red-200' : 'text-white'}`}>{it.Descripcion}</h4>
                                                     )}
                                                 </div>
-                                                <div>
+                                                <div className="flex items-center gap-2">
                                                     {isEditing ? (
-                                                        <button onClick={handleSaveEdit} className="bg-green-500 hover:bg-green-400 text-black font-bold px-3 py-1 rounded text-sm">Guardar Cambios</button>
+                                                        <>
+                                                            <button onClick={handleSaveEdit} className="bg-green-500 hover:bg-green-400 text-black font-bold px-3 py-1.5 rounded text-sm transition-colors">Guardar</button>
+                                                            <button onClick={() => setEditingId(null)} className="bg-gray-500 hover:bg-gray-400 text-white font-bold px-3 py-1.5 rounded text-sm transition-colors">Cancelar</button>
+                                                        </>
                                                     ) : (
-                                                        (isAdmin || isMyTask) && <button onClick={() => handleStartEdit(it)} className="bg-white/10 hover:bg-white/20 text-white font-bold px-3 py-1 rounded text-sm border border-white/20">Editar Valores</button>
+                                                        (isAdmin || isMyTask) && <button onClick={() => handleStartEdit(it)} className="bg-white/10 hover:bg-white/20 text-white font-bold px-3 py-1 rounded text-sm border border-white/20 transition-colors">Editar Valores</button>
                                                     )}
                                                 </div>
                                             </div>
                                             
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
-                                                <div><span className="text-white/50 block text-xs">Responsable</span><span className="text-white font-medium">{it.NombreResponsable}</span></div>
+                                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-3 text-sm">
+                                                <div>
+                                                    <span className="text-white/50 block text-xs mb-1">Responsable</span>
+                                                    {isEditing ? (
+                                                        <select className="bg-black/50 text-white border border-white/30 px-2 py-1 rounded w-full text-xs cursor-pointer" value={currentItem.NombreResponsable || ''} onChange={e => setEditForm({...editForm, NombreResponsable: e.target.value})}>
+                                                            <option value="">Seleccionar</option>
+                                                            {users.map((u) => <option key={u.user} value={u.user}>{u.user}</option>)}
+                                                        </select>
+                                                    ) : (
+                                                        <span className="text-white font-medium">{it.NombreResponsable}</span>
+                                                    )}
+                                                </div>
                                                 <div>
                                                     <span className="text-white/50 block text-xs">Fechas</span>
                                                     {isEditing ? (
                                                         <div className="flex flex-col gap-1">
-                                                            <input type="date" className="bg-black/50 text-white border border-white/30 px-1 text-xs" value={currentItem.FechaInicio ? currentItem.FechaInicio.substring(0,10) : ''} onChange={e => setEditForm({...editForm, FechaInicio: e.target.value})} title="Fecha Inicio" />
-                                                            <input type="date" className="bg-black/50 text-white border border-white/30 px-1 text-xs" value={currentItem.FechaFin ? currentItem.FechaFin.substring(0,10) : ''} onChange={e => setEditForm({...editForm, FechaFin: e.target.value})} title="Fecha Fin" />
+                                                            <input type="date" className="bg-black/50 text-white border border-white/30 px-1 text-xs rounded" value={currentItem.FechaInicio ? currentItem.FechaInicio.substring(0,10) : ''} onChange={e => setEditForm({...editForm, FechaInicio: e.target.value})} title="Fecha Inicio" />
+                                                            <input type="date" className="bg-black/50 text-white border border-white/30 px-1 text-xs rounded" value={currentItem.FechaFin ? currentItem.FechaFin.substring(0,10) : ''} onChange={e => setEditForm({...editForm, FechaFin: e.target.value})} title="Fecha Fin" />
                                                         </div>
                                                     ) : (
                                                         <span className="text-white font-medium block">I: {it.FechaInicio ? it.FechaInicio.substring(0,10) : '-'} <br/> F: {it.FechaFin ? it.FechaFin.substring(0,10) : '-'}</span>
                                                     )}
                                                 </div>
                                                 <div>
+                                                    <span className="text-white/50 block text-xs">Cumplimiento (calc)</span>
+                                                    <span className="text-green-400 font-bold text-lg">{calcularCumplimiento(it.FechaInicio, it.FechaFin)}%</span>
+                                                </div>
+                                                <div>
                                                     <span className="text-white/50 block text-xs">Avance Real</span>
                                                     {isEditing ? (
-                                                         <input type="number" max="100" className="w-16 bg-black/50 text-white border border-white/30 px-1" value={currentItem.Avance || 0} onChange={e => setEditForm({...editForm, Avance: e.target.value})} />
+                                                         <input type="number" max="100" className="w-16 bg-black/50 text-white border border-white/30 px-1 rounded" value={currentItem.Avance || 0} onChange={e => setEditForm({...editForm, Avance: e.target.value})} />
                                                     ) : (
                                                         <span className="text-yellow-400 font-bold text-lg">{it.Avance || 0}%</span>
                                                     )}
@@ -614,7 +715,7 @@
                                                         <p className="text-white/90 text-sm whitespace-pre-wrap">{it.ComentarioAdm || <span className="text-white/30 italic">Sin comentarios</span>}</p>
                                                     )}
                                                     {isAdmin && !isEditing && (
-                                                        <button onClick={() => toggleAlert(it)} className={`mt-2 text-xs font-bold px-2 py-1 rounded border ${showAlert ? 'bg-red-500/20 text-red-300 border-red-500/50' : 'bg-gray-500/20 text-gray-300 border-gray-500/50'}`}>
+                                                        <button onClick={() => toggleAlert(it)} className={`mt-2 text-xs font-bold px-2 py-1 rounded border ${showAlert ? 'bg-red-500/20 text-red-300 border-red-500/50 hover:bg-red-500/30' : 'bg-gray-500/20 text-gray-300 border-gray-500/50 hover:bg-gray-500/40'} transition-colors`}>
                                                             {showAlert ? 'Quitar Alerta' : 'Marcar Alerta'}
                                                         </button>
                                                     )}
@@ -636,11 +737,15 @@
                             );
                         })}
                     </div>
+                    
+                    {/* Componente del Diagrama de Gantt */}
+                    <GanttChart items={checklist.items} />
+
                 </div>
             );
         };
 
-        const CheckListAll = ({ onView, role }) => {
+        const CheckListAll = ({ onView, role, currentUser }) => {
             const [checklists, setChecklists] = React.useState([]);
             const [loading, setLoading] = React.useState(true);
 
@@ -662,7 +767,13 @@
                             items: dataItems.d.results.filter(it => it.Title === chk.ID_x002d_checklist)
                         }));
 
-                        setChecklists(combined.reverse());
+                        // Filtro de visibilidad según el rol
+                        const isResponsable = role === 'Responsable';
+                        const visibleChecklists = isResponsable
+                            ? combined.filter(chk => chk.items.some(it => it.NombreResponsable === currentUser))
+                            : combined;
+
+                        setChecklists(visibleChecklists.reverse());
                     } catch (error) {
                         console.error("Error fetching data:", error);
                     } finally {
@@ -670,7 +781,7 @@
                     }
                 };
                 fetchData();
-            }, []);
+            }, [role, currentUser]);
 
             if (loading) return <div className="text-center text-white mt-20">Sincronizando con SharePoint...</div>;
 
@@ -694,7 +805,8 @@
 
                     {checklists.length === 0 ? (
                         <div className="text-center py-20 bg-white/5 rounded-[2rem] border border-white/10 border-dashed backdrop-blur-sm">
-                            <h3 className="text-2xl font-bold text-white mb-2">No hay Checklists</h3>
+                            <h3 className="text-2xl font-bold text-white mb-2">No hay Checklists Disponibles</h3>
+                            {role === 'Responsable' && <p className="text-white/50">No tienes ninguna tarea asignada a\u00fan en ning\u00fan checklist.</p>}
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -826,7 +938,7 @@
                                 </div>
                             </div>
                         )}
-                        {view === 'checklist_all' && <CheckListAll onView={handleNavigate} role={role} />}
+                        {view === 'checklist_all' && <CheckListAll onView={handleNavigate} role={role} currentUser={user} />}
                         {view === 'crear_checklist' && <CrearCheckList currentUser={user} currentRole={role} onAtras={() => handleNavigate('checklist_all')} />}
                         {view === 'checklist_detalle' && <CheckListDetalle checklistId={selectedChecklistId} role={role} currentUser={user} onAtras={() => handleNavigate('checklist_all')} />}
                     </main>
