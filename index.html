@@ -79,15 +79,16 @@
         ];
 
         const users = [
-            { user: 'angie.Zabala@cerrejon.com', Rol: 'Responsable' },
-            { user: 'carlos.Duque@cerrejon.com', Rol: 'Responsable' },
-            { user: 'fabian.Almenarez@cerrejon.com', Rol: 'Responsable' },
+            { user: 'angie.zabala@cerrejon.com', Rol: 'Responsable' },
+            { user: 'carlos.duque@cerrejon.com', Rol: 'Responsable' },
+            { user: 'fabian.almenarez@cerrejon.com', Rol: 'Responsable' },
             { user: 'jean.mantilla@cerrejon.com', Rol: 'Responsable' },
-            { user: 'jose.C.Barrios@cerrejon.com', Rol: 'Responsable' },
-            { user: 'jose.Verdeza@cerrejon.com', Rol: 'Responsable' },
-            { user: 'manuel.Molina@cerrejon.com', Rol: 'Responsable' },
-            { user: 'pedro.S.Gomez@cerrejon.com', Rol: 'Responsable' },
+            { user: 'jose.c.barrios@cerrejon.com', Rol: 'Responsable' },
+            { user: 'jose.verdeza@cerrejon.com', Rol: 'Responsable' },
+            { user: 'manuel.molina@cerrejon.com', Rol: 'Responsable' },
+            { user: 'pedro.s.gomez@cerrejon.com', Rol: 'Responsable' },
             { user: 'randolf.caballero@cerrejon.com', Rol: 'Responsable' },
+            { user: 'andy.castillo@cerrejon.com', Rol: 'Responsable' },
         ];
 
         // SharePoint API Helpers
@@ -172,13 +173,18 @@
             return Math.round(total / items.length);
         };
 
+        const calcularPromedioReal = (items) => {
+            if (!items || items.length === 0) return 0;
+            let total = 0;
+            items.forEach(it => { total += parseInt(it.Avance) || 0; });
+            return Math.round(total / items.length);
+        };
+
         // --- COMPONENTS ---
 
-        // Nuevo Componente de Gantt Chart
         const GanttChart = ({ items }) => {
             if (!items || items.length === 0) return null;
 
-            // Encontrar las fechas límite para construir la línea de tiempo
             const validItems = items.filter(it => it.FechaInicio && it.FechaFin);
             if (validItems.length === 0) return (
                 <div className="bg-gray-900/80 p-6 rounded-2xl border border-white/20 shadow-2xl mt-8 text-center text-white/50">
@@ -189,7 +195,6 @@
             const minDate = new Date(Math.min(...validItems.map(it => new Date(it.FechaInicio))));
             const maxDate = new Date(Math.max(...validItems.map(it => new Date(it.FechaFin))));
             
-            // Total de días del proyecto (evitar div por cero si empieza y termina el mismo día)
             let totalDays = (maxDate - minDate) / (1000 * 60 * 60 * 24);
             if (totalDays === 0) totalDays = 1;
 
@@ -200,22 +205,19 @@
                     </h3>
                     
                     <div className="min-w-[600px] pb-4">
-                        {/* Cabecera del Tiempo */}
                         <div className="flex justify-between text-xs font-bold text-white/50 mb-3 px-[200px] border-b border-white/10 pb-2">
                             <span>Inicio Global: {minDate.toISOString().split('T')[0]}</span>
                             <span>Fin Global: {maxDate.toISOString().split('T')[0]}</span>
                         </div>
 
-                        {/* Listado de Tareas */}
                         <div className="space-y-3 relative">
                             {validItems.map((it, idx) => {
                                 const start = new Date(it.FechaInicio);
                                 const end = new Date(it.FechaFin);
                                 
-                                // Cálculos posicionales
                                 const leftDays = (start - minDate) / (1000 * 60 * 60 * 24);
                                 let durationDays = (end - start) / (1000 * 60 * 60 * 24);
-                                if (durationDays < 1) durationDays = 1; // Para que se vea al menos un bloque
+                                if (durationDays < 1) durationDays = 1;
                                 
                                 const leftPercent = (leftDays / totalDays) * 100;
                                 const widthPercent = (durationDays / totalDays) * 100;
@@ -223,26 +225,21 @@
 
                                 return (
                                     <div key={it.Id} className="flex items-center gap-4 text-sm group">
-                                        {/* Nombre de la Tarea Fijo a la Izquierda */}
                                         <div className="w-[180px] flex-shrink-0 text-white/80 truncate font-medium text-xs" title={it.Descripcion}>
                                             <span className="text-white/40 mr-1">{idx + 1}.</span> {it.Descripcion}
                                         </div>
                                         
-                                        {/* Contenedor de la Pista (Track) */}
                                         <div className="flex-1 bg-white/5 h-8 rounded-lg relative overflow-hidden">
-                                            {/* Barra de la Tarea */}
                                             <div 
                                                 className="absolute h-full bg-blue-600/30 border border-blue-400/50 rounded flex flex-col justify-center overflow-hidden transition-all duration-300 group-hover:bg-blue-500/40 shadow-inner"
                                                 style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
                                                 title={`Responsable: ${it.NombreResponsable} \nFechas: ${it.FechaInicio.substring(0,10)} a ${it.FechaFin.substring(0,10)}`}
                                             >
-                                                {/* Indicador de Progreso Interno */}
                                                 <div 
                                                     className="absolute top-0 left-0 h-full bg-gradient-to-r from-green-500/60 to-green-400/80 transition-all duration-500" 
                                                     style={{ width: `${avance}%` }}
                                                 ></div>
                                                 
-                                                {/* Etiqueta de Porcentaje */}
                                                 <span className="relative z-10 text-[10px] font-bold text-white px-2 drop-shadow-md truncate">
                                                     {avance}%
                                                 </span>
@@ -261,7 +258,6 @@
             const [nombreChecklist, setNombreChecklist] = React.useState('');
             const [isSaving, setIsSaving] = React.useState(false);
             
-            // Cargar los items predefinidos
             const [items, setItems] = React.useState(() => {
                 const hoy = new Date().toISOString().split('T')[0];
                 return PREDEFINED_ITEMS.map((act, idx) => ({
@@ -310,6 +306,13 @@
                 if (!nombreChecklist.trim()) { alert('Ingresa el nombre del checklist.'); return; }
                 if (items.length === 0) { alert('Agrega al menos un \u00edtem.'); return; }
 
+                // Verificamos si alguien intento subir 100% de una vez sin evidencias en la creacion
+                const has100 = items.some(it => parseInt(it.avance) >= 100);
+                if (has100) {
+                    alert("⚠️ No puedes guardar tareas con 100% de avance inicial, ya que aún no tienen evidencia cargada. Por favor edita esos ítems.");
+                    return;
+                }
+
                 setIsSaving(true);
                 const newChecklistId = 'CHK-' + Date.now();
 
@@ -319,7 +322,8 @@
                     await saveToSPList('checklist-saved', {
                         Title: nombreChecklist,
                         Name: nombreChecklist,
-                        ID_x002d_checklist: newChecklistId
+                        ID_x002d_checklist: newChecklistId,
+                        ComentarioGeneral: ""
                     }, digest);
 
                     for (const item of items) {
@@ -351,7 +355,7 @@
 
                 } catch (error) {
                     console.error("Error saving:", error);
-                    alert("Ocurri\u00f3 un error guardando en SharePoint.");
+                    alert("Ocurri\u00f3 un error guardando en SharePoint. Verifica la consola.");
                 } finally {
                     setIsSaving(false);
                 }
@@ -414,7 +418,6 @@
                         </form>
                     </div>
 
-                    {/* Editor de items predefinidos */}
                     <div className="mb-8">
                         <h3 className="text-lg font-bold text-white mb-3">&Iacute;tems de este Checklist ({items.length})</h3>
                         {items.length === 0 ? (
@@ -482,7 +485,7 @@
                                                     <span className="text-green-400 font-bold">{calcularCumplimiento(it.fechaInicio, it.fechaFin)}%</span>
                                                     <span className="text-white/50 block text-xs mt-1">Avance real:
                                                         {editingId === it.id ? (
-                                                            <input type="number" className="w-16 ml-1 bg-black/40 text-yellow-400 border border-yellow-400/50 rounded px-1 outline-none inline-block text-xs" value={it.avance} onChange={(e) => handleItemEdit(it.id, 'avance', e.target.value)} min="0" max="100" />
+                                                            <input type="number" className="w-16 ml-1 bg-black/40 text-yellow-400 border border-yellow-400/50 rounded px-1 outline-none inline-block text-xs" value={it.avance} onChange={(e) => handleItemEdit(it.id, 'avance', e.target.value)} />
                                                         ) : (
                                                             <span className="text-yellow-400 ml-1 font-bold">{it.avance}%</span>
                                                         )}
@@ -516,6 +519,7 @@
             const [loading, setLoading] = React.useState(true);
             const [editingId, setEditingId] = React.useState(null);
             const [editForm, setEditForm] = React.useState({});
+            const [generalComment, setGeneralComment] = React.useState('');
             
             const isAdmin = role === 'Administrador';
 
@@ -538,6 +542,7 @@
                                 ...chkData,
                                 items: itemsJson.d.results
                             });
+                            setGeneralComment(chkData.ComentarioGeneral || '');
                         }
                     } catch (error) {
                         console.error("Error loading details:", error);
@@ -560,14 +565,13 @@
                         Avance: "100"
                     }, digest);
 
-                    // Update UI locally
                     setChecklist(prev => ({
                         ...prev,
                         items: prev.items.map(it => it.Id === itemId ? { ...it, Evidencias: base64, Avance: "100" } : it)
                     }));
-                    alert('Evidencia cargada. Avance actualizado al 100%');
+                    alert('Evidencia cargada. Avance actualizado al 100% automáticamente.');
                 } catch (error) {
-                    alert('Error subiendo evidencia.');
+                    alert('Error subiendo evidencia. Revisa la consola.');
                     console.error(error);
                 }
             };
@@ -578,6 +582,12 @@
             };
 
             const handleSaveEdit = async () => {
+                // Validación estricta para evitar avance falso
+                if (parseInt(editForm.Avance) >= 100 && (!editForm.Evidencias || editForm.Evidencias === "")) {
+                    alert("⚠️ Error: No puedes guardar el avance al 100% sin antes haber cargado una evidencia.");
+                    return; // Aborta el guardado
+                }
+
                 try {
                     const digest = await getRequestDigest();
                     await updateSPListItem('Items-CheckList', editForm.Id, {
@@ -585,10 +595,10 @@
                         NombreResponsable: editForm.NombreResponsable,
                         FechaInicio: editForm.FechaInicio,
                         FechaFin: editForm.FechaFin,
-                        Avance: editForm.Avance,
-                        ComentarioAdm: editForm.ComentarioAdm,
-                        ComentarioPropio: editForm.ComentarioPropio,
-                        Alerta: editForm.Alerta
+                        Avance: editForm.Avance ? editForm.Avance.toString() : "0", // Forzamos string para evitar el 400 Bad Request
+                        ComentarioAdm: editForm.ComentarioAdm || "",
+                        ComentarioPropio: editForm.ComentarioPropio || "",
+                        Alerta: editForm.Alerta || "No"
                     }, digest);
 
                     setChecklist(prev => ({
@@ -597,8 +607,21 @@
                     }));
                     setEditingId(null);
                 } catch (error) {
-                    alert("Error guardando cambios.");
+                    alert("Error guardando cambios. Revisa la consola.");
                     console.error(error);
+                }
+            };
+
+            const handleSaveGeneralComment = async () => {
+                try {
+                    const digest = await getRequestDigest();
+                    await updateSPListItem('checklist-saved', checklist.Id, {
+                        ComentarioGeneral: generalComment
+                    }, digest);
+                    alert("Comentario general guardado exitosamente.");
+                } catch (error) {
+                    console.error(error);
+                    alert("Error guardando el comentario general.");
                 }
             };
 
@@ -690,23 +713,27 @@
                                                 <div>
                                                     <span className="text-white/50 block text-xs">Avance Real</span>
                                                     {isEditing ? (
-                                                         <input type="number" max="100" className="w-16 bg-black/50 text-white border border-white/30 px-1 rounded" value={currentItem.Avance || 0} onChange={e => setEditForm({...editForm, Avance: e.target.value})} />
+                                                         <input type="number" className="w-16 bg-black/50 text-white border border-white/30 px-1 rounded" value={currentItem.Avance || 0} onChange={e => setEditForm({...editForm, Avance: e.target.value})} />
                                                     ) : (
                                                         <span className="text-yellow-400 font-bold text-lg">{it.Avance || 0}%</span>
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <span className="text-white/50 block text-xs">Evidencia</span>
-                                                    {isMyTask ? (
-                                                        <input type="file" className="text-xs text-white/70 w-full" onChange={(e) => handleFileUpload(it.Id, e)} accept="image/*,.pdf" />
-                                                    ) : (
-                                                        it.Evidencias ? <span className="text-green-400 font-bold">&#10003; Cargada</span> : <span className="text-white/30">Sin cargar</span>
-                                                    )}
+                                                    <span className="text-white/50 block text-xs mb-1">Evidencia</span>
+                                                    <div className="space-y-2">
+                                                        {it.Evidencias ? (
+                                                            <span className="text-green-400 font-bold block">&#10003; Evidencia Cargada</span>
+                                                        ) : (
+                                                            <span className="text-white/30 block">Sin evidencia</span>
+                                                        )}
+                                                        {isMyTask && (
+                                                            <input type="file" className="text-xs text-white/70 w-full" onChange={(e) => handleFileUpload(it.Id, e)} accept="image/*,.pdf" title={it.Evidencias ? "Reemplazar evidencia" : "Cargar evidencia"} />
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                                {/* Comentarios del Administrador */}
                                                 <div className="bg-black/20 p-3 rounded border border-white/10">
                                                     <span className="text-yellow-400 text-xs font-bold uppercase block mb-1">Nota Administrador:</span>
                                                     {isEditing && isAdmin ? (
@@ -721,7 +748,6 @@
                                                     )}
                                                 </div>
 
-                                                {/* Comentarios del Responsable */}
                                                 <div className="bg-blue-900/20 p-3 rounded border border-blue-500/20">
                                                     <span className="text-blue-300 text-xs font-bold uppercase block mb-1">Comentario Responsable:</span>
                                                     {isEditing && isMyTask ? (
@@ -738,8 +764,33 @@
                         })}
                     </div>
                     
-                    {/* Componente del Diagrama de Gantt */}
                     <GanttChart items={checklist.items} />
+
+                    <div className="bg-gray-900/80 p-6 rounded-2xl border border-white/20 shadow-2xl mt-8 animate-[fadeIn_0.5s_ease-out]">
+                        <h3 className="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">&#128221; Comentario General del Checklist</h3>
+                        {isAdmin ? (
+                            <div className="space-y-3">
+                                <textarea
+                                    className="w-full bg-black/50 border border-white/20 rounded-xl p-4 text-white focus:border-yellow-400 outline-none transition-colors"
+                                    rows="3"
+                                    value={generalComment}
+                                    onChange={e => setGeneralComment(e.target.value)}
+                                    placeholder="Escribe un comentario general sobre todo el checklist..."
+                                ></textarea>
+                                <button onClick={handleSaveGeneralComment} className="bg-blue-600 hover:bg-blue-500 border border-blue-400/50 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg flex items-center gap-2 transition-colors">
+                                    Guardar Comentario General
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="p-4 bg-white/5 rounded-xl border border-white/10 min-h-[80px]">
+                                {generalComment ? (
+                                    <p className="text-white/90 whitespace-pre-wrap">{generalComment}</p>
+                                ) : (
+                                    <p className="text-white/40 italic">Sin comentarios generales por el momento.</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
                 </div>
             );
@@ -767,7 +818,6 @@
                             items: dataItems.d.results.filter(it => it.Title === chk.ID_x002d_checklist)
                         }));
 
-                        // Filtro de visibilidad según el rol
                         const isResponsable = role === 'Responsable';
                         const visibleChecklists = isResponsable
                             ? combined.filter(chk => chk.items.some(it => it.NombreResponsable === currentUser))
@@ -813,6 +863,9 @@
                             {checklists.map((chk) => {
                                 const itemCount = chk.items?.length || 0;
                                 const hasAlerts = chk.items?.some(it => it.Alerta === "Si");
+                                const promCalc = calcularPromedioChecklist(chk.items);
+                                const promReal = calcularPromedioReal(chk.items);
+                                const isDelayed = promReal < promCalc;
 
                                 return (
                                     <div key={chk.Id} className={`bg-gray-900/60 backdrop-blur-md rounded-2xl p-6 border transition-all hover:-translate-y-1 ${hasAlerts ? 'border-red-500/50 shadow-[0_5px_20px_rgba(239,68,68,0.2)]' : 'border-white/10 hover:shadow-xl'}`}>
@@ -823,10 +876,16 @@
                                         <p className="text-sm text-yellow-400 mb-4 font-medium">{itemCount} &Iacute;tems agrupados</p>
                                         <div className="bg-black/30 p-3 rounded-lg mb-5 text-sm border border-white/5">
                                             <div className="flex justify-between mb-2 pb-2 border-b border-white/10">
-                                                <span className="text-white/50">Cumplimiento Gral:</span>
-                                                <span className="text-green-400 font-bold">{calcularPromedioChecklist(chk.items)}%</span>
+                                                <span className="text-white/50">Cumplimiento Calc:</span>
+                                                <span className="text-white font-bold">{promCalc}%</span>
                                             </div>
-                                            <div className="flex justify-between"><span className="text-white/50">ID:</span> <span className="text-white">{chk.ID_x002d_checklist}</span></div>
+                                            <div className="flex justify-between mb-2 pb-2 border-b border-white/10">
+                                                <span className="text-white/50">Avance Real:</span>
+                                                <span className={`font-bold ${isDelayed ? 'text-red-400' : 'text-green-400'}`}>
+                                                    {promReal}% {isDelayed && <span title="Atraso detectado">⚠️</span>}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between"><span className="text-white/50">ID:</span> <span className="text-white/70">{chk.ID_x002d_checklist}</span></div>
                                         </div>
                                         <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold py-2.5 rounded-xl transition-colors">
                                             Ver Detalles
