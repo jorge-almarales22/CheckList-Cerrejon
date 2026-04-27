@@ -78,6 +78,203 @@
             "Notificaci\u00f3n oficial y entrega formal del activo al \u00e1rea usuaria."
         ];
 
+        const CHECKLIST_PROYECTOS_ITEMS = [
+            "El proyecto entrega un activo nuevo o modificado. Nota:  Continuar con lista de chequeo si aplica esta condición.",
+            "Realizar una descripción funcional de activos",
+            "Verificar para activos modificados o activos remplazados por nuevos que se encuentren dentro del inventario cerrejón. (Ellipse)",
+            "Validar la taxonomia de los activos.  Nota: Para activos modificados se debe validar que la nueva infraestructura se alinie con la taxonomia en el sistema. Nota:  Para activos nuevos se debe construir una nueva taxonomia por el lider de proyectos",
+            "Establecer Dossier de diseño/ ingenieria y construcción",
+            "Entregar especificaciones tecnicas a mantenedor.  Nota:  Esta actividad es un requisito a cumplir dentro del dossier del proyecto",
+            "Entregar el costo del activo, nuevo o modificado a contabilidad. Nota : El costo del activo modificado debe ser consultado a contabilidad ",
+            "Entregar las hojas de datos de equipos y componentes al rol encargado de la planeación del área mantenedor",
+            "Entregar los planos de equipos y componentes por fabricantes  al rol encargado de la planeación del área mantenedor",
+            "Entregar los manuales de instalación, O&M de equipos y componentes (procedimientos de mantenimiento) al rol encargado de la planeación del área mantenedor",
+            "Entregar y solicitar registro de los planos en planoteca  Nota : Aplica para activos nuevos y modificaciones",
+            "Entregar certificaciones de calidad y/o tecnicas requeridas  al rol encargado de la planeación del área custodio ",
+            "Desarrollar/ actualizar plan de entrenamiento a operadores y tecnicos de mantenimiento por la incorporación de activos ",
+            "Ejecutar plan de entrenamiento a operadores",
+            "Ejecutar plan de entrenamiento a tecnicos de mantenimiento",
+            "Entrenamiento en ajuste y pruebas a tecnicos de mantenimeinto",
+            "Evaluar la capacidad de recurso humano por la incorporación de la instalación/ infraestructura",
+            "Crear estrategia de mantenimiento (Modelling para AMT o lista de MST para Ellipse) en el sistema (resultado de RCM) al activo a incorporar. Nota:  Si no se desarrolla el RCM antes de la puesta en operacion del activo, el analista de proyectos, o el rol responsable de la definicion de la estrategia, define la estrategia de mantenimiento con el soporte del fabricante (ACT. NUEVO) o plantea una estrategia de mantenimiento basado en la experiencia (ACT. MODIFICADO)   Entregar las pautas y lineamientos para la estrategia de mantenimiento e inspecciones preventivas (actividades, frecuencias y procedimientos) Entregar el listado de componentes criticos, repuestos, consumibles y parametros de reposición según aplique.",
+            "Informar los requerimientos de inspecciones (ley y/o normas tecnicas). Recomendaciones de actividades y frecuencias de inspecciones y mantenimiento para componentes sin manual de O&M ni RCM Nota:  Los activospara los cuales aplica la emisión de estos requerimientos debe ser previamente definida entre el analista de proyectos y el analista de confiabilidad del área custodio",
+            "Envio de la información para la creación del activo en ellipse. Nota: cumpliendo con los requisitos del formato de creación de activo ",
+            "Solicitar la creacion del activo en el sistema Ellipse Nota:  Se debe enviar información para creación del activo en formato establecido",
+            "Crear activo en el sistema",
+            "Establecer garantias que aplican para el nuevo activo, enviarlas al rol encragado de la estrategia por parte del custodio",
+            "Registrar las fechas de fin de garantias en el registro de los activos en el sistema",
+            "Crear componentes traceables en Ellipse, si aplica. Nota:  Aplica como componentes traceable todos aquellos componentes a los que se les lleve control de vida util, pueden ser mayores o menores.",
+            "Crear jerarquia de fallas al activo a incorporar en ellipse (Modulo MSE6A1) Nota:  Aplica para EGIs nuevo. Se debe enviar plantilla a Esp. Gestion de Informacion para crear en ellipse.",
+            "Crear estructura de componentes traceables del activo a incorporar en ellipse (Modulo MSE610) Nota:  Aplica para EGIs nuevo. Se debe enviar plantilla a Esp. Gestion de Informacion para crear en ellipse.",
+            "Definir tareas estrategicas para cambio de componentes. Nota:  Se deben incluir las tareas estrategicas en el modellin (AMT) o las MST (Ellipse).",
+            "Definir MST/Tareas estrategicas para actividades de mantenimiento predictivo. Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Definir Pool de Componentes Nota:  Si se trata de la incorporacion de un activo existente, se debe calcular el nuevo tamaño del pool o confirmar el tamaño existente.",
+            "Generar pedidos de componentes del Pool",
+            "Crear los formatos de SEIS (Mantenimiento Preventivo)",
+            "Crear los formatos de commissioning y de fin de commissioning de los componentes mayores del activo a incorporar (Si aplica) Nota:  El objetivo es conocer cuales son las pruebas a realizar antes de la puesta en marcha de los componentes mayores del activo, es posible que el fabricante del activo a incorporar ofrezcan esta informacion.",
+            "Desarrollar los formatos necesarios para la realizacion de las tareas predictivas (Inspección Estructural, UT, termografias, vibraciones, entre otros), definir las rutas de inspecciones predictivas en los formatos requeridos.",
+            "Crear en el sistema Ellipse/AMT los Estándares de los SEIS Nota:  Aplica solo si la referencia del activo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Crear en el sistema Ellipse los APL de los SEIS Nota:  Aplica solo si la referencia del activo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Desarrollar los Procedimientos / Instructivos de Mantenimiento Nota:  Aplica solo si la referencia del activo a incoporar no se tiene en la operación actual de Cerrejon. Se debe generar listado de procedimientos e instructivos a elaborar (Cambio de componentes Mayor/Menor, Calibraciones, mantenimiento correctivos,entre otros) Entregar los manuales de instalación, O&M de equipos y componentes (procedimientos de mantenimiento)",
+            "Crear en el sistema Ellipse/AMT los Estándares de los cambios de componentes Mayores/Menores, y tareas correctivas Nota:  Aplica solo si la referencia del activo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Crear en el sistema Ellipse/AMT los APL de los cambios de componentes, y tareas correctivas",
+            "Crear en el sistema Ellipse/AMT las MST/Tareas Estrategicas de los SEIS",
+            "Crear en el sistema Ellipse/AMT las MST/Tareas Estrategicas de los cambios de componentes",
+            "Cargar MST/Tareas estrategicas en el sistema del activo a incorporar.",
+            "Registrar vida util del activo a incorporar. Nota:  Aplica si el activo a incorporar es usado en otra operación.",
+            "Definir vida util de los componentes mayores/menores. Nota:  Aplica si el activo a incorporar es usado en otra operación.",
+            "Registrar vida util del activo a incorporar en el sistema. Nota:  Aplica si el activo a incorporar es usado en otra operación.",
+            "Registrar vida util de los componentes mayores/menores en el sistema. Nota:  Aplica si el activo a incorporar es usado en otra operación.",
+            "Crear MST/Tareas estrategicas para actividades de mantenimiento predictivo. Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Crear los set de monitoreo de condición e ingresarlos en sistema de Ellipse.",
+            "Desarrollar caza fallas para los modos de fallas de los diferentes sistema del equipo (traducidos al español)",
+            "Definir, gestionar y armar paquetes de herramientas por tipo de SEIS",
+            "Definir, gestionar y armar paquetes de herramientas para los cambios de componentes (mayores / menores)",
+            "Definir, gestionar y armar paquetes de Herramientas Especiales",
+            "Validar que el activo a incorporar  fue creado y que cuenta con la estrategia cargada en el sistema.",
+            "Enviar correo de entrega a area mantenedora"
+        ];
+
+        const CHECKLIST_COMPRA_INSTALADA = [
+            "Documentar manejo del cambio (MIC) por el ingreso de los equipos. Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Desarrollar Plan de Entrenamiento a Operadores y Técnicos de Mantto",
+            "Desarrollar Plan de Entrenamiento a Técnicos de Reconstrucción de Componentes",
+            "Ejecutar Plan de entrenamiento a Operadores",
+            "Ejecutar Plan de entrenamiento a Tecnicos de Mantenimiento",
+            "Ejecutar Plan de entrenamiento a Tecnicos de Reconstruccion",
+            "Verificar Fecha de Llegada Equipo / Fecha tentativa de inicio de operación",
+            "Evaluar la capacidad de recurso operativo por la incorporación del nuevo activo",
+            "Entregar el costo del activo,nuevo o modificado a contabilidad.Nota: El costo del activo modificado debe ser consultado a contabilidad",
+            "Revisar si aplicacion de capital incluyo presupuesto para el ejercicio de RCM, sino solicitar presupuesto para su ejecicion.",
+            "Programar el ejercicio de RCM Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Crear estrategia de mantenimiento (Modelling para AMT o lista de MST para Ellipse) en el sistema (resultado de RCM) al equipo a incorporar. Nota:  Si no se desarrolla el RCM antes de la puesta en operacion del equipo, el analista de la flota, o el rol responsable de la definicion de la estrategia, define la estrategia de mantenimiento con el soporte del fabricante (Eq. Nuevio) o plantea una estrategia de mantenimiento basado en la experiencia (Eq. Usado)",
+            "Registrar el equipo a incorporar ante el ministerio de transporte Nota:  Se tiene soporte de el registro con el area de incorporacion de equipos (emsamble)",
+            "Solicitar la creacion del Equipo en el sistema Ellipse Nota:  la solicitud la realiza el area que realiza la adquisicion del equipo, previa autorización del Superintendencia de Incorporación y Optimización de vida de Equipos.",
+            "Crear el equipo en el sistema",
+            "Crear componentes traceables en Ellipse, si aplica. Nota:  Aplica como componentes traceable todos aquellos componentes a los que se les lleve control de vida util, pueden ser mayores o menores.",
+            "Marcar los componentes fisicos traceables, si aplica.",
+            "Crear jerarquia de falla al equipo a incorporar en ellipse (Modulo MSE6A1), si aplica. Nota:  Aplica para EGIs nuevo. Se debe enviar plantilla a Esp. Gestion de Informacion para crear en ellipse.",
+            "Crear estructura de componentes traceables del equipo a incorporar en ellipse (Modulo MSE610) Nota:  Aplica para EGIs nuevo. Se debe enviar plantilla a Esp. Gestion de Informacion para crear en ellipse.",
+            "Definir tareas estrategicas para cambio de componentes mayores. Nota:  Se deben incluir las tareas estrategicas en el modellin (AMT) o las MST (Ellipse).",
+            "Definir tareas estrategicas para cambio de componentes menores. Nota:  Se deben incluir las tareas estrategicas en el modellin (AMT) o las MST (Ellipse).",
+            "Definir Pool de Componentes. Nota:  Si se trata de la incorporacion de un equipo de una flota existente, se debe calcular el nuevo tamaño del pool o confirmar el tamaño existente.",
+            "Generar pedidos de componentes del Pool",
+            "Crear los formatos de SEIS (Mantenimiento Preventivo)",
+            "Crear los formatos de commissioning y de fin de commissioning de los componentes mayores del equipo a incorporar (Si aplica) Nota:  El objetivo es conocer cuales son las pruebas a realizar antes de la puesta en marcha de los componentes mayores del equipo, es posible que el fabricante del equipo a incorporar ofrezcan esta informacion.",
+            "Catalogar y asegurar el stock de las Partes para operar el equipo en las primeras 10000hrs.",
+            "Crear en el sistema Ellipse/AMT los Estándares de los SEIS Nota: Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Crear en el sistema Ellipse los APL de los SEIS Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Desarrollar los Procedimientos / Instructivos de Mantenimiento Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon. Se debe generar listado de procedimientos e instructivos a elaborar (Cambio de componentes Mayor/Menor, Calibraciones, mantenimiento correctivos)",
+            "Crear en el sistema Ellipse/AMT los Estándares de los cambios de componentes Mayores/Menores, y tareas correctivas Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Crear en el sistema Ellipse/AMT los APL de los cambios de componentes mayores/menores, y tareas correctivas",
+            "Crear en el sistema Ellipse/AMT las MST/Tareas Estrategicas de los SEIS",
+            "Crear en el sistema Ellipse/AMT las MST/Tareas Estrategicas de los cambios de componentes",
+            "Cargar MST/Tareas estrategicas en el sistema al equipo a incorporar.",
+            "Definir MST/Tareas estrategicas para actividades de mantenimiento predictivo. Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Desarrollar los formatos necesarios para la realizacion de las tareas predictivas (Inspección Estructural, UT, termografias, vibraciones, entre otros), definir las rutas de inspecciones predictivas en los formatos requeridos.",
+            "Crear los set de monitoreo de condición e ingresarlos en sistema de Ellipse.",
+            "Desarrollar caza fallas para los modos de fallas de los diferentes sistema del equipo (traducidos al español)",
+            "Definir, gestionar y armar paquetes de herramientas por tipo de SEIS",
+            "Definir, gestionar y armar paquetes de herramientas para los cambios de componentes (mayores / menores)",
+            "Definir, gestionar y armar paquetes de Herramientas Especiales",
+            "Definir estándar del Hangar de PM (SEIS) Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Definir el estándar del hangar de cambio de componente (Layout) ",
+            "Diseñar el estándar del Hangar (Formula 1), si aplica",
+            "Listado de equipos especiales y herramientas para atención en campo.",
+            "Recibir manuales de servicio y operación, brochure del equipo, planos hidráulicos y eléctricos:Ø  Manuales de Servicio, Operación y Ensamble.Ø  Brochure del Equipo (Longitudes y Capacidades).Ø  Planos Hidráulicos y Eléctricos.Ø  Manual de taller y reparación - Este debe incluir los siguientes capítulos:o   Recomendación para el mantenimiento preventivo para cada componente.o   Instrucciones para el seteo de la regulación hidráulica de la Hta.o   Paso a paso para el ensamble y desensamble.",
+            "Calcular la cantidad de personal necesario para la flota impactada (o el area) de acuerdo al ingreso de los equipos",
+            "Evaluar la cantidad de hangares necesarios para la flota impactada de acuerdo al ingreso de los equipos",
+            "Programar intervencion del area de Telecomunicaciones para instalar (CTD, Radios, ITRACK, Anticolisión y MineCare) antes del ingreso del equipo a la operación, si aplica",
+            "Realizar pruebas de comisionamiento con el vendedor o contratista representante del fabricante",
+            "Pruebas de estanqueidad de los sistemas de admisión del motor, refrigeración, neumático e hidráulico",
+            "Crear los formatos de puesta en marcha (commissioning) según recomendaciones de fabrica para dejar registro de las intervenciones y asegurar el registro.",
+            "Realizar prueba de hermeticidad de la cabina del operador",
+            "Realizar inspección de Calidad del equipo a incorporar",
+            "Programar actividades de Fin de commissioning.Se debe coordinar con el mantenedor, se realiza entrega de guías de ajustes de las primeras 100hr de operación (calibraciones, retorqueos, muestra de aceite a las 50HR, revisión de fugas de fluidos, entre otros)",
+            "Validar que se hizo revision de los puntos del Checklist para el cumplimiento de la norma NFPA 1901 (aplica para equipos de respuesta a emergencias)",
+            "Validar que los equipos cumplen con Estándar para la Operación en Cerrejón ",
+            "Validar que el equipo a incorporar, fue creado y que cuenta con la estrategia cargada en el sistema.",
+            "Formalizar dentro del contrato de soporte actual, que este equipo se suma a la flota sobre la que está el acuerdo comercial.",
+            "Programar pintura equipo - Cumplir estándar de señalización y numeracion",
+            "Verificar marcación equipo y componentes",
+            "Programar traslado de equipo con entrenamiento ",
+            "Validar que las ordenes de trabajo de instalacion de componentes mayores / menores fueron cerradas y que los movimientos de componentes fueron registrados con la respectiva OT",
+            "Enviar correo de entrega del equipo a Producción, o a area mantenedora"
+        ];
+
+        const CHECKLIST_EQUIPOS_NUEVOS_USADOS_ENSAMBLE = [
+            "Documentar manejo del cambio (MIC) por el ingreso de los equipos. Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Desarrollar Plan de Entrenamiento a Operadores, Técnicos de Mantto y Reconstrucción de Componentes)",
+            "Desarrollar Plan de Entrenamiento a Técnicos de Reconstrucción de Componentes",
+            "Ejecutar Plan de entrenamiento a Operadores",
+            "Ejecutar Plan de entrenamiento a Tecnicos de Mantenimiento",
+            "Ejecutar Plan de entrenamiento a Tecnicos de Reconstruccion",
+            "Revisar si aplicacion de capital incluyo presupuesto para el ejercicio de RCM, sino solicitar presupuesto para su ejecicion.",
+            "Programar el ejercicio de RCM Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Crear estrategia de mantenimiento (Modelling para AMT o lista de MST para Ellipse) en el sistema (resultado de RCM) al equipo a incorporar. Nota:  Si no se desarrolla el RCM antes de la puesta en operacion del equipo, el analista de la flota, o el rol responsable de la definicion de la estrategia, define la estrategia de mantenimiento con el soporte del fabricante (Eq. Nuevio) o plantea una estrategia de mantenimiento basado en la experiencia (Eq. Usado)",
+            "Evaluar la capacidad de recurso operativo por la incorporación del nuevo activo",
+            "Verificar Fecha de Llegada Equipo",
+            "Registrar el equipo a incorporar ante el ministerio de transporte Nota:  Se tiene soporte de el registro con el area de incorporacion de equipos (emsamble)",
+            "Solicitar la creacion del Equipo en el sistema Ellipse Nota:  la solicitud la realiza el area que realiza la adquisicion del equipo, previa autorización del Superintendencia de Incorporación y Optimización de vida de Equipos.",
+            "Crear el equipo en el sistema",
+            "Crear componentes traceables (Mayores) en Ellipse",
+            "Marcar los componentes fisicos traceables (Mayores)",
+            "Crear jerarquia RCM al equipo a incorporar en ellipse (Modulo MSE6A1) Nota:  Aplica para EGIs nuevo. Se debe enviar plantilla a Esp. Gestion de Informacion para crear en ellipse.",
+            "Crear estructura de componentes traceables (Mayores) del equipo a incorporar en ellipse (Modulo MSE650) Nota:  Aplica para EGIs nuevo. Se debe enviar plantilla a Esp. Gestion de Informacion para crear en ellipse.",
+            "Definir tareas estrategicas para cambio de componentes mayores. Nota:  Se deben incluir las tareas estrategicas en el modellin (AMT) o las MST (Ellipse).",
+            "Definir tareas estrategicas para cambio de componentes menores. Nota:  Se deben incluir las tareas estrategicas en el modellin (AMT) o las MST (Ellipse).",
+            "Definir Pool de Componentes Mayores Nota:  Si se trata de la incorporacion de un equipo de una flota existente, se debe calcular el nuevo tamaño del pool o confirmar el tamaño existente.",
+            "Crear los formatos de SEIS (Mantenimiento Preventivo)",
+            "Crear los formatos de commissioning y de fin de commissioning de los componentes mayores del equipo a incorporar (Si aplica) Nota:  El objetivo es conocer cuales son las pruebas a realizar antes de la puesta en marcha de los componentes mayores del equipo, es posible que el fabricante del equipo a incorporar ofrezcan esta informacion.",
+            "Catalogar y asegurar el stock de las Partes para operar el equipo en las primeras 10000hrs.",
+            "Crear en el sistema Ellipse/AMT los Estándares de los SEIS Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Crear en el sistema Ellipse los APL de los SEIS Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Desarrollar los Procedimientos / Instructivos de Mantenimiento Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon. Se debe generar listado de procedimientos e instructivos a elaborar (Cambio de componentes Mayor/Menor, Calibraciones, mantenimiento correctivos)",
+            "Crear en el sistema Ellipse/AMT los Estándares de los cambios de componentes Mayores/Menores, y tareas correctivas Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Crear en el sistema Ellipse/AMT los APL de los cambios de componentes mayores/menores, y tareas correctivas",
+            "Crear en el sistema Ellipse/AMT las MST/Tareas Estrategicas de los SEIS",
+            "Crear en el sistema Ellipse/AMT las MST/Tareas Estrategicas de los cambios de componentes",
+            "Cargar MST/Tareas estrategicas en el sistema al equipo a incorporar.",
+            "Generar pedidos de componentes del Pool",
+            "Definir vida (off set) remanente del equipo a incorporar. Nota:  Aplica si el equipo a incorporacion es usado en otra operación.",
+            "Definir vida (off set) remanente de los componentes mayores/menores. Nota:  Aplica si el equipo a incorporacion es usado en otra operación.",
+            "Registrar vida (off set) remanente del equipo a incorporar en el sistema. Nota:  Aplica si el equipo a incorporacion es usado en otra operación.",
+            "Registrar vida (off set) remanente de los componentes mayores/menores en el sistema. Nota:  Aplica si el equipo a incorporacion es usado en otra operación.",
+            "Definir MST/Tareas estrategicas para actividades de mantenimiento predictivo. Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Desarrollar los formatos necesarios para la realizacion de las tareas predictivas (Inspección Estructural, UT, termografias, vibraciones, entre otros), definir las rutas de inspecciones predictivas en los formatos requeridos.",
+            "Crear los set de monitoreo de condición e ingresarlos en sistema de Ellipse.",
+            "Desarrollar caza fallas para los modos de fallas de los diferentes sistema del equipo (traducidos al español)",
+            "Definir, gestionar y armar paquetes de herramientas por tipo de SEIS",
+            "Definir, gestionar y armar paquetes de herramientas para los cambios de componentes (mayores / menores)",
+            "Definir, gestionar y armar paquetes de Herramientas Especiales",
+            "Definir estándar del Hangar de PM (SEIS) Nota:  Aplica solo si la referencia del equipo a incoporar no se tiene en la operación actual de Cerrejon.",
+            "Definir el estándar del hangar de cambio de componente (Layout) ",
+            "Diseñar el estándar del Hangar (Formula 1), si aplica",
+            "Listado de equipos especiales y herramientas para atención en campo.",
+            "Recibir manuales de servicio y operación, brochure del equipo, planos hidráulicos y eléctricos:Ø  Manuales de Servicio, Operación y Ensamble.Ø  Brochure del Equipo (Longitudes y Capacidades).Ø  Planos Hidráulicos y Eléctricos.Ø  Manual de taller y reparación - Este debe incluir los siguientes capítulos:o   Recomendación para el mantenimiento preventivo para cada componente.o   Instrucciones para el seteo de la regulación hidráulica de la Hta.o   Paso a paso para el ensamble y desensamble.",
+            "Calcular la cantidad de personal necesario para la flota impactada (o el area) de acuerdo al ingreso de los equipos",
+            "Evaluar la cantidad de hangares necesarios para la flota impactada de acuerdo al ingreso de los equipos",
+            "Programar Taller de Llantas (Si aplica)",
+            "Programar intervencion del area de Telecomunicaciones para instalar (CTD, Radios, ITRACK, Anticolisión y MineCare) antes del ingreso del equipo a la operación, si aplica",
+            "Programar pintura equipo - Cumplir estándar de señalización y numeracion",
+            "Verificar marcación equipo y componentes",
+            "Realizar pruebas de comisionamiento técnica con el contratista",
+            "Pruebas de estanqueidad de los sistemas de admisión del motor, refrigeración, neumático e hidráulico",
+            "Crear los formatos de puesta en marcha (commissioning) según recomendaciones de fabrica para dejar registro de las intervenciones y asegurar el registro.",
+            "Realizar prueba de hermeticidad de la cabina del operador",
+            "Realizar inspección de Calidad del equipo a incorporar",
+            "Programar actividades de Fin de commissioning.Se debe coordinar con el mantenedor, se realiza entrega de guías de ajustes de las primeras 100hr de operación (calibraciones, retorqueos, muestra de aceite a las 50HR, revisión de fugas de fluidos, entre otros)",
+            "Validar la instalación de los puntos de anclaje y restricción segun el estándar aplicable a cada flota. Nota:  Tener en cuenta los estándares del fabricante y guias contenidas en la documentación controlada  ",
+            "Validar que los equipos cumplen con Estándar para la Operación en Cerrejón ",
+            "Programar traslado de equipo con entrenamiento ",
+            "Avisar al departamento técnico para la verificación de productividad del equipo",
+            "Validar que el equipo a incorporar (ensamblado nuevo o usado) fue creado y que cuenta con la estrategia cargada en el sistema.",
+            "Validar que las ordenes de trabajo de instalacion de componentes mayores/menores fueron cerradas y que los movimientos de componentes fueron registrados con la respectiva OT",
+            "Enviar correo de entrega del equipo al Operador, o a area mantenedora",
+            "Formalizar dentro del contrato de soporte de Vendor, que este equipo se suma a la flota sobre la que está el acuerdo comercial.",
+            "Validar que se hizo revision de los puntos del Checklist para el cumplimiento de la norma NFPA 1901 (aplica para equipos de respuesta a emergencias)"
+        ];
+
         const users = [
             { user: 'angie.zabala@cerrejon.com', Rol: 'Responsable' },
             { user: 'carlos.duque@cerrejon.com', Rol: 'Responsable' },
@@ -254,13 +451,24 @@
             );
         };
 
-        const CrearCheckList = ({ onAtras, currentUser, currentRole }) => {
+        const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType }) => {
             const [nombreChecklist, setNombreChecklist] = React.useState('');
             const [isSaving, setIsSaving] = React.useState(false);
             
             const [items, setItems] = React.useState(() => {
+                let sourceArray = [];
+                if (templateType === 'proyectos') {
+                    sourceArray = CHECKLIST_PROYECTOS_ITEMS;
+                } else if (templateType === 'compra_instalada') {
+                    sourceArray = CHECKLIST_COMPRA_INSTALADA;
+                } else if (templateType === 'ensamble') {
+                    sourceArray = CHECKLIST_EQUIPOS_NUEVOS_USADOS_ENSAMBLE;
+                } else {
+                    sourceArray = PREDEFINED_ITEMS; // Fallback
+                }
+
                 const hoy = new Date().toISOString().split('T')[0];
-                return PREDEFINED_ITEMS.map((act, idx) => ({
+                return sourceArray.map((act, idx) => ({
                     id: Date.now() + Math.random().toString(36).substr(2, 5) + idx,
                     actividades: act,
                     rolResponsable: 'Responsable',
@@ -282,11 +490,21 @@
             const [editingId, setEditingId] = React.useState(null);
 
             const handleItemEdit = (id, field, value) => {
+                if (field === 'avance') {
+                    let val = parseInt(value) || 0;
+                    if (val >= 100) val = 99; 
+                    value = val.toString();
+                }
                 setItems(prev => prev.map(it => it.id === id ? { ...it, [field]: value } : it));
             };
 
             const handleChange = (e) => {
-                const { name, value } = e.target;
+                let { name, value } = e.target;
+                if (name === 'avance') {
+                    let val = parseInt(value) || 0;
+                    if (val >= 100) val = 99; 
+                    value = val.toString();
+                }
                 setFormData(prev => ({ ...prev, [name]: value }));
             };
 
@@ -306,7 +524,6 @@
                 if (!nombreChecklist.trim()) { alert('Ingresa el nombre del checklist.'); return; }
                 if (items.length === 0) { alert('Agrega al menos un \u00edtem.'); return; }
 
-                // Verificamos si alguien intento subir 100% de una vez sin evidencias en la creacion
                 const has100 = items.some(it => parseInt(it.avance) >= 100);
                 if (has100) {
                     alert("⚠️ No puedes guardar tareas con 100% de avance inicial, ya que aún no tienen evidencia cargada. Por favor edita esos ítems.");
@@ -364,10 +581,15 @@
             const inputClasses = "w-full bg-white/90 text-gray-900 border border-transparent focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400 rounded-lg px-4 py-2.5 outline-none transition-all duration-300";
             const labelClasses = "block text-sm font-semibold text-white/90 mb-1.5";
 
+            let titlePrefix = "Crear Nuevo Checklist";
+            if(templateType === 'proyectos') titlePrefix = "Plantilla: Proyectos";
+            if(templateType === 'compra_instalada') titlePrefix = "Plantilla: Compra Instalada";
+            if(templateType === 'ensamble') titlePrefix = "Plantilla: Ensamble";
+
             return (
                 <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-2xl shadow-2xl text-white mt-8 mx-auto max-w-5xl">
                     <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/20">
-                        <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">Crear Nuevo Checklist</h2>
+                        <h2 className="text-2xl lg:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">{titlePrefix}</h2>
                         <button className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center gap-2" onClick={onAtras}>
                             <span>&larr;</span> Volver al Listado
                         </button>
@@ -401,7 +623,7 @@
                                 </div>
                                 <div className="md:col-span-4">
                                     <label className={labelClasses}>Avance (%)</label>
-                                    <input type="number" min="0" max="100" className={inputClasses} name="avance" value={formData.avance} onChange={handleChange} required />
+                                    <input type="number" min="0" max="99" className={inputClasses} name="avance" value={formData.avance} onChange={handleChange} required />
                                 </div>
                                 <div className="md:col-span-4">
                                     <label className={labelClasses}>Fecha Inicio</label>
@@ -485,7 +707,7 @@
                                                     <span className="text-green-400 font-bold">{calcularCumplimiento(it.fechaInicio, it.fechaFin)}%</span>
                                                     <span className="text-white/50 block text-xs mt-1">Avance real:
                                                         {editingId === it.id ? (
-                                                            <input type="number" className="w-16 ml-1 bg-black/40 text-yellow-400 border border-yellow-400/50 rounded px-1 outline-none inline-block text-xs" value={it.avance} onChange={(e) => handleItemEdit(it.id, 'avance', e.target.value)} />
+                                                            <input type="number" className="w-16 ml-1 bg-black/40 text-yellow-400 border border-yellow-400/50 rounded px-1 outline-none inline-block text-xs" value={it.avance} onChange={(e) => handleItemEdit(it.id, 'avance', e.target.value)} min="0" max="99" />
                                                         ) : (
                                                             <span className="text-yellow-400 ml-1 font-bold">{it.avance}%</span>
                                                         )}
@@ -582,10 +804,9 @@
             };
 
             const handleSaveEdit = async () => {
-                // Validación estricta para evitar avance falso
                 if (parseInt(editForm.Avance) >= 100 && (!editForm.Evidencias || editForm.Evidencias === "")) {
                     alert("⚠️ Error: No puedes guardar el avance al 100% sin antes haber cargado una evidencia.");
-                    return; // Aborta el guardado
+                    return; 
                 }
 
                 try {
@@ -595,7 +816,7 @@
                         NombreResponsable: editForm.NombreResponsable,
                         FechaInicio: editForm.FechaInicio,
                         FechaFin: editForm.FechaFin,
-                        Avance: editForm.Avance ? editForm.Avance.toString() : "0", // Forzamos string para evitar el 400 Bad Request
+                        Avance: editForm.Avance ? editForm.Avance.toString() : "0", 
                         ComentarioAdm: editForm.ComentarioAdm || "",
                         ComentarioPropio: editForm.ComentarioPropio || "",
                         Alerta: editForm.Alerta || "No"
@@ -713,7 +934,11 @@
                                                 <div>
                                                     <span className="text-white/50 block text-xs">Avance Real</span>
                                                     {isEditing ? (
-                                                         <input type="number" className="w-16 bg-black/50 text-white border border-white/30 px-1 rounded" value={currentItem.Avance || 0} onChange={e => setEditForm({...editForm, Avance: e.target.value})} />
+                                                         <input type="number" className="w-16 bg-black/50 text-white border border-white/30 px-1 rounded" value={currentItem.Avance || 0} onChange={e => {
+                                                             let val = parseInt(e.target.value) || 0;
+                                                             if (val >= 100 && !currentItem.Evidencias) val = 99;
+                                                             setEditForm({...editForm, Avance: val});
+                                                         }} />
                                                     ) : (
                                                         <span className="text-yellow-400 font-bold text-lg">{it.Avance || 0}%</span>
                                                     )}
@@ -799,6 +1024,7 @@
         const CheckListAll = ({ onView, role, currentUser }) => {
             const [checklists, setChecklists] = React.useState([]);
             const [loading, setLoading] = React.useState(true);
+            const [showTemplateModal, setShowTemplateModal] = React.useState(false);
 
             React.useEffect(() => {
                 const fetchData = async () => {
@@ -847,7 +1073,7 @@
                         </div>
 
                         {(role === 'Administrador' || role === 'Desarrollador') && (
-                            <button className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:-translate-y-1" onClick={() => onView('crear_checklist')}>
+                            <button className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:-translate-y-1" onClick={() => setShowTemplateModal(true)}>
                                 Crear Nuevo CheckList
                             </button>
                         )}
@@ -893,6 +1119,44 @@
                                     </div>
                                 );
                             })}
+                        </div>
+                    )}
+
+                    {/* Modal para Seleccionar Plantilla */}
+                    {showTemplateModal && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
+                            <div className="bg-gray-800 border border-white/20 p-6 md:p-8 rounded-2xl shadow-2xl max-w-5xl w-full">
+                                <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                                    <h3 className="text-2xl font-bold text-yellow-400">Selecciona el Tipo de Checklist</h3>
+                                    <button onClick={() => setShowTemplateModal(false)} className="text-white/50 hover:text-white text-2xl font-bold transition-colors">&times;</button>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+                                    <div
+                                        className="bg-white/5 border border-white/10 p-6 rounded-xl cursor-pointer hover:bg-white/10 hover:border-yellow-400 transition-all group flex flex-col"
+                                        onClick={() => { setShowTemplateModal(false); onView('crear_checklist', 'proyectos'); }}
+                                    >
+                                        <div className="text-4xl mb-4 group-hover:scale-110 transition-transform transform origin-left">📋</div>
+                                        <h4 className="text-base lg:text-lg font-bold text-white mb-3 leading-snug h-auto">Incorporaci&oacute;n de activos a traves de proyectos</h4>
+                                        <p className="text-sm text-white/50 mt-auto pt-4 border-t border-white/5">Utiliza la plantilla con {CHECKLIST_PROYECTOS_ITEMS.length} &iacute;tems predefinidos.</p>
+                                    </div>
+                                    <div
+                                        className="bg-white/5 border border-white/10 p-6 rounded-xl cursor-pointer hover:bg-white/10 hover:border-blue-400 transition-all group flex flex-col"
+                                        onClick={() => { setShowTemplateModal(false); onView('crear_checklist', 'compra_instalada'); }}
+                                    >
+                                        <div className="text-4xl mb-4 group-hover:scale-110 transition-transform transform origin-left">⚙️</div>
+                                        <h4 className="text-base lg:text-lg font-bold text-white mb-3 leading-snug h-auto">Incorporaci&oacute;n de activos nuevos o usados por compra instalada</h4>
+                                        <p className="text-sm text-white/50 mt-auto pt-4 border-t border-white/5">Utiliza la plantilla con {CHECKLIST_COMPRA_INSTALADA.length} &iacute;tems predefinidos.</p>
+                                    </div>
+                                    <div
+                                        className="bg-white/5 border border-white/10 p-6 rounded-xl cursor-pointer hover:bg-white/10 hover:border-green-400 transition-all group flex flex-col"
+                                        onClick={() => { setShowTemplateModal(false); onView('crear_checklist', 'ensamble'); }}
+                                    >
+                                        <div className="text-4xl mb-4 group-hover:scale-110 transition-transform transform origin-left">🚜</div>
+                                        <h4 className="text-base lg:text-lg font-bold text-white mb-3 leading-snug h-auto">Incorporaci&oacute;n de equipos mineros nuevos o usados por ensamble</h4>
+                                        <p className="text-sm text-white/50 mt-auto pt-4 border-t border-white/5">Utiliza la plantilla con {CHECKLIST_EQUIPOS_NUEVOS_USADOS_ENSAMBLE.length} &iacute;tems predefinidos.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -998,7 +1262,7 @@
                             </div>
                         )}
                         {view === 'checklist_all' && <CheckListAll onView={handleNavigate} role={role} currentUser={user} />}
-                        {view === 'crear_checklist' && <CrearCheckList currentUser={user} currentRole={role} onAtras={() => handleNavigate('checklist_all')} />}
+                        {view === 'crear_checklist' && <CrearCheckList currentUser={user} currentRole={role} templateType={selectedChecklistId} onAtras={() => handleNavigate('checklist_all')} />}
                         {view === 'checklist_detalle' && <CheckListDetalle checklistId={selectedChecklistId} role={role} currentUser={user} onAtras={() => handleNavigate('checklist_all')} />}
                     </main>
 
