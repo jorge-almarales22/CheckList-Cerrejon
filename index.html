@@ -372,7 +372,7 @@
         const calcularPromedioReal = (items) => {
             if (!items || items.length === 0) return 0;
             let total = 0;
-            items.forEach(it => { total += parseInt(it.Avance) || 0; });
+            items.forEach(it => { total += parseInt(it.Avance || it.avance) || 0; });
             return Math.round(total / items.length);
         };
 
@@ -493,6 +493,59 @@
             );
         };
 
+        const DashboardCharts = ({ items }) => {
+            if (!items || items.length === 0) return null;
+
+            const avanceGeneral = Math.round(items.reduce((acc, it) => acc + (parseInt(it.Avance || it.avance) || 0), 0) / items.length);
+
+            const respMap = {};
+            items.forEach(it => {
+               const r = it.NombreResponsable || it.nombreResponsable || 'Sin asignar';
+               if(!respMap[r]) respMap[r] = { total: 0, count: 0 };
+               respMap[r].total += parseInt(it.Avance || it.avance) || 0;
+               respMap[r].count += 1;
+            });
+            
+            const dataChart = Object.keys(respMap).map(k => ({
+               name: k,
+               avg: Math.round(respMap[k].total / respMap[k].count)
+            })).sort((a, b) => b.avg - a.avg);
+
+            const radius = 60;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (avanceGeneral / 100) * circumference;
+
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 animate-[fadeIn_0.5s_ease-out]">
+                    <div className="bg-black/80 backdrop-blur-2xl p-6 rounded-3xl border border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)] flex flex-col items-center justify-center">
+                        <h3 className="text-xs font-bold text-white/50 uppercase tracking-wider mb-6">% Avance General</h3>
+                        <div className="relative w-40 h-40 flex items-center justify-center">
+                            <svg className="w-full h-full transform -rotate-90">
+                                <circle cx="80" cy="80" r={radius} fill="transparent" stroke="rgba(255,255,255,0.1)" strokeWidth="20" />
+                                <circle cx="80" cy="80" r={radius} fill="transparent" stroke="#eab308" strokeWidth="20" strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-1000 ease-out" strokeLinecap="round" />
+                            </svg>
+                            <span className="absolute text-3xl font-black text-white">{avanceGeneral}%</span>
+                        </div>
+                    </div>
+
+                    <div className="md:col-span-2 bg-black/80 backdrop-blur-2xl p-6 rounded-3xl border border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
+                        <h3 className="text-xs font-bold text-white/50 uppercase tracking-wider mb-6">Promedio por Responsable</h3>
+                        <div className="space-y-4 max-h-[200px] overflow-y-auto pr-2">
+                            {dataChart.map((d, i) => (
+                                <div key={i} className="flex items-center gap-4 text-xs">
+                                    <div className="w-[140px] text-white/80 truncate text-right font-medium" title={d.name}>{d.name}</div>
+                                    <div className="flex-1 bg-white/5 h-6 rounded-full overflow-hidden relative border border-white/5">
+                                        <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-1000" style={{width: `${d.avg}%`}}></div>
+                                    </div>
+                                    <div className="w-[40px] text-white font-bold">{d.avg}%</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const GanttChart = ({ items }) => {
             if (!items || items.length === 0) return null;
 
@@ -502,10 +555,10 @@
             let hasAnyDate = false;
 
             items.forEach(it => {
-                const d1 = getValidDate(it.FechaBaselineInicio);
-                const d2 = getValidDate(it.FechaBaselineFin);
-                const d3 = getValidDate(it.FechaInicio);
-                const d4 = getValidDate(it.FechaFin);
+                const d1 = getValidDate(it.FechaBaselineInicio || it.fechaBaselineInicio);
+                const d2 = getValidDate(it.FechaBaselineFin || it.fechaBaselineFin);
+                const d3 = getValidDate(it.FechaInicio || it.fechaInicio);
+                const d4 = getValidDate(it.FechaFin || it.fechaFin);
                 
                 if(d1 && d1 < minDate) { minDate = d1; hasAnyDate = true; }
                 if(d3 && d3 < minDate) { minDate = d3; hasAnyDate = true; }
@@ -536,11 +589,11 @@
 
                         <div className="space-y-4 relative">
                             {items.map((it, idx) => {
-                                const baseStart = getValidDate(it.FechaBaselineInicio);
-                                const baseEnd = getValidDate(it.FechaBaselineFin);
-                                const actStart = getValidDate(it.FechaInicio);
-                                const actEnd = getValidDate(it.FechaFin);
-                                const avance = parseInt(it.Avance) || 0;
+                                const baseStart = getValidDate(it.FechaBaselineInicio || it.fechaBaselineInicio);
+                                const baseEnd = getValidDate(it.FechaBaselineFin || it.fechaBaselineFin);
+                                const actStart = getValidDate(it.FechaInicio || it.fechaInicio);
+                                const actEnd = getValidDate(it.FechaFin || it.fechaFin);
+                                const avance = parseInt(it.Avance || it.avance) || 0;
 
                                 let baseLeftPercent = 0, baseWidthPercent = 0;
                                 if (baseStart && baseEnd) {
@@ -562,8 +615,8 @@
 
                                 return (
                                     <div key={it.Id || idx} className="flex items-center gap-4 text-sm group">
-                                        <div className="w-[200px] flex-shrink-0 text-white/80 whitespace-normal break-words font-medium text-xs leading-tight" title={it.Descripcion}>
-                                            <span className="text-white/40 mr-1 font-bold">{idx + 1}.</span> {it.Descripcion}
+                                        <div className="w-[200px] flex-shrink-0 text-white/80 whitespace-normal break-words font-medium text-xs leading-tight" title={it.Descripcion || it.actividades}>
+                                            <span className="text-white/40 mr-1 font-bold">{idx + 1}.</span> {it.Descripcion || it.actividades}
                                         </div>
                                         
                                         <div className="flex-1 bg-white/5 h-12 rounded-lg relative overflow-hidden flex flex-col justify-center gap-1 border border-white/5">
@@ -572,7 +625,7 @@
                                                 <div 
                                                     className="absolute h-2 top-1.5 bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(96,165,250,0.5)_2px,rgba(96,165,250,0.5)_4px)] bg-blue-900/30 border border-blue-400/50 rounded-sm"
                                                     style={{ left: `${baseLeftPercent}%`, width: `${baseWidthPercent}%` }}
-                                                    title={`Planificado (Baseline): ${it.FechaBaselineInicio} a ${it.FechaBaselineFin}`}
+                                                    title={`Planificado (Baseline): ${(it.FechaBaselineInicio || it.fechaBaselineInicio)} a ${(it.FechaBaselineFin || it.fechaBaselineFin)}`}
                                                 ></div>
                                             )}
 
@@ -580,7 +633,7 @@
                                                 <div 
                                                     className="absolute h-5 bottom-1.5 bg-yellow-600/40 border border-yellow-500/50 rounded flex flex-col justify-center overflow-hidden transition-all duration-300 shadow-inner"
                                                     style={{ left: `${actLeftPercent}%`, width: `${actWidthPercent}%` }}
-                                                    title={`Real: ${it.FechaInicio} a ${it.FechaFin} \nAvance: ${avance}%`}
+                                                    title={`Real: ${(it.FechaInicio || it.fechaInicio)} a ${(it.FechaFin || it.fechaFin)} \nAvance: ${avance}%`}
                                                 >
                                                     <div 
                                                         className="absolute top-0 left-0 h-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all duration-500" 
@@ -615,6 +668,7 @@
 
             const [metadata, setMetadata] = React.useState({
                 equipos: [''],
+                imagenEquipo: '',
                 roles: {
                     lider: { area: '', persona: '' },
                     custodio: { area: '', persona: '' },
@@ -780,15 +834,34 @@
                         <input type="text" className="w-full bg-black/50 text-white border border-white/30 focus:border-yellow-400 rounded-xl px-4 py-3 outline-none transition-all duration-300 text-lg font-bold" placeholder="Ej. Nuevo Proyecto" value={nombreChecklist} onChange={(e) => setNombreChecklist(e.target.value)} required />
                     </div>
 
-                    {/* Metadatos (Estructura de la Imagen Blanca) */}
+                    {/* Metadatos */}
                     <div className="border border-white/20 rounded-lg overflow-hidden text-sm mb-8 bg-white/5">
                         <div className="flex flex-col md:flex-row border-b border-white/20">
                             <div className="w-full md:w-1/3 p-4 border-r border-white/20 flex flex-col gap-3">
                                 <span className="font-bold text-[10px] uppercase tracking-wider text-white/50">DESCRIPCI&Oacute;N DE EQUIPO(S) A INCORPORAR</span>
                                 {metadata.equipos.map((eq, idx) => (
-                                    <textarea key={idx} className={inputClasses + " text-xs"} placeholder="Describe aqu\u00ed un equipo a incorporar..." rows="2" value={eq} onChange={(e) => handleMetadataEquipoChange(idx, e.target.value)}></textarea>
+                                    <textarea key={idx} className={inputClasses + " text-xs"} placeholder={"Describe aqu\u00ed un equipo a incorporar..."} rows="2" value={eq} onChange={(e) => handleMetadataEquipoChange(idx, e.target.value)}></textarea>
                                 ))}
                                 <button onClick={addEquipo} className="bg-white/10 hover:bg-white/20 text-xs font-bold py-1.5 px-3 rounded self-start transition-colors border border-white/10">A&ntilde;adir otro activo</button>
+                                
+                                {/* Image Upload for Equipment */}
+                                <div className="mt-3 pt-3 border-t border-white/10">
+                                    <span className="font-bold text-[10px] uppercase tracking-wider text-white/50 block mb-2">FOTO DEL EQUIPO</span>
+                                    {metadata.imagenEquipo ? (
+                                        <div className="relative inline-block">
+                                            <img src={metadata.imagenEquipo} alt="Equipo" className="h-24 rounded-lg border border-white/20 object-cover shadow-lg" />
+                                            <button onClick={() => setMetadata({...metadata, imagenEquipo: ''})} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg hover:bg-red-400">&times;</button>
+                                        </div>
+                                    ) : (
+                                        <input type="file" accept="image/*" onChange={async (e) => {
+                                            const file = e.target.files[0];
+                                            if(file) {
+                                                const base64 = await fileToBase64(file);
+                                                setMetadata({...metadata, imagenEquipo: base64});
+                                            }
+                                        }} className="text-[10px] text-white/70 w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 transition-all cursor-pointer" />
+                                    )}
+                                </div>
                             </div>
                             <div className="w-full md:w-2/3 flex flex-col">
                                 <div className="grid grid-cols-12 bg-black/40 border-b border-white/20 font-bold text-[10px] uppercase tracking-wider text-white/50">
@@ -832,7 +905,7 @@
                             </div>
                             <div className="flex">
                                 <div className="w-1/3 p-3 font-bold text-xs flex items-center border-r border-white/20">Comentarios</div>
-                                <div className="w-2/3 p-2"><textarea className={inputClasses + " text-xs"} rows="2" placeholder="Escribe aqu\u00ed cualquier observaci\u00f3n..." value={metadata.comentarios} onChange={(e) => setMetadata({...metadata, comentarios: e.target.value})}></textarea></div>
+                                <div className="w-2/3 p-2"><textarea className={inputClasses + " text-xs"} rows="2" placeholder={"Escribe aqu\u00ed cualquier observaci\u00f3n..."} value={metadata.comentarios} onChange={(e) => setMetadata({...metadata, comentarios: e.target.value})}></textarea></div>
                             </div>
                         </div>
                     </div>
@@ -897,79 +970,83 @@
                             <div className="space-y-4">
                                 {items.map((it, idx) => (
                                     <div key={it.id} className={`bg-black/60 p-5 rounded-2xl border transition-all shadow-[0_0_15px_rgba(0,0,0,0.3)] ${editingId === it.id ? 'border-yellow-400' : 'border-white/10'}`} onDoubleClick={() => setEditingId(it.id)}>
-                                        <div className="flex-1">
-                                            <div className="flex items-start gap-3 mb-2 border-b border-white/10 pb-3">
-                                                <span className="bg-white/10 text-white text-xs font-bold px-2.5 py-1 rounded-md mt-0.5 border border-white/5 shadow-inner">#{idx + 1}</span>
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="flex-1">
+                                                <div className="flex items-start gap-3 mb-2 border-b border-white/10 pb-3">
+                                                    <span className="bg-white/10 text-white text-xs font-bold px-2.5 py-1 rounded-md mt-0.5 border border-white/5 shadow-inner">#{idx + 1}</span>
+                                                    {editingId === it.id ? (
+                                                        <textarea className="w-full bg-black/50 text-yellow-400 border border-yellow-400/50 rounded-lg px-3 py-2 text-sm outline-none resize-none break-words whitespace-normal focus:ring-1 focus:ring-yellow-400" value={it.actividades} onChange={(e) => handleItemEdit(it.id, 'actividades', e.target.value)} rows="2" />
+                                                    ) : (
+                                                        <h4 className="font-bold text-yellow-400 leading-snug break-words whitespace-normal text-[15px]">{it.actividades}</h4>
+                                                    )}
+                                                </div>
+                                                <div className="grid grid-cols-2 lg:grid-cols-6 gap-5 mt-4 text-sm">
+                                                    <div className="col-span-1">
+                                                        <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Responsable</span>
+                                                        {editingId === it.id ? (
+                                                            <PeoplePicker className="w-full bg-black/50 text-white border border-white/30 rounded px-2 py-1.5 text-xs outline-none focus:border-yellow-400" value={it.nombreResponsable} onChange={(val) => handleItemEdit(it.id, 'nombreResponsable', val)} />
+                                                        ) : (
+                                                            <span className="text-white font-medium text-xs break-all">{it.nombreResponsable || '-'}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="col-span-1">
+                                                        <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Entregable</span>
+                                                        {editingId === it.id ? (
+                                                            <input type="text" className="w-full bg-black/50 text-white border border-white/30 rounded px-2 py-1.5 text-xs outline-none focus:border-yellow-400" value={it.entregable} onChange={(e) => handleItemEdit(it.id, 'entregable', e.target.value)} />
+                                                        ) : (
+                                                            <span className="text-white font-medium text-xs break-words">{it.entregable || '-'}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="col-span-1 md:col-span-2 lg:col-span-1">
+                                                        <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Plan (Baseline)</span>
+                                                        {editingId === it.id ? (
+                                                            <div className="space-y-1.5 mt-1">
+                                                                <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-300">I:</span><input type="date" className="bg-blue-900/20 text-white border border-blue-400/40 rounded px-1.5 py-1 outline-none flex-1 focus:border-yellow-400" value={it.fechaBaselineInicio} onChange={(e) => handleItemEdit(it.id, 'fechaBaselineInicio', e.target.value)} /></div>
+                                                                <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-300">F:</span><input type="date" className="bg-blue-900/20 text-white border border-blue-400/40 rounded px-1.5 py-1 outline-none flex-1 focus:border-yellow-400" value={it.fechaBaselineFin} onChange={(e) => handleItemEdit(it.id, 'fechaBaselineFin', e.target.value)} /></div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="bg-blue-900/10 p-2 rounded border border-blue-400/20 shadow-inner">
+                                                                <span className="text-white/80 font-medium block text-[11px]"><span className="text-blue-300 font-bold w-4 inline-block">I:</span> {it.fechaBaselineInicio || '-'}</span>
+                                                                <span className="text-white/80 font-medium block text-[11px] mt-1"><span className="text-blue-300 font-bold w-4 inline-block">F:</span> {it.fechaBaselineFin || '-'}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="col-span-1 md:col-span-2 lg:col-span-1">
+                                                        <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Reales</span>
+                                                        {editingId === it.id ? (
+                                                            <div className="space-y-1.5 mt-1">
+                                                                <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-400">I:</span><input type="date" className="bg-yellow-900/10 text-white border border-yellow-500/30 rounded px-1.5 py-1 outline-none flex-1 focus:border-yellow-400" value={it.fechaInicio} onChange={(e) => handleItemEdit(it.id, 'fechaInicio', e.target.value)} /></div>
+                                                                <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-400">F:</span><input type="date" className="bg-yellow-900/10 text-white border border-yellow-500/30 rounded px-1.5 py-1 outline-none flex-1 focus:border-yellow-400" value={it.fechaFin} onChange={(e) => handleItemEdit(it.id, 'fechaFin', e.target.value)} /></div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="bg-yellow-900/10 p-2 rounded border border-yellow-400/20 shadow-inner">
+                                                                <span className="text-white font-medium block text-[11px]"><span className="text-yellow-400 font-bold w-4 inline-block">I:</span> {it.fechaInicio || '-'}</span>
+                                                                <span className="text-white font-medium block text-[11px] mt-1"><span className="text-yellow-400 font-bold w-4 inline-block">F:</span> {it.fechaFin || '-'}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="col-span-1">
+                                                        <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Cumplimiento (calc)</span>
+                                                        <span className="text-green-400 font-black text-2xl drop-shadow">{calcularCumplimiento(it.fechaInicio, it.fechaFin)}%</span>
+                                                    </div>
+                                                    <div className="col-span-1">
+                                                        <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Avance Real</span>
+                                                        {editingId === it.id ? (
+                                                            <input type="number" className="w-20 bg-black/50 text-white border border-white/30 rounded px-2 py-1 outline-none focus:border-yellow-400 text-lg font-bold" value={it.avance} onChange={(e) => handleItemEdit(it.id, 'avance', e.target.value)} min="0" max="99" />
+                                                        ) : (
+                                                            <span className="text-yellow-400 font-black text-2xl drop-shadow">{it.avance}%</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-2 min-w-[80px]">
                                                 {editingId === it.id ? (
-                                                    <textarea className="w-full bg-black/50 text-yellow-400 border border-yellow-400/50 rounded-lg px-3 py-2 text-sm outline-none resize-none break-words whitespace-normal focus:ring-1 focus:ring-yellow-400" value={it.actividades} onChange={(e) => handleItemEdit(it.id, 'actividades', e.target.value)} rows="2" />
+                                                    <button onClick={() => setEditingId(null)} className="bg-green-500/20 hover:bg-green-500/40 text-green-300 border border-green-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Listo</button>
                                                 ) : (
-                                                    <h4 className="font-bold text-yellow-400 leading-snug break-words whitespace-normal text-[15px]">{it.actividades}</h4>
+                                                    <button onClick={() => setEditingId(it.id)} className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Editar</button>
                                                 )}
+                                                <button onClick={() => handleDeleteItem(it.id)} className="bg-red-500/20 hover:bg-red-500/40 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Eliminar</button>
                                             </div>
-                                            <div className="grid grid-cols-2 lg:grid-cols-6 gap-5 mt-4 text-sm">
-                                                <div className="col-span-1">
-                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Responsable</span>
-                                                    {editingId === it.id ? (
-                                                        <PeoplePicker className="w-full bg-black/50 text-white border border-white/30 rounded px-2 py-1.5 text-xs outline-none focus:border-yellow-400" value={it.nombreResponsable} onChange={(val) => handleItemEdit(it.id, 'nombreResponsable', val)} />
-                                                    ) : (
-                                                        <span className="text-white font-medium text-xs break-all">{it.nombreResponsable || '-'}</span>
-                                                    )}
-                                                </div>
-                                                <div className="col-span-1">
-                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Entregable</span>
-                                                    {editingId === it.id ? (
-                                                        <input type="text" className="w-full bg-black/50 text-white border border-white/30 rounded px-2 py-1.5 text-xs outline-none focus:border-yellow-400" value={it.entregable} onChange={(e) => handleItemEdit(it.id, 'entregable', e.target.value)} />
-                                                    ) : (
-                                                        <span className="text-white font-medium text-xs break-words">{it.entregable || '-'}</span>
-                                                    )}
-                                                </div>
-                                                <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Plan (Baseline)</span>
-                                                    {editingId === it.id ? (
-                                                        <div className="space-y-1.5 mt-1">
-                                                            <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-300">I:</span><input type="date" className="bg-blue-900/20 text-white border border-blue-400/40 rounded px-1.5 py-1 outline-none flex-1 focus:border-yellow-400" value={it.fechaBaselineInicio} onChange={(e) => handleItemEdit(it.id, 'fechaBaselineInicio', e.target.value)} /></div>
-                                                            <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-300">F:</span><input type="date" className="bg-blue-900/20 text-white border border-blue-400/40 rounded px-1.5 py-1 outline-none flex-1 focus:border-yellow-400" value={it.fechaBaselineFin} onChange={(e) => handleItemEdit(it.id, 'fechaBaselineFin', e.target.value)} /></div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="bg-blue-900/10 p-2 rounded border border-blue-400/20 shadow-inner">
-                                                            <span className="text-white/80 font-medium block text-[11px]"><span className="text-blue-300 font-bold w-4 inline-block">I:</span> {it.fechaBaselineInicio || '-'}</span>
-                                                            <span className="text-white/80 font-medium block text-[11px] mt-1"><span className="text-blue-300 font-bold w-4 inline-block">F:</span> {it.fechaBaselineFin || '-'}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Reales</span>
-                                                    {editingId === it.id ? (
-                                                        <div className="space-y-1.5 mt-1">
-                                                            <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-400">I:</span><input type="date" className="bg-yellow-900/10 text-white border border-yellow-500/30 rounded px-1.5 py-1 outline-none flex-1 focus:border-yellow-400" value={it.fechaInicio} onChange={(e) => handleItemEdit(it.id, 'fechaInicio', e.target.value)} /></div>
-                                                            <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-400">F:</span><input type="date" className="bg-yellow-900/10 text-white border border-yellow-500/30 rounded px-1.5 py-1 outline-none flex-1 focus:border-yellow-400" value={it.fechaFin} onChange={(e) => handleItemEdit(it.id, 'fechaFin', e.target.value)} /></div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="bg-yellow-900/10 p-2 rounded border border-yellow-400/20 shadow-inner">
-                                                            <span className="text-white font-medium block text-[11px]"><span className="text-yellow-400 font-bold w-4 inline-block">I:</span> {it.fechaInicio || '-'}</span>
-                                                            <span className="text-white font-medium block text-[11px] mt-1"><span className="text-yellow-400 font-bold w-4 inline-block">F:</span> {it.fechaFin || '-'}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="col-span-1">
-                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Cumplimiento (calc)</span>
-                                                    <span className="text-green-400 font-black text-2xl drop-shadow">{calcularCumplimiento(it.fechaInicio, it.fechaFin)}%</span>
-                                                </div>
-                                                <div className="col-span-1">
-                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Avance Real</span>
-                                                    {editingId === it.id ? (
-                                                        <input type="number" className="w-20 bg-black/50 text-white border border-white/30 rounded px-2 py-1 outline-none focus:border-yellow-400 text-lg font-bold" value={it.avance} onChange={(e) => handleItemEdit(it.id, 'avance', e.target.value)} min="0" max="99" />
-                                                    ) : (
-                                                        <span className="text-yellow-400 font-black text-2xl drop-shadow">{it.avance}%</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {editingId === it.id && (
-                                                <div className="flex justify-end gap-3 mt-4 pt-3 border-t border-white/5">
-                                                    <button onClick={() => handleDeleteItem(it.id)} className="bg-red-500/20 hover:bg-red-500/40 text-red-300 border border-red-500/30 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors">Eliminar \u00cdtem</button>
-                                                    <button onClick={() => setEditingId(null)} className="bg-green-500 hover:bg-green-400 text-black px-5 py-1.5 rounded-lg text-xs font-bold transition-colors shadow">Listo</button>
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -980,6 +1057,8 @@
                     <button onClick={handleGuardarChecklist} disabled={items.length === 0 || isSaving} className={`w-full font-extrabold text-xl tracking-wide py-5 rounded-2xl shadow-2xl transition-all duration-300 ${items.length > 0 && !isSaving ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white hover:shadow-[0_0_40px_rgba(34,197,94,0.4)] hover:-translate-y-1' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}>
                         {isSaving ? 'GUARDANDO EN SHAREPOINT...' : '\u2713 FINALIZAR Y GUARDAR CHECKLIST'}
                     </button>
+                    
+                    <DashboardCharts items={items} />
                 </div>
             );
         };
@@ -1081,6 +1160,24 @@
                 }
             };
 
+            const handleDeleteItemDetalle = async (itemId) => {
+                if(!window.confirm('¿Est\u00e1s seguro de eliminar este \u00edtem?')) return;
+                try {
+                    const digest = await getRequestDigest();
+                    const updatedItems = checklist.items.filter(it => it.Id !== itemId);
+                    const updatedChecklist = { ...checklist, items: updatedItems };
+
+                    await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
+                        Data: JSON.stringify(updatedChecklist)
+                    }, digest);
+
+                    setChecklist(updatedChecklist);
+                } catch (error) {
+                    alert("Error eliminando ítem.");
+                    console.error(error);
+                }
+            };
+
             const handleSaveGeneralComment = async () => {
                 try {
                     const digest = await getRequestDigest();
@@ -1134,6 +1231,12 @@
                                     {checklist.Metadata.equipos.map((eq, idx) => (
                                         <div key={idx} className="bg-white/5 p-3 rounded-lg border border-white/10 text-xs text-white/80 whitespace-pre-wrap">{eq || '-'}</div>
                                     ))}
+                                    {checklist.Metadata.imagenEquipo && (
+                                        <div className="mt-3 pt-3 border-t border-white/10">
+                                            <span className="font-bold text-[10px] uppercase tracking-wider text-white/50 block mb-2">FOTO DEL EQUIPO</span>
+                                            <img src={checklist.Metadata.imagenEquipo} alt="Equipo" className="max-h-32 rounded-lg border border-white/20 object-cover shadow-lg" />
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="w-full md:w-2/3 flex flex-col">
                                     <div className="grid grid-cols-12 bg-black/40 border-b border-white/10 font-bold text-[10px] uppercase tracking-wider text-white/50">
@@ -1185,32 +1288,20 @@
 
                             return (
                                 <div key={it.Id} className={`p-5 rounded-2xl border transition-all ${showAlert ? 'bg-red-900/60 backdrop-blur-2xl border-red-500/80 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-black/80 backdrop-blur-2xl border-white/20 shadow-[0_0_20px_rgba(0,0,0,0.3)]'}`}>
-                                    <div className="flex justify-between items-start gap-4 flex-wrap md:flex-nowrap">
-                                        <div className="flex-1 w-full">
-                                            <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
-                                                <div className="flex items-start gap-3 w-3/4">
-                                                    <span className={`text-xs font-bold px-2 py-1 rounded mt-0.5 ${showAlert ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'}`}>&Iacute;tem {idx + 1}</span>
-                                                    {isEditing ? (
-                                                        <textarea className="bg-black/50 text-white border border-white/30 px-3 py-2 rounded-lg w-full break-words whitespace-normal outline-none focus:border-yellow-400" rows="2" value={currentItem.Descripcion} onChange={e => setEditForm({...editForm, Descripcion: e.target.value})} />
-                                                    ) : (
-                                                        <h4 className={`text-lg font-bold leading-tight break-words whitespace-normal ${showAlert ? 'text-red-200' : 'text-white'}`}>{it.Descripcion}</h4>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {isEditing ? (
-                                                        <>
-                                                            <button onClick={handleSaveEdit} className="bg-green-500 hover:bg-green-400 text-black font-bold px-3 py-1.5 rounded-lg text-sm transition-colors shadow-lg">Guardar</button>
-                                                            <button onClick={() => setEditingId(null)} className="bg-gray-600 hover:bg-gray-500 text-white font-bold px-3 py-1.5 rounded-lg text-sm transition-colors shadow-lg">Cancelar</button>
-                                                        </>
-                                                    ) : (
-                                                        (isAdmin || isMyTask) && <button onClick={() => handleStartEdit(it)} className="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-1.5 rounded-lg text-sm border border-white/20 transition-colors shadow">Editar Valores</button>
-                                                    )}
-                                                </div>
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div className="flex-1">
+                                            <div className="flex items-start gap-3 mb-2 border-b border-white/10 pb-3">
+                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-md mt-0.5 shadow-inner ${showAlert ? 'bg-red-500 text-white' : 'bg-white/10 text-white border border-white/5'}`}>#{idx + 1}</span>
+                                                {isEditing ? (
+                                                    <textarea className="bg-black/50 text-white border border-white/30 px-3 py-2 rounded-lg w-full break-words whitespace-normal outline-none focus:border-yellow-400" rows="2" value={currentItem.Descripcion} onChange={e => setEditForm({...editForm, Descripcion: e.target.value})} />
+                                                ) : (
+                                                    <h4 className={`text-lg font-bold leading-snug break-words whitespace-normal text-[15px] ${showAlert ? 'text-red-200' : 'text-yellow-400'}`}>{it.Descripcion}</h4>
+                                                )}
                                             </div>
                                             
-                                            <div className="grid grid-cols-2 lg:grid-cols-6 gap-6 mt-3 text-sm">
+                                            <div className="grid grid-cols-2 lg:grid-cols-6 gap-6 mt-4 text-sm">
                                                 <div className="col-span-1">
-                                                    <span className="text-white/50 block text-[10px] font-bold uppercase tracking-wider mb-1">Responsable</span>
+                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Responsable</span>
                                                     {isEditing ? (
                                                         <PeoplePicker 
                                                             className="bg-black/50 text-white border border-white/30 px-2 py-1.5 rounded-md w-full text-xs cursor-pointer outline-none focus:border-yellow-400"
@@ -1224,54 +1315,63 @@
                                                                 className="w-7 h-7 rounded-full border border-white/20 object-cover bg-gray-700"
                                                                 onError={(e) => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E"; }}
                                                             />
-                                                            <span className="text-white font-medium truncate" title={it.NombreResponsable}>{it.NombreResponsable}</span>
+                                                            <span className="text-white font-medium text-xs break-all">{it.NombreResponsable}</span>
                                                         </div>
                                                     )}
                                                 </div>
 
+                                                <div className="col-span-1">
+                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Entregable</span>
+                                                    {isEditing ? (
+                                                        <input type="text" className="w-full bg-black/50 text-white border border-white/30 rounded px-2 py-1.5 text-xs outline-none focus:border-yellow-400" value={currentItem.Entregable || ''} onChange={(e) => setEditForm({...editForm, Entregable: e.target.value})} />
+                                                    ) : (
+                                                        <span className="text-white font-medium text-xs break-words">{it.Entregable || '-'}</span>
+                                                    )}
+                                                </div>
+
                                                 <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                                                    <span className="text-white/50 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Plan (Fijas)</span>
-                                                    <div className="bg-blue-900/10 p-2 rounded border border-blue-400/20">
-                                                        <span className="text-white/80 font-medium block text-xs"><span className="text-blue-300 font-bold w-4 inline-block">I:</span> {it.FechaBaselineInicio || '-'}</span>
-                                                        <span className="text-white/80 font-medium block text-xs mt-1"><span className="text-blue-300 font-bold w-4 inline-block">F:</span> {it.FechaBaselineFin || '-'}</span>
+                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Plan (Fijas)</span>
+                                                    <div className="bg-blue-900/10 p-2 rounded border border-blue-400/20 shadow-inner">
+                                                        <span className="text-white/80 font-medium block text-[11px]"><span className="text-blue-300 font-bold w-4 inline-block">I:</span> {it.FechaBaselineInicio || '-'}</span>
+                                                        <span className="text-white/80 font-medium block text-[11px] mt-1"><span className="text-blue-300 font-bold w-4 inline-block">F:</span> {it.FechaBaselineFin || '-'}</span>
                                                     </div>
                                                 </div>
 
                                                 <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                                                    <span className="text-white/50 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Reales</span>
+                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Reales</span>
                                                     {isEditing ? (
-                                                        <div className="flex flex-col gap-1.5">
-                                                            <input type="date" className="bg-black/50 text-white border border-white/30 px-1.5 py-1 text-xs rounded outline-none focus:border-yellow-400" value={currentItem.FechaInicio ? currentItem.FechaInicio.substring(0,10) : ''} onChange={e => setEditForm({...editForm, FechaInicio: e.target.value})} title="Fecha Inicio" />
-                                                            <input type="date" className="bg-black/50 text-white border border-white/30 px-1.5 py-1 text-xs rounded outline-none focus:border-yellow-400" value={currentItem.FechaFin ? currentItem.FechaFin.substring(0,10) : ''} onChange={e => setEditForm({...editForm, FechaFin: e.target.value})} title="Fecha Fin" />
+                                                        <div className="flex flex-col gap-1.5 mt-1">
+                                                            <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-400">I:</span><input type="date" className="bg-yellow-900/10 text-white border border-yellow-500/30 px-1.5 py-1 text-xs rounded outline-none focus:border-yellow-400" value={currentItem.FechaInicio ? currentItem.FechaInicio.substring(0,10) : ''} onChange={e => setEditForm({...editForm, FechaInicio: e.target.value})} title="Fecha Inicio" /></div>
+                                                            <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-400">F:</span><input type="date" className="bg-yellow-900/10 text-white border border-yellow-500/30 px-1.5 py-1 text-xs rounded outline-none focus:border-yellow-400" value={currentItem.FechaFin ? currentItem.FechaFin.substring(0,10) : ''} onChange={e => setEditForm({...editForm, FechaFin: e.target.value})} title="Fecha Fin" /></div>
                                                         </div>
                                                     ) : (
-                                                        <div className="bg-yellow-900/10 p-2 rounded border border-yellow-400/20">
-                                                            <span className="text-white font-medium block text-xs"><span className="text-yellow-400 font-bold w-4 inline-block">I:</span> {it.FechaInicio ? it.FechaInicio.substring(0,10) : '-'}</span>
-                                                            <span className="text-white font-medium block text-xs mt-1"><span className="text-yellow-400 font-bold w-4 inline-block">F:</span> {it.FechaFin ? it.FechaFin.substring(0,10) : '-'}</span>
+                                                        <div className="bg-yellow-900/10 p-2 rounded border border-yellow-400/20 shadow-inner">
+                                                            <span className="text-white font-medium block text-[11px]"><span className="text-yellow-400 font-bold w-4 inline-block">I:</span> {it.FechaInicio ? it.FechaInicio.substring(0,10) : '-'}</span>
+                                                            <span className="text-white font-medium block text-[11px] mt-1"><span className="text-yellow-400 font-bold w-4 inline-block">F:</span> {it.FechaFin ? it.FechaFin.substring(0,10) : '-'}</span>
                                                         </div>
                                                     )}
                                                 </div>
 
                                                 <div className="col-span-1">
-                                                    <span className="text-white/50 block text-[10px] font-bold uppercase tracking-wider mb-1">Cumplimiento</span>
-                                                    <span className="text-green-400 font-bold text-2xl">{calcularCumplimiento(it.FechaInicio, it.FechaFin)}%</span>
+                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Cumplimiento</span>
+                                                    <span className="text-green-400 font-black text-2xl drop-shadow">{calcularCumplimiento(it.FechaInicio, it.FechaFin)}%</span>
                                                 </div>
 
                                                 <div className="col-span-1">
-                                                    <span className="text-white/50 block text-[10px] font-bold uppercase tracking-wider mb-1">Avance Real</span>
+                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Avance Real</span>
                                                     {isEditing ? (
-                                                         <input type="number" className="w-20 bg-black/50 text-white border border-white/30 px-2 py-1 rounded outline-none focus:border-yellow-400 text-lg font-bold" value={currentItem.Avance || 0} onChange={e => {
+                                                         <input type="number" className="w-20 bg-black/50 text-white border border-white/30 px-2 py-1 rounded outline-none focus:border-yellow-400 text-lg font-bold mt-1" value={currentItem.Avance || 0} onChange={e => {
                                                              let val = parseInt(e.target.value) || 0;
                                                              if (val >= 100 && (!currentItem.Evidencias || currentItem.Evidencias === "")) val = 99;
                                                              setEditForm({...editForm, Avance: val});
                                                          }} />
                                                     ) : (
-                                                        <span className="text-yellow-400 font-bold text-2xl">{it.Avance || 0}%</span>
+                                                        <span className="text-yellow-400 font-black text-2xl drop-shadow">{it.Avance || 0}%</span>
                                                     )}
                                                 </div>
 
-                                                <div className="col-span-1">
-                                                    <span className="text-white/50 block text-[10px] font-bold uppercase tracking-wider mb-1">Evidencia</span>
+                                                <div className="col-span-1 lg:col-span-6 border-t border-white/10 pt-3">
+                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Evidencia</span>
                                                     <div className="space-y-2">
                                                         {it.Evidencias ? (
                                                             <span className="text-green-400 font-bold text-xs bg-green-500/10 px-2 py-1 rounded border border-green-500/20 inline-block">&#10003; Cargada</span>
@@ -1279,7 +1379,7 @@
                                                             <span className="text-white/30 text-xs italic inline-block">Sin evidencia</span>
                                                         )}
                                                         {isMyTask && (
-                                                            <input type="file" className="text-[10px] text-white/70 w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 transition-all cursor-pointer" onChange={(e) => handleFileUpload(it.Id, e)} accept="image/*,.pdf" title={it.Evidencias ? "Reemplazar evidencia" : "Cargar evidencia"} />
+                                                            <input type="file" className="text-[10px] text-white/70 w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 transition-all cursor-pointer block mt-1" onChange={(e) => handleFileUpload(it.Id, e)} accept="image/*,.pdf" title={it.Evidencias ? "Reemplazar evidencia" : "Cargar evidencia"} />
                                                         )}
                                                     </div>
                                                 </div>
@@ -1310,6 +1410,16 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        <div className="flex flex-col gap-2 min-w-[80px]">
+                                            {editingId === it.Id ? (
+                                                <button onClick={handleSaveEdit} className="bg-green-500/20 hover:bg-green-500/40 text-green-300 border border-green-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Listo</button>
+                                            ) : (
+                                                (isAdmin || isMyTask) && <button onClick={() => handleStartEdit(it)} className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Editar</button>
+                                            )}
+                                            {isAdmin && (
+                                                <button onClick={() => handleDeleteItemDetalle(it.Id)} className="bg-red-500/20 hover:bg-red-500/40 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Eliminar</button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -1317,6 +1427,7 @@
                     </div>
                     
                     <GanttChart items={checklist.items} />
+                    <DashboardCharts items={checklist.items} />
 
                     <div className="bg-black/80 backdrop-blur-2xl p-6 rounded-3xl border border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)] mt-8 animate-[fadeIn_0.5s_ease-out]">
                         <h3 className="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">&#128221; Comentario General del Checklist</h3>
@@ -1327,7 +1438,7 @@
                                     rows="3"
                                     value={generalComment}
                                     onChange={e => setGeneralComment(e.target.value)}
-                                    placeholder="Escribe un comentario general sobre todo el checklist..."
+                                    placeholder={"Escribe un comentario general sobre todo el checklist..."}
                                 ></textarea>
                                 <button onClick={handleSaveGeneralComment} className="bg-blue-600 hover:bg-blue-500 border border-blue-400/50 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg flex items-center gap-2 transition-colors">
                                     Guardar Comentario General
