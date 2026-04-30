@@ -38,7 +38,6 @@
 
     <script type="text/babel" data-presets="react">
         const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist";
-
         const AREAS = [
             "ASUNTOS SOCIALES", "ASUNTOS Y DIALOGO SOCIAL", "CIERRE DE MINA TECNICO Y OPERA",
             "CONTROL INTERNO", "ESTANDARES Y ESTRAT RESP CORP", "EXC OPERACIONAL Y TECNOLOGIA",
@@ -50,13 +49,11 @@
             "RECURSOS HUMANOS", "RELACIONES CON EL GOBIERNO", "SALUD Y SEGURIDAD",
             "SERVICIOS TECNICOS", "SERVICIOS TECNOLOGICOS", "SOPORTE A PRODUCCION"
         ];
-
         const PERMISOS = {
             "Administrador": ["control_total", "ver_checklist_productivos", "gestionar_items_productivos", "ver_avances", "ver_checklist_desarrollo", "gestionar_checklist_desarrollo"],
             "Responsable": ["ver_checklist_productivos", "gestionar_items_productivos", "ver_avances"],
             "Desarrollador": ["ver_checklist_desarrollo", "gestionar_checklist_desarrollo"]
         };
-
         const tienePermiso = (rol, permiso) => {
             if (rol === "Administrador") return true;
             return PERMISOS[rol] ? PERMISOS[rol].includes(permiso) : false;
@@ -440,7 +437,6 @@
                         setLoading(false);
                     }
                 }, 500);
-
                 return () => clearTimeout(delayDebounceFn);
             }, [query, value, readOnly]);
 
@@ -495,7 +491,6 @@
 
         const DashboardCharts = ({ items }) => {
             if (!items || items.length === 0) return null;
-
             const avanceGeneral = Math.round(items.reduce((acc, it) => acc + (parseInt(it.Avance || it.avance) || 0), 0) / items.length);
 
             const respMap = {};
@@ -505,7 +500,7 @@
                respMap[r].total += parseInt(it.Avance || it.avance) || 0;
                respMap[r].count += 1;
             });
-            
+
             const dataChart = Object.keys(respMap).map(k => ({
                name: k,
                avg: Math.round(respMap[k].total / respMap[k].count)
@@ -548,7 +543,6 @@
 
         const GanttChart = ({ items }) => {
             if (!items || items.length === 0) return null;
-
             const getValidDate = (d) => d ? new Date(d) : null;
             let minDate = new Date('2999-12-31');
             let maxDate = new Date('1970-01-01');
@@ -571,7 +565,7 @@
                     No hay tareas con Fechas (Baseline o Reales) v&aacute;lidas para generar el Diagrama de Gantt.
                 </div>
             );
-            
+
             let totalDays = (maxDate - minDate) / (1000 * 60 * 60 * 24);
             if (totalDays <= 0) totalDays = 1;
 
@@ -658,7 +652,7 @@
             const [nombreChecklist, setNombreChecklist] = React.useState('');
             const [isSaving, setIsSaving] = React.useState(false);
             const [showAddItemForm, setShowAddItemForm] = React.useState(false);
-            
+
             const getTipoFormulario = () => {
                 if (templateType === 'proyectos') return 'PROYECTO';
                 if (templateType === 'compra_instalada') return 'COMPRA INSTALADA';
@@ -698,7 +692,6 @@
                     fechaBaselineFin: '',
                     fechaInicio: hoy,
                     fechaFin: '',
-                    comentarioAdmin: '',
                     isAlert: false
                 }));
             });
@@ -776,7 +769,6 @@
 
                 try {
                     const digest = await getRequestDigest();
-
                     const finalItems = items.map((it) => ({
                         Id: it.id,
                         Descripcion: it.actividades,
@@ -788,8 +780,7 @@
                         FechaInicio: it.fechaInicio,
                         FechaFin: it.fechaFin,
                         Alerta: "No",
-                        ComentarioAdm: "",
-                        ComentarioPropio: "",
+                        HistorialComentarios: [], // Inyectamos el historial inmutable vacío al crear
                         Evidencias: ""
                     }));
 
@@ -797,6 +788,7 @@
                         ID_x002d_checklist: newChecklistId,
                         Name: nombreChecklist,
                         ComentarioGeneral: "",
+                        Tipo: getTipoFormulario(), // Guardamos el tipo de checklist
                         Metadata: metadata,
                         items: finalItems
                     };
@@ -1069,7 +1061,7 @@
             const [editingId, setEditingId] = React.useState(null);
             const [editForm, setEditForm] = React.useState({});
             const [generalComment, setGeneralComment] = React.useState('');
-            
+            const [nuevosComentarios, setNuevosComentarios] = React.useState({});
             const isAdmin = role === 'Administrador';
 
             React.useEffect(() => {
@@ -1141,13 +1133,12 @@
                         FechaInicio: editForm.FechaInicio,
                         FechaFin: editForm.FechaFin,
                         Avance: editForm.Avance ? editForm.Avance.toString() : "0", 
-                        ComentarioAdm: editForm.ComentarioAdm || "",
-                        ComentarioPropio: editForm.ComentarioPropio || "",
                         Alerta: editForm.Alerta || "No"
-                        // Nota: FechaBaselineInicio y FechaBaselineFin deliberadamente NO se guardan desde el form edit
+                        // Nota: HistorialComentarios se maneja en handleAgregarComentario
                     } : it);
+                    
                     const updatedChecklist = { ...checklist, items: updatedItems };
-
+                    
                     await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                         Data: JSON.stringify(updatedChecklist)
                     }, digest);
@@ -1178,6 +1169,39 @@
                 }
             };
 
+            const handleAgregarComentario = async (itemId) => {
+                const texto = nuevosComentarios[itemId];
+                if (!texto || !texto.trim()) return;
+
+                const comentarioObj = {
+                    texto: texto.trim(),
+                    autor: currentUser,
+                    fecha: new Date().toISOString(),
+                };
+
+                try {
+                    const digest = await getRequestDigest();
+                    const updatedItems = checklist.items.map(it => {
+                        if (it.Id === itemId) {
+                            const history = it.HistorialComentarios || [];
+                            return { ...it, HistorialComentarios: [...history, comentarioObj] };
+                        }
+                        return it;
+                    });
+
+                    const updatedChecklist = { ...checklist, items: updatedItems };
+                    await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
+                        Data: JSON.stringify(updatedChecklist)
+                    }, digest);
+
+                    setChecklist(updatedChecklist);
+                    setNuevosComentarios({ ...nuevosComentarios, [itemId]: '' });
+                } catch (error) {
+                    console.error(error);
+                    alert("Error guardando el comentario.");
+                }
+            };
+
             const handleSaveGeneralComment = async () => {
                 try {
                     const digest = await getRequestDigest();
@@ -1186,6 +1210,7 @@
                     await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                         Data: JSON.stringify(updatedChecklist)
                     }, digest);
+
                     setChecklist(updatedChecklist);
                     alert("Comentario general guardado exitosamente.");
                 } catch (error) {
@@ -1204,6 +1229,7 @@
                     await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, { 
                         Data: JSON.stringify(updatedChecklist) 
                     }, digest);
+
                     setChecklist(updatedChecklist);
                 } catch(error) { console.error(error); }
             };
@@ -1360,11 +1386,11 @@
                                                 <div className="col-span-1">
                                                     <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Avance Real</span>
                                                     {isEditing ? (
-                                                         <input type="number" className="w-20 bg-black/50 text-white border border-white/30 px-2 py-1 rounded outline-none focus:border-yellow-400 text-lg font-bold mt-1" value={currentItem.Avance || 0} onChange={e => {
-                                                             let val = parseInt(e.target.value) || 0;
-                                                             if (val >= 100 && (!currentItem.Evidencias || currentItem.Evidencias === "")) val = 99;
-                                                             setEditForm({...editForm, Avance: val});
-                                                         }} />
+                                                        <input type="number" className="w-20 bg-black/50 text-white border border-white/30 px-2 py-1 rounded outline-none focus:border-yellow-400 text-lg font-bold mt-1" value={currentItem.Avance || 0} onChange={e => {
+                                                            let val = parseInt(e.target.value) || 0;
+                                                            if (val >= 100 && (!currentItem.Evidencias || currentItem.Evidencias === "")) val = 99;
+                                                            setEditForm({...editForm, Avance: val});
+                                                        }} />
                                                     ) : (
                                                         <span className="text-yellow-400 font-black text-2xl drop-shadow">{it.Avance || 0}%</span>
                                                     )}
@@ -1385,29 +1411,50 @@
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5 pt-4 border-t border-white/10">
-                                                <div className="bg-black/30 p-3 rounded-lg border border-white/5">
-                                                    <span className="text-yellow-400 text-[10px] font-bold uppercase tracking-wider block mb-2">Nota Administrador:</span>
-                                                    {isEditing && isAdmin ? (
-                                                        <textarea className="w-full bg-black/50 text-white border border-white/30 p-2 text-sm rounded outline-none focus:border-yellow-400" rows="2" value={currentItem.ComentarioAdm || ''} onChange={e => setEditForm({...editForm, ComentarioAdm: e.target.value})}></textarea>
-                                                    ) : (
-                                                        <p className="text-white/90 text-sm whitespace-pre-wrap">{it.ComentarioAdm || <span className="text-white/30 italic">Sin comentarios</span>}</p>
-                                                    )}
+                                            <div className="col-span-1 lg:col-span-6 mt-5 pt-4 border-t border-white/10">
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <span className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Historial de Comentarios</span>
                                                     {isAdmin && !isEditing && (
-                                                        <button onClick={() => toggleAlert(it)} className={`mt-3 text-xs font-bold px-3 py-1.5 rounded border shadow-sm ${showAlert ? 'bg-red-500/20 text-red-300 border-red-500/50 hover:bg-red-500/30' : 'bg-white/10 text-white border-white/20 hover:bg-white/20'} transition-colors`}>
+                                                        <button onClick={() => toggleAlert(it)} className={`text-[10px] font-bold px-2 py-1 rounded border shadow-sm ${showAlert ? 'bg-red-500/20 text-red-300 border-red-500/50' : 'bg-white/10 text-white border-white/20'} transition-colors`}>
                                                             {showAlert ? 'Quitar Alerta' : 'Marcar Alerta'}
                                                         </button>
                                                     )}
                                                 </div>
 
-                                                <div className="bg-blue-900/10 p-3 rounded-lg border border-blue-500/20">
-                                                    <span className="text-blue-300 text-[10px] font-bold uppercase tracking-wider block mb-2">Comentario Responsable:</span>
-                                                    {isEditing && isMyTask ? (
-                                                        <textarea className="w-full bg-black/50 text-white border border-white/30 p-2 text-sm rounded outline-none focus:border-yellow-400" rows="2" value={currentItem.ComentarioPropio || ''} onChange={e => setEditForm({...editForm, ComentarioPropio: e.target.value})}></textarea>
+                                                <div className="space-y-2 mb-4 max-h-40 overflow-y-auto pr-2">
+                                                    {(!it.HistorialComentarios || it.HistorialComentarios.length === 0) ? (
+                                                        <p className="text-white/30 italic text-sm">No hay comentarios.</p>
                                                     ) : (
-                                                        <p className="text-white/90 text-sm whitespace-pre-wrap">{it.ComentarioPropio || <span className="text-white/30 italic">Sin comentarios</span>}</p>
+                                                        it.HistorialComentarios.map((com, index) => (
+                                                            <div key={index} className="bg-white/5 p-3 rounded-lg border border-white/10">
+                                                                <div className="flex justify-between items-center mb-1 border-b border-white/5 pb-1">
+                                                                    <span className="text-yellow-400 font-bold text-xs">{com.autor}</span>
+                                                                    <span className="text-white/40 text-[10px]">{new Date(com.fecha).toLocaleString()}</span>
+                                                                </div>
+                                                                <p className="text-white/90 text-sm whitespace-pre-wrap">{com.texto}</p>
+                                                            </div>
+                                                        ))
                                                     )}
                                                 </div>
+
+                                                {(isAdmin || isMyTask) && (
+                                                    <div className="flex gap-2">
+                                                        <textarea 
+                                                            className="flex-1 bg-black/50 text-white border border-white/30 p-2 text-sm rounded outline-none focus:border-yellow-400" 
+                                                            rows="1" 
+                                                            placeholder="Escribe un comentario..."
+                                                            value={nuevosComentarios[it.Id] || ''}
+                                                            onChange={(e) => setNuevosComentarios({...nuevosComentarios, [it.Id]: e.target.value})}
+                                                        ></textarea>
+                                                        <button 
+                                                            onClick={() => handleAgregarComentario(it.Id)}
+                                                            disabled={!nuevosComentarios[it.Id] || !nuevosComentarios[it.Id].trim()}
+                                                            className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:text-gray-400 text-white text-xs font-bold px-4 rounded transition-colors shadow"
+                                                        >
+                                                            Agregar
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex flex-col gap-2 min-w-[80px]">
@@ -1463,6 +1510,10 @@
             const [checklists, setChecklists] = React.useState([]);
             const [loading, setLoading] = React.useState(true);
             const [showTemplateModal, setShowTemplateModal] = React.useState(false);
+            
+            const [filtroNombre, setFiltroNombre] = React.useState('');
+            const [filtroAlerta, setFiltroAlerta] = React.useState(false);
+            const [filtroTipo, setFiltroTipo] = React.useState('');
 
             React.useEffect(() => {
                 const fetchData = async () => {
@@ -1488,7 +1539,6 @@
                         const visibleChecklists = isResponsable
                             ? combined.filter(chk => chk.items && chk.items.some(it => it.NombreResponsable === currentUser))
                             : combined;
-
                         setChecklists(visibleChecklists.reverse());
                     } catch (error) {
                         console.error("Error fetching data:", error);
@@ -1501,32 +1551,75 @@
 
             if (loading) return <div className="text-center text-white mt-20">Cargando datos desde SharePoint DB...</div>;
 
+            let filtrados = checklists;
+            if (filtroNombre.trim()) {
+                filtrados = filtrados.filter(chk => chk.Name && chk.Name.toLowerCase().includes(filtroNombre.toLowerCase()));
+            }
+            if (filtroAlerta) {
+                filtrados = filtrados.filter(chk => chk.items && chk.items.some(it => it.Alerta === "Si"));
+            }
+            if (filtroTipo) {
+                filtrados = filtrados.filter(chk => chk.Tipo === filtroTipo);
+            }
+
             return (
                 <div className="max-w-7xl mx-auto animate-[fadeIn_0.4s_ease-out]">
-                    <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-black/80 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.3)] border border-white/20">
-                        <div>
-                            <h2 className="text-3xl font-black text-white flex items-center gap-3">
-                                &#128203; Listado de Checklists
-                                <span className="bg-yellow-400 text-black text-sm font-bold px-3 py-1 rounded-full">{checklists.length}</span>
-                            </h2>
-                            <p className="text-white/60 mt-1">Directorio consolidado de actividades desde SharePoint.</p>
+                    <div className="flex flex-col justify-between items-start mb-8 gap-4 bg-black/80 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.3)] border border-white/20">
+                        <div className="flex justify-between w-full items-center">
+                            <div>
+                                <h2 className="text-3xl font-black text-white flex items-center gap-3">
+                                    &#128203; Listado de Checklists
+                                    <span className="bg-yellow-400 text-black text-sm font-bold px-3 py-1 rounded-full">{filtrados.length}</span>
+                                </h2>
+                                <p className="text-white/60 mt-1">Directorio consolidado de actividades desde SharePoint.</p>
+                            </div>
+
+                            {(role === 'Administrador' || role === 'Desarrollador') && (
+                                <button className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:-translate-y-1" onClick={() => setShowTemplateModal(true)}>
+                                    Crear Nuevo CheckList
+                                </button>
+                            )}
                         </div>
 
-                        {(role === 'Administrador' || role === 'Desarrollador') && (
-                            <button className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:-translate-y-1" onClick={() => setShowTemplateModal(true)}>
-                                Crear Nuevo CheckList
-                            </button>
-                        )}
+                        <div className="flex flex-col md:flex-row gap-4 w-full mt-4 border-t border-white/10 pt-4">
+                            <input 
+                                type="text" 
+                                placeholder="Buscar por nombre..." 
+                                className="bg-black/50 text-white border border-white/20 rounded-lg px-4 py-2 outline-none focus:border-yellow-400 text-sm flex-1"
+                                value={filtroNombre}
+                                onChange={(e) => setFiltroNombre(e.target.value)}
+                            />
+                            <select 
+                                className="bg-black/50 text-white/80 border border-white/20 rounded-lg px-4 py-2 outline-none focus:border-yellow-400 text-sm"
+                                value={filtroTipo}
+                                onChange={(e) => setFiltroTipo(e.target.value)}
+                            >
+                                <option value="">Todos los Tipos</option>
+                                <option value="PROYECTO">Incorporaci&oacute;n por Proyectos</option>
+                                <option value="COMPRA INSTALADA">Incorporaci&oacute;n Compra Instalada</option>
+                                <option value="ENSAMBLE">Incorporaci&oacute;n por Ensamble</option>
+                                <option value="GENERAL">General</option>
+                            </select>
+                            <label className="flex items-center gap-2 text-sm font-bold text-white cursor-pointer bg-black/50 border border-white/20 px-4 py-2 rounded-lg">
+                                <input 
+                                    type="checkbox" 
+                                    checked={filtroAlerta} 
+                                    onChange={(e) => setFiltroAlerta(e.target.checked)} 
+                                    className="accent-yellow-400"
+                                />
+                                Solo con Alertas
+                            </label>
+                        </div>
                     </div>
 
-                    {checklists.length === 0 ? (
+                    {filtrados.length === 0 ? (
                         <div className="text-center py-20 bg-black/80 backdrop-blur-2xl rounded-3xl border border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
                             <h3 className="text-2xl font-bold text-white mb-2">No hay Checklists Disponibles</h3>
                             {role === 'Responsable' && <p className="text-white/50">No tienes ninguna tarea asignada a\u00fan en ning\u00fan checklist.</p>}
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {checklists.map((chk) => {
+                            {filtrados.map((chk) => {
                                 const itemCount = chk.items?.length || 0;
                                 const hasAlerts = chk.items?.some(it => it.Alerta === "Si");
                                 const promCalc = calcularPromedioChecklist(chk.items);
@@ -1615,6 +1708,7 @@
 
                 const LIST_NAME = "User-CheckList";
                 const url = SITE_URL + "/_api/web/lists/getbytitle('" + encodeURIComponent(LIST_NAME) + "')/items?$filter=User eq '" + user + "' and Password eq '" + pswd + "'&$select=User,Rol";
+
                 try {
                     const res = await fetch(url, { method: 'GET', headers: { "Accept": "application/json;odata=verbose" }, credentials: 'same-origin' });
                     if (!res.ok) throw new Error("HTTP " + res.status);
@@ -1633,7 +1727,9 @@
                     setIsLoading(false);
                 }
             };
+
             const inputClasses = "w-full bg-white/90 text-gray-900 border border-transparent focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400 rounded-xl px-4 py-3 outline-none transition-all duration-300 placeholder-transparent peer";
+
             return (
                 <div className="flex justify-center items-center min-h-screen p-4">
                     <div className="bg-black/80 backdrop-blur-2xl border border-white/20 p-10 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md transform transition-all hover:scale-[1.01]">
@@ -1716,8 +1812,10 @@
             const [isLoggedIn, setIsLoggedIn] = React.useState(false);
             const [currentUser, setCurrentUser] = React.useState('');
             const [currentRole, setCurrentRole] = React.useState('');
+            
             const handleLogin = (user, role) => { setIsLoggedIn(true); setCurrentUser(user); setCurrentRole(role); };
             const handleLogout = () => { setIsLoggedIn(false); setCurrentUser(''); setCurrentRole(''); };
+            
             return isLoggedIn ? <Dashboard user={currentUser} role={currentRole} onLogout={handleLogout} /> : <Login onLogin={handleLogin} />;
         };
 
