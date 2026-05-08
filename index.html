@@ -38,6 +38,24 @@
 
     <script type="text/babel" data-presets="react">
         const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist";
+        
+        // --- CONFIGURACIÓN DE NOTIFICACIONES TEAMS ---
+        const WEBHOOK_TEAMS_URL = "https://defaultc9a8e948bf0d4f8d9e9d551ac1b45a.48.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/686f52048bdf4bd29d83e8d4c6a2b610/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=qjJy4JkHjxDThnRnucNOGV0dvKxgPnEzAznBTnZkF8U"; 
+        
+        const notificarTeams = async (tipoAlerta, responsableEmail, mensaje, checklistNombre) => {
+            if (!WEBHOOK_TEAMS_URL || WEBHOOK_TEAMS_URL === "AQUI_TU_URL_DE_POWER_AUTOMATE") return;
+            try {
+                await fetch(WEBHOOK_TEAMS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tipoAlerta, responsableEmail, mensaje, checklistNombre })
+                });
+            } catch (error) {
+                console.error("Fallo al enviar la notificación a Teams:", error);
+            }
+        };
+        // ---------------------------------------------
+
         const AREAS = [
             "ASUNTOS SOCIALES", "ASUNTOS Y DIALOGO SOCIAL", "CIERRE DE MINA TECNICO Y OPERA",
             "CONTROL INTERNO", "ESTANDARES Y ESTRAT RESP CORP", "EXC OPERACIONAL Y TECNOLOGIA",
@@ -437,6 +455,7 @@
                         setLoading(false);
                     }
                 }, 500);
+
                 return () => clearTimeout(delayDebounceFn);
             }, [query, value, readOnly]);
 
@@ -780,7 +799,7 @@
                         FechaInicio: it.fechaInicio,
                         FechaFin: it.fechaFin,
                         Alerta: "No",
-                        HistorialComentarios: [], // Inyectamos el historial inmutable vacío al crear
+                        HistorialComentarios: [], 
                         Evidencias: ""
                     }));
 
@@ -788,7 +807,7 @@
                         ID_x002d_checklist: newChecklistId,
                         Name: nombreChecklist,
                         ComentarioGeneral: "",
-                        Tipo: getTipoFormulario(), // Guardamos el tipo de checklist
+                        Tipo: getTipoFormulario(),
                         Metadata: metadata,
                         items: finalItems
                     };
@@ -810,7 +829,9 @@
             };
 
             const inputClasses = "w-full bg-black/50 text-white border border-white/20 focus:border-yellow-400 rounded px-3 py-2 outline-none transition-all duration-300";
-            let titlePrefix = templateType === 'proyectos' ? "Plantilla: Proyectos" : templateType === 'compra_instalada' ? "Plantilla: Compra Instalada" : templateType === 'ensamble' ? "Plantilla: Ensamble" : "Crear Nuevo Checklist";
+            
+            let titlePrefix = templateType === 'proyectos' ? "Plantilla: Proyectos" : templateType === 'compra_instalada' ?
+            "Plantilla: Compra Instalada" : templateType === 'ensamble' ? "Plantilla: Ensamble" : "Crear Nuevo Checklist";
 
             return (
                 <div className="bg-black/80 backdrop-blur-2xl border border-white/20 p-8 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] text-white mt-8 mx-auto max-w-6xl animate-[fadeIn_0.3s_ease-out]">
@@ -826,7 +847,6 @@
                         <input type="text" className="w-full bg-black/50 text-white border border-white/30 focus:border-yellow-400 rounded-xl px-4 py-3 outline-none transition-all duration-300 text-lg font-bold" placeholder="Ej. Nuevo Proyecto" value={nombreChecklist} onChange={(e) => setNombreChecklist(e.target.value)} required />
                     </div>
 
-                    {/* Metadatos */}
                     <div className="border border-white/20 rounded-lg overflow-hidden text-sm mb-8 bg-white/5">
                         <div className="flex flex-col md:flex-row border-b border-white/20">
                             <div className="w-full md:w-1/3 p-4 border-r border-white/20 flex flex-col gap-3">
@@ -836,7 +856,6 @@
                                 ))}
                                 <button onClick={addEquipo} className="bg-white/10 hover:bg-white/20 text-xs font-bold py-1.5 px-3 rounded self-start transition-colors border border-white/10">A&ntilde;adir otro activo</button>
                                 
-                                {/* Image Upload for Equipment */}
                                 <div className="mt-3 pt-3 border-t border-white/10">
                                     <span className="font-bold text-[10px] uppercase tracking-wider text-white/50 block mb-2">FOTO DEL EQUIPO</span>
                                     {metadata.imagenEquipo ? (
@@ -1075,11 +1094,7 @@
                         if (listJson.d.results.length > 0) {
                             const row = listJson.d.results[0];
                             const parsedData = JSON.parse(row.Data);
-                            
-                            setChecklist({
-                                ...parsedData,
-                                SharePointId: row.Id 
-                            });
+                            setChecklist({ ...parsedData, SharePointId: row.Id });
                             setGeneralComment(parsedData.ComentarioGeneral || '');
                         }
                     } catch (error) {
@@ -1104,7 +1119,6 @@
                     await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                         Data: JSON.stringify(updatedChecklist)
                     }, digest);
-
                     setChecklist(updatedChecklist);
                     alert('Evidencia cargada. Avance actualizado al 100% automáticamente.');
                 } catch (error) {
@@ -1134,15 +1148,12 @@
                         FechaFin: editForm.FechaFin,
                         Avance: editForm.Avance ? editForm.Avance.toString() : "0", 
                         Alerta: editForm.Alerta || "No"
-                        // Nota: HistorialComentarios se maneja en handleAgregarComentario
                     } : it);
-                    
                     const updatedChecklist = { ...checklist, items: updatedItems };
                     
                     await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                         Data: JSON.stringify(updatedChecklist)
                     }, digest);
-
                     setChecklist(updatedChecklist);
                     setEditingId(null);
                 } catch (error) {
@@ -1157,11 +1168,9 @@
                     const digest = await getRequestDigest();
                     const updatedItems = checklist.items.filter(it => it.Id !== itemId);
                     const updatedChecklist = { ...checklist, items: updatedItems };
-
                     await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                         Data: JSON.stringify(updatedChecklist)
                     }, digest);
-
                     setChecklist(updatedChecklist);
                 } catch (error) {
                     alert("Error eliminando ítem.");
@@ -1178,24 +1187,36 @@
                     autor: currentUser,
                     fecha: new Date().toISOString(),
                 };
-
                 try {
                     const digest = await getRequestDigest();
+                    let targetItem = null;
                     const updatedItems = checklist.items.map(it => {
                         if (it.Id === itemId) {
+                            targetItem = it;
                             const history = it.HistorialComentarios || [];
                             return { ...it, HistorialComentarios: [...history, comentarioObj] };
                         }
                         return it;
                     });
-
+                    
                     const updatedChecklist = { ...checklist, items: updatedItems };
                     await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                         Data: JSON.stringify(updatedChecklist)
                     }, digest);
-
+                    
                     setChecklist(updatedChecklist);
                     setNuevosComentarios({ ...nuevosComentarios, [itemId]: '' });
+
+                    // NOTIFICACIÓN TEAMS: Solo si el autor del comentario no es el responsable
+                    if (targetItem && targetItem.NombreResponsable && targetItem.NombreResponsable.toLowerCase() !== currentUser.toLowerCase()) {
+                        notificarTeams(
+                            "Nuevo Comentario",
+                            targetItem.NombreResponsable,
+                            `El usuario ${currentUser} ha comentado en tu tarea "${targetItem.Descripcion}": ${texto}`,
+                            checklist.Name
+                        );
+                    }
+
                 } catch (error) {
                     console.error(error);
                     alert("Error guardando el comentario.");
@@ -1210,7 +1231,6 @@
                     await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                         Data: JSON.stringify(updatedChecklist)
                     }, digest);
-
                     setChecklist(updatedChecklist);
                     alert("Comentario general guardado exitosamente.");
                 } catch (error) {
@@ -1229,8 +1249,17 @@
                     await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, { 
                         Data: JSON.stringify(updatedChecklist) 
                     }, digest);
-
                     setChecklist(updatedChecklist);
+
+                    // NOTIFICACIÓN TEAMS: Solo si se está activando la alerta y el usuario actual NO es el responsable
+                    if (newAlerta === "Si" && item.NombreResponsable && item.NombreResponsable.toLowerCase() !== currentUser.toLowerCase()) {
+                        notificarTeams(
+                            "Alerta Activada",
+                            item.NombreResponsable,
+                            `El usuario ${currentUser} ha marcado una alerta en tu tarea: "${item.Descripcion}".`,
+                            checklist.Name
+                        );
+                    }
                 } catch(error) { console.error(error); }
             };
 
@@ -1248,7 +1277,6 @@
                         </button>
                     </div>
 
-                    {/* Metadata ReadOnly Panel */}
                     {checklist.Metadata && (
                         <div className="border border-white/20 rounded-2xl overflow-hidden text-sm mb-8 bg-black/60 backdrop-blur-2xl shadow-2xl text-white">
                             <div className="flex flex-col md:flex-row border-b border-white/10">
@@ -1501,7 +1529,6 @@
                             </div>
                         )}
                     </div>
-
                 </div>
             );
         };
@@ -1708,7 +1735,7 @@
 
                 const LIST_NAME = "User-CheckList";
                 const url = SITE_URL + "/_api/web/lists/getbytitle('" + encodeURIComponent(LIST_NAME) + "')/items?$filter=User eq '" + user + "' and Password eq '" + pswd + "'&$select=User,Rol";
-
+                
                 try {
                     const res = await fetch(url, { method: 'GET', headers: { "Accept": "application/json;odata=verbose" }, credentials: 'same-origin' });
                     if (!res.ok) throw new Error("HTTP " + res.status);
@@ -1729,7 +1756,7 @@
             };
 
             const inputClasses = "w-full bg-white/90 text-gray-900 border border-transparent focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400 rounded-xl px-4 py-3 outline-none transition-all duration-300 placeholder-transparent peer";
-
+            
             return (
                 <div className="flex justify-center items-center min-h-screen p-4">
                     <div className="bg-black/80 backdrop-blur-2xl border border-white/20 p-10 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md transform transition-all hover:scale-[1.01]">
