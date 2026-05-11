@@ -40,7 +40,7 @@
         const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist";
         
         // --- CONFIGURACIÓN DE NOTIFICACIONES TEAMS ---
-        const WEBHOOK_TEAMS_URL = "https://defaultc9a8e948bf0d4f8d9e9d551ac1b45a.48.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/686f52048bdf4bd29d83e8d4c6a2b610/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=qjJy4JkHjxDThnRnucNOGV0dvKxgPnEzAznBTnZkF8U"; 
+        const WEBHOOK_TEAMS_URL = "https://defaultc9a8e948bf0d4f8d9e9d551ac1b45a.48.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/686f52048bdf4bd29d83e8d4c6a2b610/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=qjJy4JkHjxDThnRnucNOGV0dvKxgPnEzAznBTnZkF8U";
         
         const notificarTeams = async (tipoAlerta, responsableEmail, mensaje, checklistNombre) => {
             if (!WEBHOOK_TEAMS_URL || WEBHOOK_TEAMS_URL === "AQUI_TU_URL_DE_POWER_AUTOMATE") return;
@@ -67,11 +67,13 @@
             "RECURSOS HUMANOS", "RELACIONES CON EL GOBIERNO", "SALUD Y SEGURIDAD",
             "SERVICIOS TECNICOS", "SERVICIOS TECNOLOGICOS", "SOPORTE A PRODUCCION"
         ];
+        
         const PERMISOS = {
             "Administrador": ["control_total", "ver_checklist_productivos", "gestionar_items_productivos", "ver_avances", "ver_checklist_desarrollo", "gestionar_checklist_desarrollo"],
             "Responsable": ["ver_checklist_productivos", "gestionar_items_productivos", "ver_avances"],
             "Desarrollador": ["ver_checklist_desarrollo", "gestionar_checklist_desarrollo"]
         };
+        
         const tienePermiso = (rol, permiso) => {
             if (rol === "Administrador") return true;
             return PERMISOS[rol] ? PERMISOS[rol].includes(permiso) : false;
@@ -1722,67 +1724,6 @@
             );
         };
 
-        const Login = ({ onLogin }) => {
-            const [user, setUser] = React.useState('');
-            const [pswd, setPswd] = React.useState('');
-            const [error, setError] = React.useState('');
-            const [isLoading, setIsLoading] = React.useState(false);
-
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                setError('');
-                setIsLoading(true);
-
-                const LIST_NAME = "User-CheckList";
-                const url = SITE_URL + "/_api/web/lists/getbytitle('" + encodeURIComponent(LIST_NAME) + "')/items?$filter=User eq '" + user + "' and Password eq '" + pswd + "'&$select=User,Rol";
-                
-                try {
-                    const res = await fetch(url, { method: 'GET', headers: { "Accept": "application/json;odata=verbose" }, credentials: 'same-origin' });
-                    if (!res.ok) throw new Error("HTTP " + res.status);
-                    const json = await res.json();
-                    const results = (json.d && json.d.results) || [];
-
-                    if (results.length > 0) {
-                        onLogin(results[0].User, results[0].Rol);
-                    } else {
-                        setError('Usuario o contrase\u00f1a incorrectos.');
-                    }
-                } catch (err) {
-                    console.error("REST Error:", err);
-                    setError('Error 404/Conexi\u00f3n. Ejecuta desde SharePoint.');
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-
-            const inputClasses = "w-full bg-white/90 text-gray-900 border border-transparent focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400 rounded-xl px-4 py-3 outline-none transition-all duration-300 placeholder-transparent peer";
-            
-            return (
-                <div className="flex justify-center items-center min-h-screen p-4">
-                    <div className="bg-black/80 backdrop-blur-2xl border border-white/20 p-10 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md transform transition-all hover:scale-[1.01]">
-                        <div className="text-center mb-8">
-                            <h2 className="text-4xl font-black text-white tracking-tight drop-shadow-md">Cerrej&oacute;n</h2>
-                            <p className="text-yellow-400/90 font-medium mt-1 uppercase tracking-widest text-sm">Plataforma de Operaciones</p>
-                        </div>
-                        {error && <div className="bg-red-500/20 border border-red-500/50 text-red-100 px-4 py-3 rounded-xl mb-6 shadow-inner flex items-center gap-3 animate-pulse"><span>&#9888;</span><span className="text-sm font-medium">{error}</span></div>}
-                        <form onSubmit={handleSubmit} className="space-y-5">
-                            <div className="relative">
-                                <input type="text" className={inputClasses} id="inputUser" placeholder="Usuario" value={user} onChange={(e) => setUser(e.target.value)} required disabled={isLoading} />
-                                <label htmlFor="inputUser" className="absolute left-4 -top-2.5 bg-gray-800/90 px-2 text-xs text-yellow-400 font-semibold rounded backdrop-blur-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-placeholder-shown:bg-transparent peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-yellow-400 peer-focus:bg-gray-800/90">Usuario</label>
-                            </div>
-                            <div className="relative">
-                                <input type="password" className={inputClasses} id="inputPswd" placeholder="Contrase\u00f1a" value={pswd} onChange={(e) => setPswd(e.target.value)} required disabled={isLoading} />
-                                <label htmlFor="inputPswd" className="absolute left-4 -top-2.5 bg-gray-800/90 px-2 text-xs text-yellow-400 font-semibold rounded backdrop-blur-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-placeholder-shown:bg-transparent peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-yellow-400 peer-focus:bg-gray-800/90">Contrase&ntilde;a</label>
-                            </div>
-                            <button className={`w-full mt-8 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-extrabold py-3.5 rounded-xl shadow-[0_0_20px_rgba(234,179,8,0.3)] transition-all duration-300 ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-1'}`} type="submit" disabled={isLoading}>
-                                {isLoading ? 'VERIFICANDO...' : 'INGRESAR AL SISTEMA'}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            );
-        };
-
         const Dashboard = ({ user, role, onLogout }) => {
             const [view, setView] = React.useState('checklist_all');
             const [selectedChecklistId, setSelectedChecklistId] = React.useState(null);
@@ -1836,14 +1777,36 @@
         };
 
         const App = () => {
-            const [isLoggedIn, setIsLoggedIn] = React.useState(false);
-            const [currentUser, setCurrentUser] = React.useState('');
-            const [currentRole, setCurrentRole] = React.useState('');
-            
-            const handleLogin = (user, role) => { setIsLoggedIn(true); setCurrentUser(user); setCurrentRole(role); };
-            const handleLogout = () => { setIsLoggedIn(false); setCurrentUser(''); setCurrentRole(''); };
-            
-            return isLoggedIn ? <Dashboard user={currentUser} role={currentRole} onLogout={handleLogout} /> : <Login onLogin={handleLogin} />;
+            const [user, setUser] = React.useState(null);
+            const [role, setRole] = React.useState(null);
+            const [loading, setLoading] = React.useState(true);
+
+            React.useEffect(() => {
+                const initUser = async () => {
+                    try {
+                        const res = await fetch(`${SITE_URL}/_api/web/currentuser?$select=Email,Title`, {
+                            headers: { "Accept": "application/json;odata=verbose" },
+                            credentials: 'same-origin'
+                        });
+                        const data = await res.json();
+                        const userEmail = data.d.Email || data.d.Title; 
+                        
+                        setUser(userEmail);
+                        setRole(userEmail.toLowerCase() === 'jorge.almarales.ext@cerrejon.com' ? 'Administrador' : 'Responsable');
+                    } catch (error) {
+                        console.error("Error fetching current user:", error);
+                        alert("No se pudo autenticar con SharePoint.");
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+                initUser();
+            }, []);
+
+            if (loading) return <div className="text-white text-center mt-20 font-bold text-xl">Autenticando con Microsoft 365...</div>;
+            if (!user) return <div className="text-white text-center mt-20">Error de autenticaci&oacute;n con el sistema de la empresa.</div>;
+
+            return <Dashboard user={user} role={role} onLogout={() => alert("Tu sesión está vinculada a tu cuenta de Microsoft. Para cerrar sesión, debes salir de tu cuenta corporativa en el navegador.")} />;
         };
 
         const rootContainer = document.getElementById('root');
