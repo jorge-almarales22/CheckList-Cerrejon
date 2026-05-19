@@ -1996,7 +1996,7 @@
                         const userEmail = data.d.Email || data.d.Title; 
                         
                         setUser(userEmail);
-                        setRole(userEmail.toLowerCase() === 'jorge.almarales.ext@cerrejon.com' ? 'Administrador' : 'Responsable');
+                        setRole(userEmail.toLowerCase() === 'jorge.almarales.ext@cerrejon.com' || 'samir.tenorio.ext@cerrejon.com' ? 'Administrador' : 'Responsable');
                     } catch (error) {
                         console.error("Error fetching current user:", error);
                         alert("No se pudo autenticar con SharePoint.");
