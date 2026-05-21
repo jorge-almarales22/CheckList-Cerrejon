@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App React en SharePoint</title>
+    <link rel="shortcut icon" href="./img/Logo.png" type="image/x-icon">
+   <title>Incorporaci&oacute;n de Activos</title>
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -12,19 +13,42 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        body, html {
-            margin: 0; padding: 0; height: 100%;
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
             font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-image: url('./img/img-background.png');
             background-color: #1a202c;
-            background-size: cover; background-position: center;
-            background-attachment: fixed; background-repeat: no-repeat;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
         }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
-        input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active {
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
             -webkit-box-shadow: 0 0 0 30px rgba(255, 255, 255, 0.9) inset !important;
             -webkit-text-fill-color: #1f2937 !important;
             transition: background-color 5000s ease-in-out 0s;
@@ -38,10 +62,10 @@
 
     <script type="text/babel" data-presets="react">
         const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist";
-        
+
         // --- CONFIGURACIÓN DE NOTIFICACIONES TEAMS ---
         const WEBHOOK_TEAMS_URL = "https://defaultc9a8e948bf0d4f8d9e9d551ac1b45a.48.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/686f52048bdf4bd29d83e8d4c6a2b610/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=qjJy4JkHjxDThnRnucNOGV0dvKxgPnEzAznBTnZkF8U";
-        
+
         const notificarTeams = async (tipoAlerta, responsableEmail, mensaje, checklistNombre) => {
             if (!WEBHOOK_TEAMS_URL || WEBHOOK_TEAMS_URL === "AQUI_TU_URL_DE_POWER_AUTOMATE") return;
             try {
@@ -67,13 +91,13 @@
             "RECURSOS HUMANOS", "RELACIONES CON EL GOBIERNO", "SALUD Y SEGURIDAD",
             "SERVICIOS TECNICOS", "SERVICIOS TECNOLOGICOS", "SOPORTE A PRODUCCION"
         ];
-        
+
         const PERMISOS = {
             "Administrador": ["control_total", "ver_checklist_productivos", "gestionar_items_productivos", "ver_avances", "ver_checklist_desarrollo", "gestionar_checklist_desarrollo"],
             "Responsable": ["ver_checklist_productivos", "gestionar_items_productivos", "ver_avances"],
             "Desarrollador": ["ver_checklist_desarrollo", "gestionar_checklist_desarrollo"]
         };
-        
+
         const tienePermiso = (rol, permiso) => {
             if (rol === "Administrador") return true;
             return PERMISOS[rol] ? PERMISOS[rol].includes(permiso) : false;
@@ -124,11 +148,11 @@
             "Ejecutar plan de entrenamiento a operadores",
             "Ejecutar plan de entrenamiento a t\u00e9cnicos de mantenimiento",
             "Entrenamiento en ajuste y pruebas a t\u00e9cnicos de mantenimiento",
-            "Evaluar la capacidad de recurso humano por la incorporaci\u00f3n de la instalaci\u00f3n/ infraestructura",
-            "Crear estrategia de mantenimiento (Modelling para AMT o lista de MST para Ellipse) en el sistema (resultado de RCM) al activo a incorporar. Nota: Si no se desarrolla el RCM antes de la puesta en operaci\u00f3n del activo, el analista de proyectos, o el rol responsable de la definici\u00f3n de la estrategia, define la estrategia de mantenimiento con el soporte del fabricante (ACT. NUEVO) o plantea una estrategia de mantenimiento basado en la experiencia (ACT. MODIFICADO) Entregar las pautas y lineamientos para la estrategia de mantenimiento e inspecciones preventivas (actividades, frecuencias y procedimientos) Entregar el listado de componentes cr\u00edticos, repuestos, consumibles y par\u00e1metros de reposici\u00f3n seg\u00fan aplique.",
-            "Informar los requerimientos de inspecciones (ley y/o normas t\u00e9cnicas). Recomendaciones de actividades y frecuencias de inspecciones y mantenimiento para componentes sin manual de O&M ni RCM Nota: Los activos para los cuales aplica la emisi\u00f3n de estos requerimientos debe ser previamente definida entre el analista de proyectos y el analista de confiabilidad del \u00e1rea custodio",
-            "Envio de la informaci\u00f3n para la creaci\u00f3n del activo en ellipse. Nota: cumpliendo con los requisitos del formato de creaci\u00f3n de activo",
-            "Solicitar la creaci\u00f3n del activo en el sistema Ellipse Nota: Se debe enviar informaci\u00f3n para creaci\u00f3n del activo en formato establecido",
+            "Evaluar la capacidad de recurso humano por la incorporaci\u00f3n de la instalación/ infraestructura",
+            "Crear estrategia de mantenimiento (Modelling para AMT o lista de MST para Ellipse) en el sistema (resultado de RCM) al activo a incorporar. Nota: Si no se desarrolla el RCM antes de la puesta en operación del activo, el analista de proyectos, o el rol responsable de la definición de la estrategia, define la estrategia de mantenimiento con el soporte del fabricante (ACT. NUEVO) o plantea una estrategia de mantenimiento basado en la experiencia (ACT. MODIFICADO) Entregar las pautas y lineamientos para la estrategia de mantenimiento e inspecciones preventivas (actividades, frecuencias y procedimientos) Entregar el listado de componentes cr\u00edticos, repuestos, consumibles y par\u00e1metros de reposición según aplique.",
+            "Informar los requerimientos de inspecciones (ley y/o normas t\u00e9cnicas). Recomendaciones de actividades y frecuencias de inspecciones y mantenimiento para componentes sin manual de O&M ni RCM Nota: Los activos para los cuales aplica la emisión de estos requerimientos debe ser previamente definida entre el analista de proyectos y el analista de confiabilidad del \u00e1rea custodio",
+            "Envio de la información para la creación del activo en ellipse. Nota: cumpliendo con los requisitos del formato de creación de activo",
+            "Solicitar la creación del activo en el sistema Ellipse Nota: Se debe enviar información para creación del activo en formato establecido",
             "Crear activo en el sistema",
             "Establecer garant\u00edas que aplican para el nuevo activo, enviarlas al rol encargado de la estrategia por parte del custodio",
             "Registrar las fechas de fin de garant\u00edas en el registro de los activos en el sistema",
@@ -136,25 +160,25 @@
             "Crear jerarqu\u00eda de fallas al activo a incorporar en ellipse (Modulo MSE6A1) Nota: Aplica para EGIs nuevo. Se debe enviar plantilla a Esp. Gesti\u00f3n de Informaci\u00f3n para crear en ellipse.",
             "Crear estructura de componentes traceables del activo a incorporar en ellipse (Modulo MSE610) Nota: Aplica para EGIs nuevo. Se debe enviar plantilla a Esp. Gesti\u00f3n de Informaci\u00f3n para crear en ellipse.",
             "Definir tareas estrat\u00e9gicas para cambio de componentes. Nota: Se deben incluir las tareas estrat\u00e9gicas en el modellin (AMT) o las MST (Ellipse).",
-            "Definir MST/Tareas estrat\u00e9gicas para actividades de mantenimiento predictivo. Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
-            "Definir Pool de Componentes Nota: Si se trata de la incorporaci\u00f3n de un activo existente, se calculations el nuevo tama\u00f1o del pool o confirmar el tama\u00f1o existente.",
+            "Definir MST/Tareas estrat\u00e9gicas para actividades de mantenimiento predictivo. Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
+            "Definir Pool de Componentes Nota: Si se trata de la incorporación de un activo existente, se calculations el nuevo tama\u00f1o del pool o confirmar el tama\u00f1o existente.",
             "Generar pedidos de componentes del Pool",
             "Crear los formatos de SEIS (Mantenimiento Preventivo)",
             "Crear los formatos de commissioning y de fin de commissioning de los componentes mayores del activo a incorporar (Si aplica) Nota: El objetivo es conocer cuales son las pruebas a realizar antes de la puesta en marcha de los componentes mayores del activo, es posible que el fabricante del activo a incorporar ofrezcan esta informaci\u00f3n.",
-            "Desarrollar los formatos necesarios para la realizaci\u00f3n de las tareas predictivas (Inspecci\u00f3n Estructural, UT, termograf\u00edas, vibraciones, entre otros), definir las rutas de inspecciones predictivas en los formatos requeridos.",
-            "Crear en el sistema Ellipse/AMT los Est\u00e1ndares de los SEIS Nota: Aplica solo si la referencia del activo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
-            "Crear en el sistema Ellipse los APL de los SEIS Nota: Aplica solo si la referencia del activo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
-            "Desarrollar los Procedimientos / Instructivos de Mantenimiento Nota: Aplica solo si la referencia del activo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n. Se debe generar listado de procedimientos e instructivos a elaborar (Cambio de componentes Mayor/Menor, Calibraciones, mantenimiento correctivos,entre otros) Entregar los manuales de instalaci\u00f3n, O&M de equipos y componentes (procedimientos de mantenimiento)",
-            "Crear en el sistema Ellipse/AMT los Est\u00e1ndares de los cambios de componentes Mayores/Menores, y tareas correctivas Nota: Aplica solo si la referencia del activo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
+            "Desarrollar los formatos necesarios para la realización de las tareas predictivas (Inspección Estructural, UT, termograf\u00edas, vibraciones, entre otros), definir las rutas de inspecciones predictivas en los formatos requeridos.",
+            "Crear en el sistema Ellipse/AMT los Est\u00e1ndares de los SEIS Nota: Aplica solo si la referencia del activo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
+            "Crear en el sistema Ellipse los APL de los SEIS Nota: Aplica solo si la referencia del activo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
+            "Desarrollar los Procedimientos / Instructivos de Mantenimiento Nota: Aplica solo si la referencia del activo a incorporar no se tiene en la operación actual de Cerrej\u00f3n. Se debe generar listado de procedimientos e instructivos a elaborar (Cambio de componentes Mayor/Menor, Calibraciones, mantenimiento correctivos,entre otros) Entregar los manuales de instalación, O&M de equipos y componentes (procedimientos de mantenimiento)",
+            "Crear en el sistema Ellipse/AMT los Est\u00e1ndares de los cambios de componentes Mayores/Menores, y tareas correctivas Nota: Aplica solo si la referencia del activo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
             "Crear en el sistema Ellipse/AMT los APL de los cambios de componentes, y tareas correctivas",
             "Crear en el sistema Ellipse/AMT las MST/Tareas Estrat\u00e9gicas de los SEIS",
             "Crear en el sistema Ellipse/AMT las MST/Tareas Estrat\u00e9gicas de los cambios de componentes",
             "Cargar MST/Tareas estrat\u00e9gicas en el sistema del activo a incorporar.",
-            "Registrar vida \u00fatil del activo a incorporar. Nota: Aplica si el activo a incorporar es usado en otra operaci\u00f3n.",
-            "Definir vida \u00fatil de los componentes mayores/menores. Nota: Aplica si el activo a incorporar es usado en otra operaci\u00f3n.",
-            "Registrar vida \u00fatil del activo a incorporar en el sistema. Nota: Aplica si el activo a incorporar es usado en otra operaci\u00f3n.",
-            "Registrar vida \u00fatil de los componentes mayores/menores en el sistema. Nota: Aplica si el activo a incorporar es usado en otra operaci\u00f3n.",
-            "Crear MST/Tareas estrat\u00e9gicas para actividades de mantenimiento predictivo. Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
+            "Registrar vida \u00fatil del activo a incorporar. Nota: Aplica si el activo a incorporar es usado en otra operación.",
+            "Definir vida \u00fatil de los componentes mayores/menores. Nota: Aplica si el activo a incorporar es usado en otra operación.",
+            "Registrar vida \u00fatil del activo a incorporar en el sistema. Nota: Aplica si el activo a incorporar es usado en otra operación.",
+            "Registrar vida \u00fatil de los componentes mayores/menores en el sistema. Nota: Aplica si el activo a incorporar es usado en otra operación.",
+            "Crear MST/Tareas estrat\u00e9gicas para actividades de mantenimiento predictivo. Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
             "Crear los set de monitoreo de condici\u00f3n e ingresarlos en sistema de Ellipse.",
             "Desarrollar caza fallas para los modos de fallas de los diferentes sistema del equipo (traducidos al espa\u00f1ol)",
             "Definir, gestionar y armar paquetes de herramientas por tipo de SEIS",
@@ -165,20 +189,20 @@
         ];
 
         const CHECKLIST_COMPRA_INSTALADA = [
-            "Documentar manejo del cambio (MIC) por el ingreso de los equipos. Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
+            "Documentar manejo del cambio (MIC) por el ingreso de los equipos. Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
             "Desarrollar Plan de Entrenamiento a Operadores y T\u00e9cnicos de Mantto",
             "Desarrollar Plan de Entrenamiento a T\u00e9cnicos de Reconstrucci\u00f3n de Componentes",
             "Ejecutar Plan de entrenamiento a Operadores",
             "Ejecutar Plan de entrenamiento a T\u00e9cnicos de Mantenimiento",
             "Ejecutar Plan de entrenamiento a T\u00e9cnicos de Reconstrucci\u00f3n",
-            "Verificar Fecha de Llegada Equipo / Fecha tentativa de inicio de operaci\u00f3n",
-            "Evaluar la capacidad de recurso operativo por la incorporaci\u00f3n del nuevo activo",
+            "Verificar Fecha de Llegada Equipo / Fecha tentativa de inicio de operación",
+            "Evaluar la capacidad de recurso operativo por la incorporación del nuevo activo",
             "Entregar el costo del activo, nuevo o modificado a contabilidad. Nota: El costo del activo modificado debe ser consultado a contabilidad",
-            "Revisar si aplicaci\u00f3n de capital incluyo presupuesto para el ejercicio de RCM, sino solicitar presupuesto para su ejecuci\u00f3n.",
-            "Programar el ejercicio de RCM Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
-            "Crear estrategia de mantenimiento (Modelling para AMT o lista de MST para Ellipse) en el sistema (resultado de RCM) al equipo a incorporar. Nota: Si no se desarrolla el RCM antes de la puesta en operaci\u00f3n del equipo, el analista de la flota, o el rol responsable de la definici\u00f3n de la estrategia, define la estrategia de mantenimiento con el soporte del fabricante (Eq. Nuevo) o plantea una estrategia de mantenimiento basado en la experiencia (Eq. Usado)",
-            "Registrar el equipo a incorporar ante el ministerio de transporte Nota: Se tiene soporte de el registro con el \u00e1rea de incorporaci\u00f3n de equipos (ensamble)",
-            "Solicitar la creaci\u00f3n del Equipo en el sistema Ellipse Nota: la solicitud la realiza el \u00e1rea que realiza la adquisici\u00f3n del equipo, previa autorizaci\u00f3n de la Superintendencia de Incorporaci\u00f3n y Optimizaci\u00f3n de vida de Equipos.",
+            "Revisar si aplicaci\u00f3n de capital incluyo presupuesto para el ejercicio de RCM, sino solicitar presupuesto para su ejecución.",
+            "Programar el ejercicio de RCM Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
+            "Crear estrategia de mantenimiento (Modelling para AMT o lista de MST para Ellipse) en el sistema (resultado de RCM) al equipo a incorporar. Nota: Si no se desarrolla el RCM antes de la puesta en operación del equipo, el analista de la flota, o el rol responsable de la definición de la estrategia, define la estrategia de mantenimiento con el soporte del fabricante (Eq. Nuevo) o plantea una estrategia de mantenimiento basado en la experiencia (Eq. Usado)",
+            "Registrar el equipo a incorporar ante el ministerio de transporte Nota: Se tiene soporte de el registro con el \u00e1rea de incorporación de equipos (ensamble)",
+            "Solicitar la creaci\u00f3n del Equipo en el sistema Ellipse Nota: la solicitud la realiza el \u00e1rea que realiza la adquisici\u00f3n del equipo, previa autorizaci\u00f3n de la Superintendencia de Incorporación y Optimizaci\u00f3n de vida de Equipos.",
             "Crear el equipo en el sistema",
             "Crear componentes traceables en Ellipse, si aplica. Nota: Aplica como componentes traceable todos aquellos componentes a los que se les lleve control de vida \u00fatil, pueden ser mayores o menores.",
             "Marcar los componentes f\u00edsicos traceables, si aplica.",
@@ -186,65 +210,65 @@
             "Crear estructura de componentes traceables del equipo a incorporar en ellipse (Modulo MSE610) Nota: Aplica para EGIs nuevo. Se debe enviar plantilla a Esp. Gesti\u00f3n de Informaci\u00f3n para crear en ellipse.",
             "Definir tareas estrat\u00e9gicas para cambio de componentes mayores. Nota: Se deben incluir las tareas estrat\u00e9gicas en el modellin (AMT) o las MST (Ellipse).",
             "Definir tareas estrat\u00e9gicas para cambio de componentes menores. Nota: Se deben incluir las tareas estrat\u00e9gicas en el modellin (AMT) o las MST (Ellipse).",
-            "Definir Pool de Componentes. Nota: Si se trata de la incorporaci\u00f3n de un equipo de una flota existente, se debe calcular el nuevo tama\u00f1o del pool o confirmar el tama\u00f1o existente.",
+            "Definir Pool de Componentes. Nota: Si se trata de la incorporación de un equipo de una flota existente, se debe calcular el nuevo tama\u00f1o del pool o confirmar el tama\u00f1o existente.",
             "Generar pedidos de componentes del Pool",
             "Crear los formatos de SEIS (Mantenimiento Preventivo)",
             "Crear los formatos de commissioning y de fin de commissioning de los componentes mayores del equipo a incorporar (Si aplica) Nota: El objetivo es conocer cuales son las pruebas a realizar antes de la puesta en marcha de los componentes mayores del equipo, es posible que el fabricante del equipo a incorporar ofrezcan esta informaci\u00f3n.",
             "Catalogar y asegurar el stock de las Partes para operar el equipo en las primeras 10000hrs.",
-            "Crear en el sistema Ellipse/AMT los Est\u00e1ndares de los SEIS Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
-            "Crear en el sistema Ellipse los APL de los SEIS Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
-            "Desarrollar los Procedimientos / Instructivos de Mantenimiento Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n. Se debe generar listado de procedimientos e instructivos a elaborar (Cambio de componentes Mayor/Menor, Calibraciones, mantenimiento correctivos)",
-            "Crear en el sistema Ellipse/AMT los Est\u00e1ndares de los cambios de componentes Mayores/Menores, y tareas correctivas Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
+            "Crear en el sistema Ellipse/AMT los Est\u00e1ndares de los SEIS Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
+            "Crear en el sistema Ellipse los APL de los SEIS Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
+            "Desarrollar los Procedimientos / Instructivos de Mantenimiento Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n. Se debe generar listado de procedimientos e instructivos a elaborar (Cambio de componentes Mayor/Menor, Calibraciones, mantenimiento correctivos)",
+            "Crear en el sistema Ellipse/AMT los Est\u00e1ndares de los cambios de componentes Mayores/Menores, y tareas correctivas Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
             "Crear en el sistema Ellipse/AMT los APL de los cambios de componentes mayores/menores, y tareas correctivas",
             "Crear en el sistema Ellipse/AMT las MST/Tareas Estrat\u00e9gicas de los SEIS",
             "Crear en el sistema Ellipse/AMT las MST/Tareas Estrat\u00e9gicas de los cambios de componentes",
             "Cargar MST/Tareas estrat\u00e9gicas en el sistema al equipo a incorporar.",
-            "Definir MST/Tareas estrat\u00e9gicas para actividades de mantenimiento predictivo. Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
-            "Desarrollar los formatos necesarios para la realizaci\u00f3n de las tareas predictivas (Inspecci\u00f3n Estructural, UT, termograf\u00edas, vibraciones, entre otros), definir las rutas de inspecciones predictivas en los formatos requeridos.",
+            "Definir MST/Tareas estrat\u00e9gicas para actividades de mantenimiento predictivo. Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
+            "Desarrollar los formatos necesarios para la realización de las tareas predictivas (Inspección Estructural, UT, termograf\u00edas, vibraciones, entre otros), definir las rutas de inspecciones predictivas en los formatos requeridos.",
             "Crear los set de monitoreo de condici\u00f3n e ingresarlos en sistema de Ellipse.",
             "Desarrollar caza fallas para los modos de fallas de los diferentes sistema del equipo (traducidos al espa\u00f1ol)",
             "Definir, gestionar y armar paquetes de herramientas por tipo de SEIS",
             "Definir, gestionar y armar paquetes de herramientas para los cambios de componentes (mayores / menores)",
             "Definir, gestionar y armar paquetes de Herramientas Especiales",
-            "Definir est\u00e1ndar del Hangar de PM (SEIS) Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
+            "Definir est\u00e1ndar del Hangar de PM (SEIS) Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
             "Definir el est\u00e1ndar del hangar de cambio de componente (Layout) ",
             "Dise\u00f1ar el est\u00e1ndar del Hangar (Formula 1), si aplica",
             "Listado de equipos especiales y herramientas para atenci\u00f3n en campo.",
-            "Recibir manuales de servicio y operaci\u00f3n, brochure del equipo, planos hidr\u00e1ulicos y el\u00e9ctricos: \u00d8 Manuales de Servicio, Operaci\u00f3n y Ensamble. \u00d8 Brochure del Equipo (Longitudes y Capacidades). \u00d8 Planos Hidr\u00e1ulicos y El\u00e9ctricos. \u00d8 Manual de taller y reparaci\u00f3n - Este debe incluir los siguientes cap\u00edtulos: o Recomendaci\u00f3n para el mantenimiento preventivo para cada componente. o Instrucciones para el seteo de la regulaci\u00f3n hidr\u00e1ulica de la Hta. o Paso a paso para el ensamble y desensamble.",
+            "Recibir manuales de servicio y operación, brochure del equipo, planos hidr\u00e1ulicos y el\u00e9ctricos: \u00d8 Manuales de Servicio, Operación y Ensamble. \u00d8 Brochure del Equipo (Longitudes y Capacidades). \u00d8 Planos Hidr\u00e1ulicos y El\u00e9ctricos. \u00d8 Manual de taller y reparación - Este debe incluir los siguientes cap\u00edtulos: o Recomendación para el mantenimiento preventivo para cada componente. o Instrucciones para el seteo de la regulación hidr\u00e1ulica de la Hta. o Paso a paso para el ensamble y desensamble.",
             "Calcular la cantidad de personal necesario para la flota impactada (o el \u00e1rea) de acuerdo al ingreso de los equipos",
             "Evaluar la cantidad de hangares necesarios para la flota impactada de acuerdo al ingreso de los equipos",
-            "Programar intervenci\u00f3n del \u00e1rea de Telecomunicaciones para instalar (CTD, Radios, ITRACK, Anticolisi\u00f3n y MineCare) antes del ingreso del equipo a la operaci\u00f3n, si aplica",
+            "Programar intervenci\u00f3n del \u00e1rea de Telecomunicaciones para instalar (CTD, Radios, ITRACK, Anticolisión y MineCare) antes del ingreso del equipo a la operación, si aplica",
             "Realizar pruebas de comisionamiento con el vendedor o contratista representante del fabricante",
-            "Pruebas de estanqueidad de los sistemas de admisi\u00f3n del motor, refrigeraci\u00f3n, neum\u00e1tico e hidr\u00e1ulico",
-            "Crear los formatos de puesta en marcha (commissioning) seg\u00fan recomendaciones de f\u00e1brica para dejar registro de las intervenciones y asegurar el registro.",
+            "Pruebas de estanqueidad de los sistemas de admisión del motor, refrigeración, neum\u00e1tico e hidr\u00e1ulico",
+            "Crear los formatos de puesta en marcha (commissioning) según recomendaciones de f\u00e1brica para dejar registro de las intervenciones y asegurar el registro.",
             "Realizar prueba de hermeticidad de la cabina del operador",
-            "Realizar inspecci\u00f3n de Calidad del equipo a incorporar",
-            "Programar actividades de Fin de commissioning. Se debe coordinar con el mantenedor, se realiza entrega de gu\u00edas de ajustes de las primeras 100hr de operaci\u00f3n (calibraciones, retorqueos, muestra de aceite a las 50HR, revisi\u00f3n de fugas de fluidos, entre otros)",
-            "Validar que se hizo revisi\u00f3n de los puntos del Checklist para el cumplimiento de la norma NFPA 1901 (aplica para equipos de respuesta a emergencias)",
-            "Validar que los equipos cumplen con Est\u00e1ndar para la Operaci\u00f3n en Cerrej\u00f3n ",
+            "Realizar inspección de Calidad del equipo a incorporar",
+            "Programar actividades de Fin de commissioning. Se debe coordinar con el mantenedor, se realiza entrega de gu\u00edas de ajustes de las primeras 100hr de operación (calibraciones, retorqueos, muestra de aceite a las 50HR, revisi\u00f3n de fugas de fluidos, entre otros)",
+            "Validar que se hizo revisión de los puntos del Checklist para el cumplimiento de la norma NFPA 1901 (aplica para equipos de respuesta a emergencias)",
+            "Validar que los equipos cumplen con Est\u00e1ndar para la Operación en Cerrej\u00f3n ",
             "Validar que el equipo a incorporar, fue creado y que cuenta con la estrategia cargada en el sistema.",
             "Formalizar dentro del contrato de soporte actual, que este equipo se suma a la flota sobre la que est\u00e1 el acuerdo comercial.",
-            "Programar pintura equipo - Cumplir est\u00e1ndar de se\u00f1alizaci\u00f3n y numeraci\u00f3n",
-            "Verificar marcaci\u00f3n equipo y componentes",
+            "Programar pintura equipo - Cumplir est\u00e1ndar de señalización y numeración",
+            "Verificar marcación equipo y componentes",
             "Programar traslado de equipo con entrenamiento ",
-            "Validar que las ordenes de trabajo de instalaci\u00f3n de componentes mayores / menores fueron cerradas y que los movimientos de componentes fueron registrados con la respectiva OT",
+            "Validar que las ordenes de trabajo de instalación de componentes mayores / menores fueron cerradas y que los movimientos de componentes fueron registrados con la respectiva OT",
             "Enviar correo de entrega del equipo a Producci\u00f3n, o a \u00e1rea mantenedora"
         ];
 
         const CHECKLIST_EQUIPOS_NUEVOS_USADOS_ENSAMBLE = [
-            "Documentar manejo del cambio (MIC) por el ingreso de los equipos. Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
+            "Documentar manejo del cambio (MIC) por el ingreso de los equipos. Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
             "Desarrollar Plan de Entrenamiento a Operadores, T\u00e9cnicos de Mantto y Reconstrucci\u00f3n de Componentes)",
             "Desarrollar Plan de Entrenamiento a T\u00e9cnicos de Reconstrucci\u00f3n de Componentes",
             "Ejecutar Plan de entrenamiento a Operadores",
             "Ejecutar Plan de entrenamiento a T\u00e9cnicos de Mantenimiento",
             "Ejecutar Plan de entrenamiento a T\u00e9cnicos de Reconstrucci\u00f3n",
-            "Revisar si aplicaci\u00f3n de capital incluyo presupuesto para el ejercicio de RCM, sino solicitar presupuesto para su ejecuci\u00f3n.",
-            "Programar el ejercicio de RCM Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
-            "Crear estrategia de mantenimiento (Modelling para AMT o lista de MST para Ellipse) en el sistema (resultado de RCM) al equipo a incorporar. Nota: Si no se desarrolla el RCM antes de la puesta en operaci\u00f3n del equipo, el analista de la flota, o el rol responsable de la definici\u00f3n de la estrategia, define la estrategia de mantenimiento con el soporte del fabricante (Eq. Nuevo) o plantea una estrategia de mantenimiento basado en la experiencia (Eq. Usado)",
-            "Evaluar la capacidad de recurso operativo por la incorporaci\u00f3n del nuevo activo",
+            "Revisar si aplicaci\u00f3n de capital incluyo presupuesto para el ejercicio de RCM, sino solicitar presupuesto para su ejecución.",
+            "Programar el ejercicio de RCM Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
+            "Crear estrategia de mantenimiento (Modelling para AMT o lista de MST para Ellipse) en el sistema (resultado de RCM) al equipo a incorporar. Nota: Si no se desarrolla el RCM antes de la puesta en operación del equipo, el analista de la flota, o el rol responsable de la definición de la estrategia, define la estrategia de mantenimiento con el soporte del fabricante (Eq. Nuevo) o plantea una estrategia de mantenimiento basado en la experiencia (Eq. Usado)",
+            "Evaluar la capacidad de recurso operativo por la incorporación del nuevo activo",
             "Verificar Fecha de Llegada Equipo",
-            "Registrar el equipo a incorporar ante el ministerio de transporte Nota: Se tiene soporte de el registro con el \u00e1rea de incorporaci\u00f3n de equipos (ensamble)",
-            "Solicitar la creaci\u00f3n del Equipo en el sistema Ellipse Nota: la solicitud la realiza el \u00e1rea que realiza la adquisici\u00f3n del equipo, previa autorizaci\u00f3n de la Superintendencia de Incorporaci\u00f3n y Optimizaci\u00f3n de vida de Equipos.",
+            "Registrar el equipo a incorporar ante el ministerio de transporte Nota: Se tiene soporte de el registro con el \u00e1rea de incorporación de equipos (ensamble)",
+            "Solicitar la creación del Equipo en el sistema Ellipse Nota: la solicitud la realiza el \u00e1rea que realiza la adquisici\u00f3n del equipo, previa autorizaci\u00f3n de la Superintendencia de Incorporación y Optimizaci\u00f3n de vida de Equipos.",
             "Crear el equipo en el sistema",
             "Crear componentes traceables (Mayores) en Ellipse",
             "Marcar los componentes f\u00edsicos traceables (Mayores)",
@@ -252,56 +276,56 @@
             "Crear estructura de componentes traceables (Mayores) del equipo a incorporar en ellipse (Modulo MSE650) Nota: Aplica para EGIs nuevo. Se debe enviar plantilla a Esp. Gesti\u00f3n de Informaci\u00f3n para crear en ellipse.",
             "Definir tareas estrat\u00e9gicas para cambio de componentes mayores. Nota: Se deben incluir las tareas estrat\u00e9gicas en el modellin (AMT) o las MST (Ellipse).",
             "Definir tareas estrat\u00e9gicas para cambio de componentes menores. Nota: Se deben incluir las tareas estrat\u00e9gicas en el modellin (AMT) o las MST (Ellipse).",
-            "Definir Pool de Componentes Mayores Nota: Si se trata de la incorporaci\u00f3n de un equipo de una flota existente, se debe calcular el nuevo tama\u00f1o del pool o confirmar el tama\u00f1o existente.",
+            "Definir Pool de Componentes Mayores Nota: Si se trata de la incorporación de un equipo de una flota existente, se debe calcular el nuevo tama\u00f1o del pool o confirmar el tama\u00f1o existente.",
             "Crear los formatos de SEIS (Mantenimiento Preventivo)",
             "Crear los formatos de commissioning y de fin de commissioning de los componentes mayores del equipo a incorporar (Si aplica) Nota: El objetivo es conocer cuales son las pruebas a realizar antes de la puesta en marcha de los componentes mayores del equipo, es posible que el fabricante del equipo a incorporar ofrezcan esta informaci\u00f3n.",
             "Catalogar y asegurar el stock de las Partes para operar el equipo en las primeras 10000hrs.",
-            "Crear en el sistema Ellipse/AMT los Est\u00e1ndares de los SEIS Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
-            "Crear en el sistema Ellipse los APL de los SEIS Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
-            "Desarrollar los Procedimientos / Instructivos de Mantenimiento Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n. Se debe generar listado de procedimientos e instructivos a elaborar (Cambio de componentes Mayor/Menor, Calibraciones, mantenimiento correctivos)",
-            "Crear en el sistema Ellipse/AMT los Est\u00e1ndares de los cambios de componentes Mayores/Menores, y tareas correctivas Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
+            "Crear en el sistema Ellipse/AMT los Est\u00e1ndares de los SEIS Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
+            "Crear en el sistema Ellipse los APL de los SEIS Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
+            "Desarrollar los Procedimientos / Instructivos de Mantenimiento Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n. Se debe generar listado de procedimientos e instructivos a elaborar (Cambio de componentes Mayor/Menor, Calibraciones, mantenimiento correctivos)",
+            "Crear en el sistema Ellipse/AMT los Est\u00e1ndares de los cambios de componentes Mayores/Menores, y tareas correctivas Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
             "Crear en el sistema Ellipse/AMT los APL de los cambios de componentes mayores/menores, y tareas correctivas",
             "Crear en el sistema Ellipse/AMT las MST/Tareas Estrat\u00e9gicas de los SEIS",
             "Crear en el sistema Ellipse/AMT las MST/Tareas Estrat\u00e9gicas de los cambios de componentes",
             "Cargar MST/Tareas estrat\u00e9gicas en el sistema al equipo a incorporar.",
             "Generar pedidos de componentes del Pool",
-            "Definir vida (off set) remanente del equipo a incorporar. Nota: Aplica si el equipo a incorporaci\u00f3n es usado en otra operaci\u00f3n.",
-            "Definir vida (off set) remanente de los componentes mayores/menores. Nota: Aplica si el equipo a incorporaci\u00f3n es usado en otra operaci\u00f3n.",
-            "Registrar vida (off set) remanente del equipo a incorporar en el sistema. Nota: Aplica si el equipo a incorporaci\u00f3n es usado en otra operaci\u00f3n.",
-            "Registrar vida (off set) remanente de los componentes mayores/menores en el sistema. Nota: Aplica si el equipo a incorporaci\u00f3n es usado en otra operaci\u00f3n.",
-            "Definir MST/Tareas estrat\u00e9gicas para actividades de mantenimiento predictivo. Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
-            "Desarrollar los formatos necesarios para la realizaci\u00f3n de las tareas predictivas (Inspecci\u00f3n Estructural, UT, termograf\u00edas, vibraciones, entre otros), definir las rutas de inspecciones predictivas en los formatos requeridos.",
+            "Definir vida (off set) remanente del equipo a incorporar. Nota: Aplica si el equipo a incorporación es usado en otra operación.",
+            "Definir vida (off set) remanente de los componentes mayores/menores. Nota: Aplica si el equipo a incorporación es usado en otra operación.",
+            "Registrar vida (off set) remanente del equipo a incorporar en el sistema. Nota: Aplica si el equipo a incorporación es usado en otra operación.",
+            "Registrar vida (off set) remanente de los componentes mayores/menores en el sistema. Nota: Aplica si el equipo a incorporación es usado en otra operación.",
+            "Definir MST/Tareas estrat\u00e9gicas para actividades de mantenimiento predictivo. Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
+            "Desarrollar los formatos necesarios para la realización de las tareas predictivas (Inspección Estructural, UT, termograf\u00edas, vibraciones, entre otros), definir las rutas de inspecciones predictivas en los formatos requeridos.",
             "Crear los set de monitoreo de condici\u00f3n e ingresarlos en sistema de Ellipse.",
             "Desarrollar caza fallas para los modos de fallas de los diferentes sistema del equipo (traducidos al espa\u00f1ol)",
             "Definir, gestionar y armar paquetes de herramientas por tipo de SEIS",
             "Definir, gestionar y armar paquetes de herramientas para los cambios de componentes (mayores / menores)",
             "Definir, gestionar y armar paquetes de Herramientas Especiales",
-            "Definir est\u00e1ndar del Hangar de PM (SEIS) Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operaci\u00f3n actual de Cerrej\u00f3n.",
+            "Definir est\u00e1ndar del Hangar de PM (SEIS) Nota: Aplica solo si la referencia del equipo a incorporar no se tiene en la operación actual de Cerrej\u00f3n.",
             "Definir el est\u00e1ndar del hangar de cambio de componente (Layout) ",
-            "Dise\u00f1ar el est\u00e1ndar del Hangar (Formula 1), si aplica",
+            "Diseñar el est\u00e1ndar del Hangar (Formula 1), si aplica",
             "Listado de equipos especiales y herramientas para atenci\u00f3n en campo.",
-            "Recibir manuales de servicio y operaci\u00f3n, brochure del equipo, planos hidr\u00e1ulicos y el\u00e9ctricos: \u00d8 Manuales de Servicio, Operaci\u00f3n y Ensamble. \u00d8 Brochure del Equipo (Longitudes y Capacidades). \u00d8 Planos Hidr\u00e1ulicos y El\u00e9ctricos. \u00d8 Manual de taller y reparaci\u00f3n - Este debe incluir los siguientes cap\u00edtulos: o Recomendaci\u00f3n para el mantenimiento preventivo para cada componente. o Instrucciones para el seteo de la regulaci\u00f3n hidr\u00e1ulica de la Hta. o Paso a paso para el ensamble y desensamble.",
+            "Recibir manuales de servicio y operación, brochure del equipo, planos hidr\u00e1ulicos y el\u00e9ctricos: \u00d8 Manuales de Servicio, Operación y Ensamble. \u00d8 Brochure del Equipo (Longitudes y Capacidades). \u00d8 Planos Hidr\u00e1ulicos y El\u00e9ctricos. \u00d8 Manual de taller y reparación - Este debe incluir los siguientes cap\u00edtulos: o Recomendación para el mantenimiento preventivo para cada componente. o Instrucciones para el seteo de la regulación hidr\u00e1ulica de la Hta. o Paso a paso para el ensamble y desensamble.",
             "Calcular la cantidad de personal necesario para la flota impactada (o el \u00e1rea) de acuerdo al ingreso de los equipos",
             "Evaluar la cantidad de hangares necesarios para la flota impactada de acuerdo al ingreso de los equipos",
             "Programar Taller de Llantas (Si aplica)",
-            "Programar intervenci\u00f3n del \u00e1rea de Telecomunicaciones para instalar (CTD, Radios, ITRACK, Anticolisi\u00f3n y MineCare) antes del ingreso del equipo a la operaci\u00f3n, si aplica",
-            "Programar pintura equipo - Cumplir est\u00e1ndar de se\u00f1alizaci\u00f3n y numeraci\u00f3n",
-            "Verificar marcaci\u00f3n equipo y componentes",
+            "Programar intervención del \u00e1rea de Telecomunicaciones para instalar (CTD, Radios, ITRACK, Anticolisión y MineCare) antes del ingreso del equipo a la operación, si aplica",
+            "Programar pintura equipo - Cumplir est\u00e1ndar de señalización y numeración",
+            "Verificar marcación equipo y componentes",
             "Realizar pruebas de comisionamiento t\u00e9cnica con el contratista",
-            "Pruebas de estanqueidad de los sistemas de admisi\u00f3n del motor, refrigeraci\u00f3n, neum\u00e1tico e hidr\u00e1ulico",
-            "Crear los formatos de puesta en marcha (commissioning) seg\u00fan recomendaciones de f\u00e1brica para dejar registro de las intervenciones y asegurar el registro.",
+            "Pruebas de estanqueidad de los sistemas de admisión del motor, refrigeración, neum\u00e1tico e hidr\u00e1ulico",
+            "Crear los formatos de puesta en marcha (commissioning) según recomendaciones de f\u00e1brica para dejar registro de las intervenciones y asegurar el registro.",
             "Realizar prueba de hermeticidad de la cabina del operador",
-            "Realizar inspecci\u00f3n de Calidad del equipo a incorporar",
-            "Programar actividades de Fin de commissioning. Se debe coordinar con el mantenedor, se realiza entrega de gu\u00edas de ajustes de las primeras 100hr de operaci\u00f3n (calibraciones, retorqueos, muestra de aceite a las 50HR, revisi\u00f3n de fugas de fluidos, entre otros)",
-            "Validar la instalaci\u00f3n de los puntos de anclaje y restricci\u00f3n seg\u00fan el est\u00e1ndar aplicable a cada flota. Nota: Tener en cuenta los est\u00e1ndares del fabricante y gu\u00edas contenidas en la documentaci\u00f3n controlada",
-            "Validar que los equipos cumplen con Est\u00e1ndar para la Operaci\u00f3n en Cerrej\u00f3n ",
+            "Realizar inspección de Calidad del equipo a incorporar",
+            "Programar actividades de Fin de commissioning. Se debe coordinar con el mantenedor, se realiza entrega de gu\u00edas de ajustes de las primeras 100hr de operación (calibraciones, retorqueos, muestra de aceite a las 50HR, revisi\u00f3n de fugas de fluidos, entre otros)",
+            "Validar la instalación de los puntos de anclaje y restricción según el est\u00e1ndar aplicable a cada flota. Nota: Tener en cuenta los est\u00e1ndares del fabricante y gu\u00edas contenidas en la documentación controlada",
+            "Validar que los equipos cumplen con Est\u00e1ndar para la Operación en Cerrej\u00f3n ",
             "Programar traslado de equipo con entrenamiento ",
-            "Avisar al departamento t\u00e9cnico para la verificaci\u00f3n de productividad del equipo",
+            "Avisar al departamento t\u00e9cnico para la verificación de productividad del equipo",
             "Validar que el equipo a incorporar (ensamblado nuevo o usado) fue creado y que cuenta con la estrategia cargada en el sistema.",
-            "Validar que las \u00f3rdenes de trabajo de instalaci\u00f3n de componentes mayores/menores fueron cerradas y que los movimientos de componentes fueron registrados con la respectiva OT",
+            "Validar que las \u00f3rdenes de trabajo de instalación de componentes mayores/menores fueron cerradas y que los movimientos de componentes fueron registrados con la respectiva OT",
             "Enviar correo de entrega del equipo al Operador, o a \u00e1rea mantenedora",
             "Formalizar dentro del contrato de soporte de Vendor, que este equipo se suma a la flota sobre la que est\u00e1 el acuerdo comercial.",
-            "Validar que se hizo revisi\u00f3n de los puntos del Checklist para el cumplimiento de la norma NFPA 1901 (aplica para equipos de respuesta a emergencias)"
+            "Validar que se hizo revisión de los puntos del Checklist para el cumplimiento de la norma NFPA 1901 (aplica para equipos de respuesta a emergencias)"
         ];
 
         // SharePoint API Helpers
@@ -403,7 +427,7 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        
+
                         // Retorna base64 comprimido
                         resolve(canvas.toDataURL('image/jpeg', quality));
                     };
@@ -430,16 +454,21 @@
 
         const calcularPromedioChecklist = (items) => {
             if (!items || items.length === 0) return 0;
+            // Se consideran solo elementos activos en los cálculos promedio
+            const activos = items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
+            if (activos.length === 0) return 0;
             let total = 0;
-            items.forEach(it => { total += calcularCumplimiento(it.FechaInicio, it.FechaFin); });
-            return Math.round(total / items.length);
+            activos.forEach(it => { total += calcularCumplimiento(it.FechaInicio || it.fechaInicio, it.FechaFin || it.fechaFin); });
+            return Math.round(total / activos.length);
         };
 
         const calcularPromedioReal = (items) => {
             if (!items || items.length === 0) return 0;
+            const activos = items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
+            if (activos.length === 0) return 0;
             let total = 0;
-            items.forEach(it => { total += parseInt(it.Avance || it.avance) || 0; });
-            return Math.round(total / items.length);
+            activos.forEach(it => { total += parseInt(it.Avance || it.avance) || 0; });
+            return Math.round(total / activos.length);
         };
 
         // --- COMPONENTS ---
@@ -526,9 +555,9 @@
                         value={query}
                         onChange={(e) => {
                             setQuery(e.target.value);
-                            if(e.target.value !== value) onChange('');
+                            if (e.target.value !== value) onChange('');
                         }}
-                        onFocus={() => { if(results.length > 0 && !readOnly) setIsOpen(true); }}
+                        onFocus={() => { if (results.length > 0 && !readOnly) setIsOpen(true); }}
                         readOnly={readOnly}
                         required={!readOnly}
                     />
@@ -541,7 +570,7 @@
                                     className="px-4 py-3 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0 flex items-center gap-3"
                                     onClick={() => handleSelect(user)}
                                 >
-                                    <img 
+                                    <img
                                         src={`https://glencore.sharepoint.com/_layouts/15/userphoto.aspx?size=S&accountname=${user.EntityData.Email || user.Key}`}
                                         alt={user.DisplayText}
                                         className="w-10 h-10 rounded-full border border-white/20 object-cover bg-gray-700"
@@ -561,19 +590,22 @@
 
         const DashboardCharts = ({ items }) => {
             if (!items || items.length === 0) return null;
-            const avanceGeneral = Math.round(items.reduce((acc, it) => acc + (parseInt(it.Avance || it.avance) || 0), 0) / items.length);
+            const activos = items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
+            if (activos.length === 0) return null;
+
+            const avanceGeneral = Math.round(activos.reduce((acc, it) => acc + (parseInt(it.Avance || it.avance) || 0), 0) / activos.length);
 
             const respMap = {};
-            items.forEach(it => {
-               const r = it.NombreResponsable || it.nombreResponsable || 'Sin asignar';
-               if(!respMap[r]) respMap[r] = { total: 0, count: 0 };
-               respMap[r].total += parseInt(it.Avance || it.avance) || 0;
-               respMap[r].count += 1;
+            activos.forEach(it => {
+                const r = it.NombreResponsable || it.nombreResponsable || 'Sin asignar';
+                if (!respMap[r]) respMap[r] = { total: 0, count: 0 };
+                respMap[r].total += parseInt(it.Avance || it.avance) || 0;
+                respMap[r].count += 1;
             });
 
             const dataChart = Object.keys(respMap).map(k => ({
-               name: k,
-               avg: Math.round(respMap[k].total / respMap[k].count)
+                name: k,
+                avg: Math.round(respMap[k].total / respMap[k].count)
             })).sort((a, b) => b.avg - a.avg);
 
             const radius = 60;
@@ -594,13 +626,13 @@
                     </div>
 
                     <div className="md:col-span-2 bg-black/80 backdrop-blur-2xl p-6 rounded-3xl border border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
-                        <h3 className="text-xs font-bold text-white/50 uppercase tracking-wider mb-6">Promedio por Responsable</h3>
+                        <h3 className="text-xs font-bold text-white/50 uppercase tracking-wider mb-6">Promedio por Responsable (Activos)</h3>
                         <div className="space-y-4 max-h-[200px] overflow-y-auto pr-2">
                             {dataChart.map((d, i) => (
                                 <div key={i} className="flex items-center gap-4 text-xs">
                                     <div className="w-[140px] text-white/80 truncate text-right font-medium" title={d.name}>{d.name}</div>
                                     <div className="flex-1 bg-white/5 h-6 rounded-full overflow-hidden relative border border-white/5">
-                                        <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-1000" style={{width: `${d.avg}%`}}></div>
+                                        <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-1000" style={{ width: `${d.avg}%` }}></div>
                                     </div>
                                     <div className="w-[40px] text-white font-bold">{d.avg}%</div>
                                 </div>
@@ -613,26 +645,29 @@
 
         const GanttChart = ({ items }) => {
             if (!items || items.length === 0) return null;
+            const activos = items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
+            if (activos.length === 0) return null;
+
             const getValidDate = (d) => d ? new Date(d) : null;
             let minDate = new Date('2999-12-31');
             let maxDate = new Date('1970-01-01');
             let hasAnyDate = false;
 
-            items.forEach(it => {
+            activos.forEach(it => {
                 const d1 = getValidDate(it.FechaBaselineInicio || it.fechaBaselineInicio);
                 const d2 = getValidDate(it.FechaBaselineFin || it.fechaBaselineFin);
                 const d3 = getValidDate(it.FechaInicio || it.fechaInicio);
                 const d4 = getValidDate(it.FechaFin || it.fechaFin);
-                
-                if(d1 && d1 < minDate) { minDate = d1; hasAnyDate = true; }
-                if(d3 && d3 < minDate) { minDate = d3; hasAnyDate = true; }
-                if(d2 && d2 > maxDate) { maxDate = d2; hasAnyDate = true; }
-                if(d4 && d4 > maxDate) { maxDate = d4; hasAnyDate = true; }
+
+                if (d1 && d1 < minDate) { minDate = d1; hasAnyDate = true; }
+                if (d3 && d3 < minDate) { minDate = d3; hasAnyDate = true; }
+                if (d2 && d2 > maxDate) { maxDate = d2; hasAnyDate = true; }
+                if (d4 && d4 > maxDate) { maxDate = d4; hasAnyDate = true; }
             });
 
             if (!hasAnyDate) return (
                 <div className="bg-gray-900/80 p-6 rounded-2xl border border-white/20 shadow-2xl mt-8 text-center text-white/50">
-                    No hay tareas con Fechas (Baseline o Reales) v&aacute;lidas para generar el Diagrama de Gantt.
+                    No hay tareas activas con Fechas v&aacute;lidas para generar el Diagrama de Gantt.
                 </div>
             );
 
@@ -642,9 +677,9 @@
             return (
                 <div className="bg-black/80 backdrop-blur-2xl p-6 rounded-3xl border border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)] mt-8 overflow-x-auto animate-[fadeIn_0.5s_ease-out]">
                     <h3 className="text-xl font-bold text-yellow-400 mb-6 flex items-center gap-2">
-                        <svg className="w-6 h-6 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 13v-1m4 1v-3m4 3V8M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg> Diagrama de Gantt del Checklist
+                        <svg className="w-6 h-6 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 13v-1m4 1v-3m4 3V8M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg> Diagrama de Gantt del Checklist (Tareas Activas)
                     </h3>
-                    
+
                     <div className="min-w-[800px] pb-4">
                         <div className="flex justify-between text-xs font-bold text-white/50 mb-3 px-[220px] border-b border-white/10 pb-2">
                             <span>Inicio Proyecto: {minDate.toISOString().split('T')[0]}</span>
@@ -652,7 +687,7 @@
                         </div>
 
                         <div className="space-y-4 relative">
-                            {items.map((it, idx) => {
+                            {activos.map((it, idx) => {
                                 const baseStart = getValidDate(it.FechaBaselineInicio || it.fechaBaselineInicio);
                                 const baseEnd = getValidDate(it.FechaBaselineFin || it.fechaBaselineFin);
                                 const actStart = getValidDate(it.FechaInicio || it.fechaInicio);
@@ -663,7 +698,7 @@
                                 if (baseStart && baseEnd) {
                                     const leftDays = (baseStart - minDate) / (1000 * 60 * 60 * 24);
                                     let durDays = (baseEnd - baseStart) / (1000 * 60 * 60 * 24);
-                                    if(durDays < 1) durDays = 1;
+                                    if (durDays < 1) durDays = 1;
                                     baseLeftPercent = (leftDays / totalDays) * 100;
                                     baseWidthPercent = (durDays / totalDays) * 100;
                                 }
@@ -672,7 +707,7 @@
                                 if (actStart && actEnd) {
                                     const leftDays = (actStart - minDate) / (1000 * 60 * 60 * 24);
                                     let durDays = (actEnd - actStart) / (1000 * 60 * 60 * 24);
-                                    if(durDays < 1) durDays = 1;
+                                    if (durDays < 1) durDays = 1;
                                     actLeftPercent = (leftDays / totalDays) * 100;
                                     actWidthPercent = (durDays / totalDays) * 100;
                                 }
@@ -682,11 +717,11 @@
                                         <div className="w-[200px] flex-shrink-0 text-white/80 whitespace-normal break-words font-medium text-xs leading-tight" title={it.Descripcion || it.actividades}>
                                             <span className="text-white/40 mr-1 font-bold">{idx + 1}.</span> {it.Descripcion || it.actividades}
                                         </div>
-                                        
+
                                         <div className="flex-1 bg-white/5 h-12 rounded-lg relative overflow-hidden flex flex-col justify-center gap-1 border border-white/5">
-                                            
+
                                             {baseStart && baseEnd && (
-                                                <div 
+                                                <div
                                                     className="absolute h-2 top-1.5 bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(96,165,250,0.5)_2px,rgba(96,165,250,0.5)_4px)] bg-blue-900/30 border border-blue-400/50 rounded-sm"
                                                     style={{ left: `${baseLeftPercent}%`, width: `${baseWidthPercent}%` }}
                                                     title={`Planificado (Baseline): ${(it.FechaBaselineInicio || it.fechaBaselineInicio)} a ${(it.FechaBaselineFin || it.fechaBaselineFin)}`}
@@ -694,13 +729,13 @@
                                             )}
 
                                             {actStart && actEnd && (
-                                                <div 
+                                                <div
                                                     className="absolute h-5 bottom-1.5 bg-yellow-600/40 border border-yellow-500/50 rounded flex flex-col justify-center overflow-hidden transition-all duration-300 shadow-inner"
                                                     style={{ left: `${actLeftPercent}%`, width: `${actWidthPercent}%` }}
                                                     title={`Real: ${(it.FechaInicio || it.fechaInicio)} a ${(it.FechaFin || it.fechaFin)} \nAvance: ${avance}%`}
                                                 >
-                                                    <div 
-                                                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all duration-500" 
+                                                    <div
+                                                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all duration-500"
                                                         style={{ width: `${avance}%` }}
                                                     ></div>
                                                     <span className="relative z-10 text-[10px] font-extrabold text-black px-2 drop-shadow-md truncate">
@@ -719,10 +754,20 @@
         };
 
         const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType }) => {
+
             const [nombreChecklist, setNombreChecklist] = React.useState('');
             const [isSaving, setIsSaving] = React.useState(false);
             const [showAddItemForm, setShowAddItemForm] = React.useState(false);
 
+            // ESTADO CORREGIDO: inactivatingItemId y su setter setInactivatingItemId
+            const [inactivatingItemId, setInactivatingItemId] = React.useState(null);
+            const [inactivateReasonText, setInactivateReasonText] = React.useState('');
+
+            const openInactivateModal = (id) => {
+                setInactivatingItemId(id);
+                setInactivateReasonText('');
+            };
+            
             const getTipoFormulario = () => {
                 if (templateType === 'proyectos') return 'PROYECTO';
                 if (templateType === 'compra_instalada') return 'COMPRA INSTALADA';
@@ -762,12 +807,16 @@
                     fechaBaselineFin: '',
                     fechaInicio: hoy,
                     fechaFin: '',
-                    isAlert: false
+                    isAlert: false,
+                    estado: 'Activo',
+                    inactivadoPor: '',
+                    inactivadoRazon: '',
+                    inactivadoFecha: ''
                 }));
             });
 
             const [formData, setFormData] = React.useState({
-                actividades: '', entregable: '', nombreResponsable: '', avance: '', 
+                actividades: '', entregable: '', nombreResponsable: '', avance: '0',
                 fechaBaselineInicio: new Date().toISOString().split('T')[0], fechaBaselineFin: '',
                 fechaInicio: new Date().toISOString().split('T')[0], fechaFin: '',
             });
@@ -792,47 +841,58 @@
             };
 
             const handleItemEdit = (id, field, value) => {
-                if (field === 'avance') {
-                    let val = parseInt(value) || 0;
-                    if (val >= 100) val = 99; 
-                    value = val.toString();
-                }
                 setItems(prev => prev.map(it => it.id === id ? { ...it, [field]: value } : it));
-            };
-
-            const handleChange = (e) => {
-                let { name, value } = e.target;
-                if (name === 'avance') {
-                    let val = parseInt(value) || 0;
-                    if (val >= 100) val = 99; 
-                    value = val.toString();
-                }
-                setFormData(prev => ({ ...prev, [name]: value }));
             };
 
             const handleAddItem = (e) => {
                 e.preventDefault();
-                const newItem = { ...formData, id: Date.now() + Math.random().toString(36).substr(2, 5) };
+                const newItem = {
+                    ...formData,
+                    id: Date.now() + Math.random().toString(36).substr(2, 5),
+                    estado: 'Activo',
+                    inactivadoPor: '',
+                    inactivadoRazon: '',
+                    inactivadoFecha: ''
+                };
                 setItems([...items, newItem]);
-                setFormData({ 
-                    actividades: '', entregable: '', nombreResponsable: '', avance: '', 
+                setFormData({
+                    actividades: '', entregable: '', nombreResponsable: '', avance: '0',
                     fechaBaselineInicio: new Date().toISOString().split('T')[0], fechaBaselineFin: '',
-                    fechaInicio: new Date().toISOString().split('T')[0], fechaFin: '' 
+                    fechaInicio: new Date().toISOString().split('T')[0], fechaFin: ''
                 });
                 setShowAddItemForm(false);
             };
 
-            const handleDeleteItem = (id) => setItems(items.filter(it => it.id !== id));
+
+            const handleConfirmInactivate = () => {
+                if (!inactivateReasonText.trim()) {
+                    alert('Por favor ingrese la razón de la inactivación.');
+                    return;
+                }
+                setItems(prev => prev.map(it => it.id === inactivatingItemId ? {
+                    ...it,
+                    estado: 'Inactivo',
+                    inactivadoPor: currentUser,
+                    inactivadoRazon: inactivateReasonText.trim(),
+                    inactivadoFecha: new Date().toISOString()
+                } : it));
+                setInactivatingItemId(null);
+                setInactivateReasonText('');
+            };
+
+            const handleReactivarItem = (id) => {
+                setItems(prev => prev.map(it => it.id === id ? {
+                    ...it,
+                    estado: 'Activo',
+                    inactivadoPor: '',
+                    inactivadoRazon: '',
+                    inactivadoFecha: ''
+                } : it));
+            };
 
             const handleGuardarChecklist = async () => {
                 if (!nombreChecklist.trim()) { alert('Ingresa el nombre del checklist.'); return; }
                 if (items.length === 0) { alert('Agrega al menos un \u00edtem.'); return; }
-
-                const has100 = items.some(it => parseInt(it.avance) >= 100);
-                if (has100) {
-                    alert("\u26a0\ufe0f Error: No puedes guardar tareas con 100% de avance inicial sin evidencias.");
-                    return;
-                }
 
                 setIsSaving(true);
                 const newChecklistId = 'CHK-' + Date.now();
@@ -840,7 +900,7 @@
                 try {
                     const digest = await getRequestDigest();
                     const finalItems = items.map((it) => ({
-                        Id: it.id.toString(), // Forzar a String para usar como ID_Registro luego
+                        Id: it.id.toString(),
                         Descripcion: it.actividades,
                         NombreResponsable: it.nombreResponsable,
                         Entregable: it.entregable,
@@ -850,7 +910,11 @@
                         FechaInicio: it.fechaInicio,
                         FechaFin: it.fechaFin,
                         Alerta: "No",
-                        HistorialComentarios: []
+                        HistorialComentarios: [],
+                        Estado: it.estado || "Activo",
+                        InactivadoPor: it.inactivadoPor || "",
+                        InactivadoRazon: it.inactivadoRazon || "",
+                        InactivadoFecha: it.inactivadoFecha || ""
                     }));
 
                     const checklistData = {
@@ -879,12 +943,17 @@
             };
 
             const inputClasses = "w-full bg-black/50 text-white border border-white/20 focus:border-yellow-400 rounded px-3 py-2 outline-none transition-all duration-300";
-            
+
             let titlePrefix = templateType === 'proyectos' ? "Plantilla: Proyectos" : templateType === 'compra_instalada' ?
-            "Plantilla: Compra Instalada" : templateType === 'ensamble' ? "Plantilla: Ensamble" : "Crear Nuevo Checklist";
+                "Plantilla: Compra Instalada" : templateType === 'ensamble' ? "Plantilla: Ensamble" : "Crear Nuevo Checklist";
+
+            // Separar tareas activas e inactivas (Inactivas se mueven al fondo)
+            const activas = items.filter(it => it.estado !== 'Inactivo');
+            const inactivas = items.filter(it => it.estado === 'Inactivo');
+            const listadoOrdenado = [...activas, ...inactivas];
 
             return (
-                <div className="bg-black/80 backdrop-blur-2xl border border-white/20 p-8 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] text-white mt-8 mx-auto max-w-6xl animate-[fadeIn_0.3s_ease-out]">
+                <div className="bg-black/80 backdrop-blur-2xl border border-white/20 p-8 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] text-white mt-8 mx-auto max-w-[95%] animate-[fadeIn_0.3s_ease-out]">
                     <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/20">
                         <h2 className="text-2xl lg:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500">{titlePrefix}</h2>
                         <button className="bg-white/10 hover:bg-white/20 border border-white/30 text-white text-sm font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors shadow" onClick={onAtras}>
@@ -905,20 +974,20 @@
                                     <textarea key={idx} className={inputClasses + " text-xs"} placeholder={"Describe aqu\u00ed un equipo a incorporar..."} rows="2" value={eq} onChange={(e) => handleMetadataEquipoChange(idx, e.target.value)}></textarea>
                                 ))}
                                 <button onClick={addEquipo} className="bg-white/10 hover:bg-white/20 text-xs font-bold py-1.5 px-3 rounded self-start transition-colors border border-white/10">A&ntilde;adir otro activo</button>
-                                
+
                                 <div className="mt-3 pt-3 border-t border-white/10">
                                     <span className="font-bold text-[10px] uppercase tracking-wider text-white/50 block mb-2">FOTO DEL EQUIPO</span>
                                     {metadata.imagenEquipo ? (
                                         <div className="relative inline-block">
                                             <img src={metadata.imagenEquipo} alt="Equipo" className="h-24 rounded-lg border border-white/20 object-cover shadow-lg" />
-                                            <button onClick={() => setMetadata({...metadata, imagenEquipo: ''})} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg hover:bg-red-400">&times;</button>
+                                            <button onClick={() => setMetadata({ ...metadata, imagenEquipo: '' })} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg hover:bg-red-400">&times;</button>
                                         </div>
                                     ) : (
                                         <input type="file" accept="image/*" onChange={async (e) => {
                                             const file = e.target.files[0];
-                                            if(file) {
-                                                const base64 = await comprimirImagen(file); // Usa compresión aquí también
-                                                setMetadata({...metadata, imagenEquipo: base64});
+                                            if (file) {
+                                                const base64 = await comprimirImagen(file);
+                                                setMetadata({ ...metadata, imagenEquipo: base64 });
                                             }
                                         }} className="text-[10px] text-white/70 w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 transition-all cursor-pointer" />
                                     )}
@@ -958,7 +1027,7 @@
                         <div className="flex flex-col">
                             <div className="flex border-b border-white/20 bg-black/20">
                                 <div className="w-1/3 p-3 font-bold text-xs flex items-center border-r border-white/20">Fecha inicio diligenciamiento</div>
-                                <div className="w-2/3 p-2"><input type="date" className={inputClasses + " text-xs py-1.5 max-w-[200px]"} value={metadata.fechaInicioDiligenciamiento} onChange={(e) => setMetadata({...metadata, fechaInicioDiligenciamiento: e.target.value})} /></div>
+                                <div className="w-2/3 p-2"><input type="date" className={inputClasses + " text-xs py-1.5 max-w-[200px]"} value={metadata.fechaInicioDiligenciamiento} onChange={(e) => setMetadata({ ...metadata, fechaInicioDiligenciamiento: e.target.value })} /></div>
                             </div>
                             <div className="flex border-b border-white/20 bg-black/20">
                                 <div className="w-1/3 p-3 font-bold text-xs flex items-center border-r border-white/20">Fecha fin diligenciamiento</div>
@@ -966,7 +1035,7 @@
                             </div>
                             <div className="flex">
                                 <div className="w-1/3 p-3 font-bold text-xs flex items-center border-r border-white/20">Comentarios</div>
-                                <div className="w-2/3 p-2"><textarea className={inputClasses + " text-xs"} rows="2" placeholder={"Escribe aqu\u00ed cualquier observaci\u00f3n..."} value={metadata.comentarios} onChange={(e) => setMetadata({...metadata, comentarios: e.target.value})}></textarea></div>
+                                <div className="w-2/3 p-2"><textarea className={inputClasses + " text-xs"} rows="2" placeholder={"Escribe aqu\u00ed cualquier observaci\u00f3n..."} value={metadata.comentarios} onChange={(e) => setMetadata({ ...metadata, comentarios: e.target.value })}></textarea></div>
                             </div>
                         </div>
                     </div>
@@ -983,8 +1052,8 @@
                             <form onSubmit={handleAddItem} className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                                     <div className="md:col-span-12">
-                                        <label className="block text-xs font-bold text-white/70 mb-1">Descripci&oacute;n</label>
-                                        <textarea className={inputClasses} value={formData.actividades} onChange={(e) => setFormData({...formData, actividades: e.target.value})} rows="2" required></textarea>
+                                        <label className="block text-xs font-bold text-white/70 mb-1">Descripci&oacute;n de Actividad</label>
+                                        <textarea className={inputClasses} value={formData.actividades} onChange={(e) => setFormData({ ...formData, actividades: e.target.value })} rows="2" required></textarea>
                                     </div>
                                     <div className="md:col-span-4">
                                         <label className="block text-xs font-bold text-white/70 mb-1">Responsable</label>
@@ -992,27 +1061,15 @@
                                     </div>
                                     <div className="md:col-span-4">
                                         <label className="block text-xs font-bold text-white/70 mb-1">Entregable</label>
-                                        <input type="text" className={inputClasses} value={formData.entregable} onChange={(e) => setFormData({...formData, entregable: e.target.value})} required />
+                                        <input type="text" className={inputClasses} value={formData.entregable} onChange={(e) => setFormData({ ...formData, entregable: e.target.value })} required />
                                     </div>
-                                    <div className="md:col-span-4">
-                                        <label className="block text-xs font-bold text-white/70 mb-1">Avance (%)</label>
-                                        <input type="number" min="0" max="99" className={inputClasses} value={formData.avance} onChange={(e) => { let v = parseInt(e.target.value)||0; if(v>99)v=99; setFormData({...formData, avance: v.toString()}) }} required />
-                                    </div>
-                                    <div className="md:col-span-3">
+                                    <div className="md:col-span-2">
                                         <label className="block text-xs font-bold text-blue-300 mb-1">Plan Inicio (Baseline)</label>
-                                        <input type="date" className={inputClasses + " border-blue-400/40 bg-blue-900/10"} value={formData.fechaBaselineInicio} onChange={(e) => setFormData({...formData, fechaBaselineInicio: e.target.value})} required />
+                                        <input type="date" className={inputClasses + " border-blue-400/40 bg-blue-900/10"} value={formData.fechaBaselineInicio} onChange={(e) => setFormData({ ...formData, fechaBaselineInicio: e.target.value })} required />
                                     </div>
-                                    <div className="md:col-span-3">
+                                    <div className="md:col-span-2">
                                         <label className="block text-xs font-bold text-blue-300 mb-1">Plan Fin (Baseline)</label>
-                                        <input type="date" className={inputClasses + " border-blue-400/40 bg-blue-900/10"} value={formData.fechaBaselineFin} onChange={(e) => setFormData({...formData, fechaBaselineFin: e.target.value})} required />
-                                    </div>
-                                    <div className="md:col-span-3">
-                                        <label className="block text-xs font-bold text-yellow-400/80 mb-1">Fecha Inicio Real</label>
-                                        <input type="date" className={inputClasses + " border-yellow-500/30 bg-yellow-900/10"} value={formData.fechaInicio} onChange={(e) => setFormData({...formData, fechaInicio: e.target.value})} required />
-                                    </div>
-                                    <div className="md:col-span-3">
-                                        <label className="block text-xs font-bold text-yellow-400/80 mb-1">Fecha Fin Real</label>
-                                        <input type="date" className={inputClasses + " border-yellow-500/30 bg-yellow-900/10"} value={formData.fechaFin} onChange={(e) => setFormData({...formData, fechaFin: e.target.value})} required />
+                                        <input type="date" className={inputClasses + " border-blue-400/40 bg-blue-900/10"} value={formData.fechaBaselineFin} onChange={(e) => setFormData({ ...formData, fechaBaselineFin: e.target.value })} required />
                                     </div>
                                 </div>
                                 <div className="flex justify-end pt-2">
@@ -1023,97 +1080,99 @@
                     )}
 
                     <div className="mb-8">
-                        {items.length === 0 ? (
+                        {listadoOrdenado.length === 0 ? (
                             <div className="text-center py-8 bg-black/40 rounded-xl border border-white/5 border-dashed">
                                 <p className="text-white/50">A&uacute;n no hay &iacute;tems en este checklist.</p>
                             </div>
                         ) : (
-                            <div className="space-y-4">
-                                {items.map((it, idx) => (
-                                    <div key={it.id} className={`bg-black/60 p-5 rounded-2xl border transition-all shadow-[0_0_15px_rgba(0,0,0,0.3)] ${editingId === it.id ? 'border-yellow-400' : 'border-white/10'}`} onDoubleClick={() => setEditingId(it.id)}>
-                                        <div className="flex justify-between items-start gap-4">
-                                            <div className="flex-1">
-                                                <div className="flex items-start gap-3 mb-2 border-b border-white/10 pb-3">
-                                                    <span className="bg-white/10 text-white text-xs font-bold px-2.5 py-1 rounded-md mt-0.5 border border-white/5 shadow-inner">#{idx + 1}</span>
-                                                    {editingId === it.id ? (
-                                                        <textarea className="w-full bg-black/50 text-yellow-400 border border-yellow-400/50 rounded-lg px-3 py-2 text-sm outline-none resize-none break-words whitespace-normal focus:ring-1 focus:ring-yellow-400" value={it.actividades} onChange={(e) => handleItemEdit(it.id, 'actividades', e.target.value)} rows="2" />
+                            <div className="space-y-3">
+                                {listadoOrdenado.map((it, idx) => {
+                                    const isInactive = it.estado === 'Inactivo';
+                                    const isEditing = editingId === it.id;
+
+                                    return (
+                                        <div key={it.id} className={`bg-black/60 p-4 rounded-xl border transition-all shadow-[0_0_15px_rgba(0,0,0,0.3)] ${isInactive ? 'opacity-40 border-dashed border-white/5 bg-black/40' : isEditing ? 'border-yellow-400' : 'border-white/10'}`}>
+                                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                                
+                                                {/* Left Side: Number & Description */}
+                                                <div className="flex-1 min-w-0 flex items-start gap-3">
+                                                    <span className={`text-xs font-bold px-2 py-1 rounded mt-0.5 ${isInactive ? 'bg-white/5 text-white/40' : 'bg-white/10 text-white'}`}>
+                                                        #{idx + 1}
+                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        {isEditing ? (
+                                                            <textarea className="w-full bg-black/50 text-yellow-400 border border-yellow-400/50 rounded-lg px-3 py-1.5 text-xs outline-none resize-none" value={it.actividades} onChange={(e) => handleItemEdit(it.id, 'actividades', e.target.value)} rows="2" />
+                                                        ) : (
+                                                            <p className={`font-bold text-sm leading-snug break-words ${isInactive ? 'text-white/40 line-through' : 'text-yellow-400'}`}>
+                                                                {it.actividades}
+                                                            </p>
+                                                        )}
+                                                        {isInactive && (
+                                                            <div className="text-[10px] text-red-400/80 font-medium mt-1">
+                                                                &#9888; Inactivado por: <span className="underline">{it.inactivadoPor}</span> - Raz&oacute;n: "{it.inactivadoRazon}"
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Middle Columns (Solo se muestran si está activo) */}
+                                                {!isInactive && (
+                                                    <div className="flex flex-wrap lg:flex-nowrap items-center gap-6 text-xs text-white/80 min-w-fit">
+                                                        <div className="w-44">
+                                                            <span className="text-white/40 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Responsable</span>
+                                                            {isEditing ? (
+                                                                <PeoplePicker className="bg-black/50 text-white border border-white/30 rounded px-2 py-1 text-xs outline-none" value={it.nombreResponsable} onChange={(val) => handleItemEdit(it.id, 'nombreResponsable', val)} />
+                                                            ) : (
+                                                                <span className="truncate block font-medium max-w-[170px]" title={it.nombreResponsable}>{it.nombreResponsable || '-'}</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="w-36">
+                                                            <span className="text-white/40 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Entregable</span>
+                                                            {isEditing ? (
+                                                                <input type="text" className="bg-black/50 text-white border border-white/30 rounded px-2 py-1 text-xs outline-none" value={it.entregable} onChange={(e) => handleItemEdit(it.id, 'entregable', e.target.value)} />
+                                                            ) : (
+                                                                <span className="truncate block font-medium max-w-[140px]" title={it.entregable}>{it.entregable || '-'}</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="bg-blue-900/10 p-2 rounded border border-blue-400/20 w-36">
+                                                            <span className="text-white/40 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Fechas Plan</span>
+                                                            {isEditing ? (
+                                                                <div className="space-y-1">
+                                                                    <div className="flex items-center gap-1"><span className="text-blue-300 font-bold">I:</span><input type="date" className="bg-blue-900/20 text-white border border-blue-400/40 rounded px-1 py-0.5 text-[10px]" value={it.fechaBaselineInicio} onChange={(e) => handleItemEdit(it.id, 'fechaBaselineInicio', e.target.value)} /></div>
+                                                                    <div className="flex items-center gap-1"><span className="text-blue-300 font-bold">F:</span><input type="date" className="bg-blue-900/20 text-white border border-blue-400/40 rounded px-1 py-0.5 text-[10px]" value={it.fechaBaselineFin} onChange={(e) => handleItemEdit(it.id, 'fechaBaselineFin', e.target.value)} /></div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-[10px]">
+                                                                    <span><span className="text-blue-300 font-bold">I:</span> {it.fechaBaselineInicio || '-'}</span>
+                                                                    <span className="block mt-0.5"><span className="text-blue-300 font-bold">F:</span> {it.fechaBaselineFin || '-'}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Right Action buttons */}
+                                                <div className="flex items-center gap-2 min-w-[140px] justify-end">
+                                                    {isInactive ? (
+                                                        <button onClick={() => handleReactivarItem(it.id)} className="bg-green-500/20 hover:bg-green-500/40 text-green-300 border border-green-500/30 px-3 py-1 rounded text-xs font-bold transition-colors w-full shadow-sm">
+                                                            Reactivar
+                                                        </button>
+                                                    ) : isEditing ? (
+                                                        <button onClick={() => setEditingId(null)} className="bg-green-500/20 hover:bg-green-500/40 text-green-300 border border-green-500/30 px-3 py-1 rounded text-xs font-bold transition-colors w-full shadow-sm">
+                                                            Listo
+                                                        </button>
                                                     ) : (
-                                                        <h4 className="font-bold text-yellow-400 leading-snug break-words whitespace-normal text-[15px]">{it.actividades}</h4>
+                                                        <>
+                                                            <button onClick={() => setEditingId(it.id)} className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 border border-blue-500/30 px-2.5 py-1.5 rounded text-xs font-bold transition-colors flex-1">Editar</button>
+                                                            <button onClick={() => openInactivateModal(it.id)} className="bg-gray-500/20 hover:bg-gray-500/40 text-gray-300 border border-gray-500/30 px-2.5 py-1.5 rounded text-xs font-bold transition-colors flex-1">Inactivar</button>
+                                                        </>
                                                     )}
                                                 </div>
-                                                <div className="grid grid-cols-2 lg:grid-cols-6 gap-5 mt-4 text-sm">
-                                                    <div className="col-span-1">
-                                                        <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Responsable</span>
-                                                        {editingId === it.id ? (
-                                                            <PeoplePicker className="w-full bg-black/50 text-white border border-white/30 rounded px-2 py-1.5 text-xs outline-none focus:border-yellow-400" value={it.nombreResponsable} onChange={(val) => handleItemEdit(it.id, 'nombreResponsable', val)} />
-                                                        ) : (
-                                                            <span className="text-white font-medium text-xs break-all">{it.nombreResponsable || '-'}</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="col-span-1">
-                                                        <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Entregable</span>
-                                                        {editingId === it.id ? (
-                                                            <input type="text" className="w-full bg-black/50 text-white border border-white/30 rounded px-2 py-1.5 text-xs outline-none focus:border-yellow-400" value={it.entregable} onChange={(e) => handleItemEdit(it.id, 'entregable', e.target.value)} />
-                                                        ) : (
-                                                            <span className="text-white font-medium text-xs break-words">{it.entregable || '-'}</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                                                        <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Plan (Baseline)</span>
-                                                        {editingId === it.id ? (
-                                                            <div className="space-y-1.5 mt-1">
-                                                                <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-300">I:</span><input type="date" className="bg-blue-900/20 text-white border border-blue-400/40 rounded px-1.5 py-1 outline-none flex-1 focus:border-yellow-400" value={it.fechaBaselineInicio} onChange={(e) => handleItemEdit(it.id, 'fechaBaselineInicio', e.target.value)} /></div>
-                                                                <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-300">F:</span><input type="date" className="bg-blue-900/20 text-white border border-blue-400/40 rounded px-1.5 py-1 outline-none flex-1 focus:border-yellow-400" value={it.fechaBaselineFin} onChange={(e) => handleItemEdit(it.id, 'fechaBaselineFin', e.target.value)} /></div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="bg-blue-900/10 p-2 rounded border border-blue-400/20 shadow-inner">
-                                                                <span className="text-white/80 font-medium block text-[11px]"><span className="text-blue-300 font-bold w-4 inline-block">I:</span> {it.fechaBaselineInicio || '-'}</span>
-                                                                <span className="text-white/80 font-medium block text-[11px] mt-1"><span className="text-blue-300 font-bold w-4 inline-block">F:</span> {it.fechaBaselineFin || '-'}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                                                        <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Reales</span>
-                                                        {editingId === it.id ? (
-                                                            <div className="space-y-1.5 mt-1">
-                                                                <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-400">I:</span><input type="date" className="bg-yellow-900/10 text-white border border-yellow-500/30 rounded px-1.5 py-1 outline-none flex-1 focus:border-yellow-400" value={it.fechaInicio} onChange={(e) => handleItemEdit(it.id, 'fechaInicio', e.target.value)} /></div>
-                                                                <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-400">F:</span><input type="date" className="bg-yellow-900/10 text-white border border-yellow-500/30 rounded px-1.5 py-1 outline-none flex-1 focus:border-yellow-400" value={it.fechaFin} onChange={(e) => handleItemEdit(it.id, 'fechaFin', e.target.value)} /></div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="bg-yellow-900/10 p-2 rounded border border-yellow-400/20 shadow-inner">
-                                                                <span className="text-white font-medium block text-[11px]"><span className="text-yellow-400 font-bold w-4 inline-block">I:</span> {it.fechaInicio || '-'}</span>
-                                                                <span className="text-white font-medium block text-[11px] mt-1"><span className="text-yellow-400 font-bold w-4 inline-block">F:</span> {it.fechaFin || '-'}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="col-span-1">
-                                                        <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Cumplimiento (calc)</span>
-                                                        <span className="text-green-400 font-black text-2xl drop-shadow">{calcularCumplimiento(it.fechaInicio, it.fechaFin)}%</span>
-                                                    </div>
-                                                    <div className="col-span-1">
-                                                        <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Avance Real</span>
-                                                        {editingId === it.id ? (
-                                                            <input type="number" className="w-20 bg-black/50 text-white border border-white/30 rounded px-2 py-1 outline-none focus:border-yellow-400 text-lg font-bold" value={it.avance} onChange={(e) => handleItemEdit(it.id, 'avance', e.target.value)} min="0" max="99" />
-                                                        ) : (
-                                                            <span className="text-yellow-400 font-black text-2xl drop-shadow">{it.avance}%</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex flex-col gap-2 min-w-[80px]">
-                                                {editingId === it.id ? (
-                                                    <>
-                                                        <button onClick={() => setEditingId(null)} className="bg-green-500/20 hover:bg-green-500/40 text-green-300 border border-green-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Listo</button>
-                                                        <button onClick={() => setEditingId(null)} className="bg-gray-500/20 hover:bg-gray-500/40 text-gray-300 border border-gray-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Cancelar</button>
-                                                    </>
-                                                ) : (
-                                                    <button onClick={() => setEditingId(it.id)} className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Editar</button>
-                                                )}
-                                                <button onClick={() => handleDeleteItem(it.id)} className="bg-red-500/20 hover:bg-red-500/40 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Eliminar</button>
+
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -1121,8 +1180,45 @@
                     <button onClick={handleGuardarChecklist} disabled={items.length === 0 || isSaving} className={`w-full font-extrabold text-xl tracking-wide py-5 rounded-2xl shadow-2xl transition-all duration-300 ${items.length > 0 && !isSaving ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white hover:shadow-[0_0_40px_rgba(34,197,94,0.4)] hover:-translate-y-1' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}>
                         {isSaving ? 'GUARDANDO EN SHAREPOINT...' : '\u2713 FINALIZAR Y GUARDAR CHECKLIST'}
                     </button>
-                    
+
                     <DashboardCharts items={items} />
+
+                    {/* MODAL PARA JUSTIFICAR INACTIVACIÓN (RENDERIZADO MEDIANTE PORTAL AL BODY) */}
+                    {inactivatingItemId && ReactDOM.createPortal(
+                        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
+                            <div className="bg-gray-800 border border-white/20 p-6 rounded-2xl max-w-md w-full shadow-2xl text-white">
+                                <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                                    {"\u26a0 Inactivar Tarea"}
+                                </h3>
+                                <p className="text-xs text-white/80 mb-4 font-normal">
+                                    {"\u00bfPor qu\u00e9 lo vas a inactivar? Por favor ingrese una justificaci\u00f3n. Esta acci\u00f3n quedar\u00e1 registrada bajo su usuario corporativo."}
+                                </p>
+                                <textarea
+                                    className="w-full bg-black/50 text-white border border-white/20 rounded-lg p-3 text-sm outline-none focus:border-yellow-400 mb-4"
+                                    rows="3"
+                                    placeholder={"Raz\u00f3n de inactivaci\u00f3n..."}
+                                    value={inactivateReasonText}
+                                    onChange={(e) => setInactivateReasonText(e.target.value)}
+                                    required
+                                />
+                                <div className="flex justify-end gap-3 text-xs font-bold">
+                                    <button
+                                        onClick={() => { setInactivatingItemId(null); setInactivateReasonText(''); }}
+                                        className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleConfirmInactivate}
+                                        className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg transition-colors shadow-lg"
+                                    >
+                                        Inactivar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>,
+                        document.body
+                    )}
                 </div>
             );
         };
@@ -1138,10 +1234,14 @@
             const [cargandoEvidencias, setCargandoEvidencias] = React.useState({});
             const [isUploading, setIsUploading] = React.useState(false);
 
+            // Estados para inactivar tareas guardadas
+            const [inactivatingItemId, setInactivatingItemId] = React.useState(null);
+            const [inactivateReasonText, setInactivateReasonText] = React.useState('');
+
             // NUEVOS ESTADOS PARA EL VISOR MODAL LIGHTBOX
             const [modalEvidences, setModalEvidences] = React.useState(null);
             const [activeEvidenciaIndex, setActiveEvidenciaIndex] = React.useState(0);
-            
+
             const isAdmin = role === 'Administrador';
 
             React.useEffect(() => {
@@ -1151,7 +1251,7 @@
                             headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
                         });
                         const listJson = await listRes.json();
-                        
+
                         if (listJson.d.results.length > 0) {
                             const row = listJson.d.results[0];
                             const parsedData = JSON.parse(row.Data);
@@ -1168,17 +1268,17 @@
             }, [checklistId]);
 
             const cargarEvidencias = async (itemId) => {
-                setCargandoEvidencias(prev => ({...prev, [itemId]: true}));
+                setCargandoEvidencias(prev => ({ ...prev, [itemId]: true }));
                 try {
                     const res = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('EvidenciasChecklist')/items?$filter=ID_Registro eq '${itemId}'&$select=Id,Data,Title`, {
                         headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
                     });
                     const json = await res.json();
-                    setEvidenciasItem(prev => ({...prev, [itemId]: json.d.results}));
+                    setEvidenciasItem(prev => ({ ...prev, [itemId]: json.d.results }));
                 } catch (error) {
                     console.error("Error cargando evidencias", error);
                 }
-                setCargandoEvidencias(prev => ({...prev, [itemId]: false}));
+                setCargandoEvidencias(prev => ({ ...prev, [itemId]: false }));
             };
 
             const handleFileUpload = async (itemId, e) => {
@@ -1187,13 +1287,12 @@
                 setIsUploading(true);
                 try {
                     const digest = await getRequestDigest();
-                    for(let file of files) {
+                    for (let file of files) {
                         let base64Data = "";
-                        
+
                         if (file.type.startsWith('image/')) {
-                            base64Data = await comprimirImagen(file, 1024, 0.6); // Usando canvas
+                            base64Data = await comprimirImagen(file, 1024, 0.6);
                         } else {
-                            // Limite estricto de 2MB para documentos no-imagen
                             const maxSize = 2 * 1024 * 1024;
                             if (file.size > maxSize) {
                                 alert(`El archivo "${file.name}" supera el límite de 2MB. SharePoint no puede procesar documentos de texto tan pesados por esta vía.`);
@@ -1202,7 +1301,7 @@
                             base64Data = await fileToBase64(file);
                         }
 
-                        if(base64Data) {
+                        if (base64Data) {
                             await saveToSPList('EvidenciasChecklist', {
                                 Title: `Evidencia_${itemId}_${Date.now()}`,
                                 ID_Registro: itemId.toString(),
@@ -1210,7 +1309,7 @@
                             }, digest);
                         }
                     }
-                    
+
                     alert('Proceso de carga finalizado.');
                     await cargarEvidencias(itemId);
                 } catch (error) {
@@ -1222,7 +1321,7 @@
             };
 
             const eliminarEvidencia = async (itemId, evidenciaId) => {
-                if(!window.confirm("¿Seguro que deseas eliminar esta evidencia?")) return;
+                if (!window.confirm("¿Seguro que deseas eliminar esta evidencia?")) return;
                 try {
                     const digest = await getRequestDigest();
                     await deleteSPListItem('EvidenciasChecklist', evidenciaId, digest);
@@ -1242,7 +1341,7 @@
                 const tieneEvidenciasCargadas = evidenciasItem[editForm.Id] && evidenciasItem[editForm.Id].length > 0;
                 if (parseInt(editForm.Avance) >= 100 && !tieneEvidenciasCargadas) {
                     alert("\u26a0\ufe0f Error: No puedes guardar el avance al 100% sin antes haber cargado al menos una evidencia y validado dando click en 'Cargar/Actualizar Vista'.");
-                    return; 
+                    return;
                 }
 
                 try {
@@ -1251,13 +1350,14 @@
                         ...it,
                         Descripcion: editForm.Descripcion,
                         NombreResponsable: editForm.NombreResponsable,
+                        Entregable: editForm.Entregable,
                         FechaInicio: editForm.FechaInicio,
                         FechaFin: editForm.FechaFin,
-                        Avance: editForm.Avance ? editForm.Avance.toString() : "0", 
+                        Avance: editForm.Avance ? editForm.Avance.toString() : "0",
                         Alerta: editForm.Alerta || "No"
                     } : it);
                     const updatedChecklist = { ...checklist, items: updatedItems };
-                    
+
                     await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                         Data: JSON.stringify(updatedChecklist)
                     }, digest);
@@ -1269,28 +1369,67 @@
                 }
             };
 
-            const handleDeleteItemDetalle = async (itemId) => {
-                if(!window.confirm('¿Est\u00e1s seguro de eliminar este \u00edtem?')) return;
+            const openInactivateModal = (itemId) => {
+                setInactivatingItemId(itemId);
+                setInactivateReasonText('');
+            };
+
+            const handleConfirmInactivate = async () => {
+                if (!inactivateReasonText.trim()) {
+                    alert('Por favor ingrese la razón de la inactivación.');
+                    return;
+                }
                 try {
                     const digest = await getRequestDigest();
-                    const updatedItems = checklist.items.filter(it => it.Id !== itemId);
+                    const updatedItems = checklist.items.map(it => it.Id === inactivatingItemId ? {
+                        ...it,
+                        Estado: 'Inactivo',
+                        InactivadoPor: currentUser,
+                        InactivadoRazon: inactivateReasonText.trim(),
+                        InactivadoFecha: new Date().toISOString()
+                    } : it);
                     const updatedChecklist = { ...checklist, items: updatedItems };
+
+                    await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
+                        Data: JSON.stringify(updatedChecklist)
+                    }, digest);
+                    setChecklist(updatedChecklist);
+                    setInactivatingItemId(null);
+                    setInactivateReasonText('');
+                } catch (error) {
+                    alert("Error inactivando el item en SharePoint.");
+                    console.error(error);
+                }
+            };
+
+            const handleReactivarItem = async (itemId) => {
+                try {
+                    const digest = await getRequestDigest();
+                    const updatedItems = checklist.items.map(it => it.Id === itemId ? {
+                        ...it,
+                        Estado: 'Activo',
+                        InactivadoPor: '',
+                        InactivadoRazon: '',
+                        InactivadoFecha: ''
+                    } : it);
+                    const updatedChecklist = { ...checklist, items: updatedItems };
+
                     await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                         Data: JSON.stringify(updatedChecklist)
                     }, digest);
                     setChecklist(updatedChecklist);
                 } catch (error) {
-                    alert("Error eliminando ítem.");
+                    alert("Error reactivando el item.");
                     console.error(error);
                 }
             };
 
             const handleAgregarComentario = async (itemId) => {
-                const texto = nuevosComentarios[itemId];
-                if (!texto || !texto.trim()) return;
+                const text = nuevosComentarios[itemId];
+                if (!text || !text.trim()) return;
 
                 const comentarioObj = {
-                    texto: texto.trim(),
+                    texto: text.trim(),
                     autor: currentUser,
                     fecha: new Date().toISOString(),
                 };
@@ -1305,21 +1444,20 @@
                         }
                         return it;
                     });
-                    
+
                     const updatedChecklist = { ...checklist, items: updatedItems };
                     await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                         Data: JSON.stringify(updatedChecklist)
                     }, digest);
-                    
+
                     setChecklist(updatedChecklist);
                     setNuevosComentarios({ ...nuevosComentarios, [itemId]: '' });
 
-                    // NOTIFICACIÓN TEAMS: Solo si el autor del comentario no es el responsable
                     if (targetItem && targetItem.NombreResponsable && targetItem.NombreResponsable.toLowerCase() !== currentUser.toLowerCase()) {
                         notificarTeams(
                             "Nuevo Comentario",
                             targetItem.NombreResponsable,
-                            `El usuario ${currentUser} ha comentado en tu tarea "${targetItem.Descripcion}": ${texto}`,
+                            `El usuario ${currentUser} ha comentado en tu tarea "${targetItem.Descripcion}": ${text}`,
                             checklist.Name
                         );
                     }
@@ -1353,12 +1491,11 @@
                     const updatedItems = checklist.items.map(it => it.Id === item.Id ? { ...it, Alerta: newAlerta } : it);
                     const updatedChecklist = { ...checklist, items: updatedItems };
 
-                    await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, { 
-                        Data: JSON.stringify(updatedChecklist) 
+                    await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
+                        Data: JSON.stringify(updatedChecklist)
                     }, digest);
                     setChecklist(updatedChecklist);
 
-                    // NOTIFICACIÓN TEAMS: Solo si se está activando la alerta y el usuario actual NO es el responsable
                     if (newAlerta === "Si" && item.NombreResponsable && item.NombreResponsable.toLowerCase() !== currentUser.toLowerCase()) {
                         notificarTeams(
                             "Alerta Activada",
@@ -1367,14 +1504,19 @@
                             checklist.Name
                         );
                     }
-                } catch(error) { console.error(error); }
+                } catch (error) { console.error(error); }
             };
 
             if (loading) return <div className="text-center text-white mt-20">Cargando detalles desde SharePoint...</div>;
             if (!checklist) return <div className="text-center text-white mt-20">Checklist no encontrado.</div>;
 
+            // Ordenamiento: Tareas activas arriba, inactivas abajo
+            const activas = checklist.items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
+            const inactivas = checklist.items.filter(it => (it.Estado || it.estado) === 'Inactivo');
+            const listadoOrdenado = [...activas, ...inactivas];
+
             return (
-                <div className="max-w-7xl mx-auto animate-[fadeIn_0.3s_ease-out]">
+                <div className="max-w-[95%] mx-auto animate-[fadeIn_0.3s_ease-out]">
                     <div className="flex justify-between items-center bg-black/80 backdrop-blur-2xl p-6 rounded-3xl border border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)] mb-6">
                         <div>
                             <h2 className="text-3xl font-extrabold text-white mb-1"><span className="text-yellow-400">Checklist:</span> {checklist.Name}</h2>
@@ -1441,37 +1583,52 @@
                     )}
 
                     <div className="space-y-4 mb-8">
-                        {checklist.items.map((it, idx) => {
+                        {listadoOrdenado.map((it, idx) => {
                             const isEditing = editingId === it.Id;
                             const currentItem = isEditing ? editForm : it;
                             const isMyTask = currentUser === it.NombreResponsable;
+                            const isInactive = (it.Estado || it.estado) === 'Inactivo';
                             const showAlert = it.Alerta === "Si";
 
                             return (
-                                <div key={it.Id} className={`p-5 rounded-2xl border transition-all ${showAlert ? 'bg-red-900/60 backdrop-blur-2xl border-red-500/80 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-black/80 backdrop-blur-2xl border-white/20 shadow-[0_0_20px_rgba(0,0,0,0.3)]'}`}>
-                                    <div className="flex justify-between items-start gap-4">
-                                        <div className="flex-1">
+                                <div key={it.Id} className={`p-5 rounded-2xl border transition-all ${isInactive ? 'opacity-40 border-dashed border-white/5 bg-black/40' : showAlert ? 'bg-red-900/60 backdrop-blur-2xl border-red-500/80 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-black/80 backdrop-blur-2xl border-white/20 shadow-[0_0_20px_rgba(0,0,0,0.3)]'}`}>
+                                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-stretch gap-4">
+                                        
+                                        {/* Detalle Izquierdo */}
+                                        <div className="flex-1 min-w-0">
                                             <div className="flex items-start gap-3 mb-2 border-b border-white/10 pb-3">
-                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-md mt-0.5 shadow-inner ${showAlert ? 'bg-red-500 text-white' : 'bg-white/10 text-white border border-white/5'}`}>#{idx + 1}</span>
+                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-md mt-0.5 shadow-inner ${isInactive ? 'bg-white/5 text-white/40' : showAlert ? 'bg-red-500 text-white' : 'bg-white/10 text-white border border-white/5'}`}>
+                                                    #{idx + 1}
+                                                </span>
                                                 {isEditing ? (
-                                                    <textarea className="bg-black/50 text-white border border-white/30 px-3 py-2 rounded-lg w-full break-words whitespace-normal outline-none focus:border-yellow-400" rows="2" value={currentItem.Descripcion} onChange={e => setEditForm({...editForm, Descripcion: e.target.value})} />
+                                                    <textarea className="bg-black/50 text-white border border-white/30 px-3 py-2 rounded-lg w-full break-words outline-none focus:border-yellow-400 text-sm" rows="2" value={currentItem.Descripcion} onChange={e => setEditForm({ ...editForm, Descripcion: e.target.value })} />
                                                 ) : (
-                                                    <h4 className={`text-lg font-bold leading-snug break-words whitespace-normal text-[15px] ${showAlert ? 'text-red-200' : 'text-yellow-400'}`}>{it.Descripcion}</h4>
+                                                    <div className="flex flex-col flex-1">
+                                                        <h4 className={`text-lg font-bold leading-snug break-words text-[15px] ${isInactive ? 'text-white/40 line-through' : showAlert ? 'text-red-200' : 'text-yellow-400'}`}>
+                                                            {it.Descripcion}
+                                                        </h4>
+                                                        {isInactive && (
+                                                            <div className="text-[10px] text-red-400/80 font-medium mt-1">
+                                                                &#9888; Inactivado por: <span className="underline">{it.InactivadoPor || it.inactivadoPor}</span> - Raz&oacute;n: "{it.InactivadoRazon || it.inactivadoRazon}"
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
-                                            
+
+                                            {/* Campos (Grid) - Solo interactivos si está activo */}
                                             <div className="grid grid-cols-2 lg:grid-cols-6 gap-6 mt-4 text-sm">
                                                 <div className="col-span-1">
                                                     <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Responsable</span>
                                                     {isEditing ? (
-                                                        <PeoplePicker 
+                                                        <PeoplePicker
                                                             className="bg-black/50 text-white border border-white/30 px-2 py-1.5 rounded-md w-full text-xs cursor-pointer outline-none focus:border-yellow-400"
-                                                            value={currentItem.NombreResponsable || ''} 
-                                                            onChange={val => setEditForm({...editForm, NombreResponsable: val})}
+                                                            value={currentItem.NombreResponsable || ''}
+                                                            onChange={val => setEditForm({ ...editForm, NombreResponsable: val })}
                                                         />
                                                     ) : (
                                                         <div className="flex items-center gap-2">
-                                                            <img 
+                                                            <img
                                                                 src={`https://glencore.sharepoint.com/_layouts/15/userphoto.aspx?size=S&accountname=${it.NombreResponsable}`}
                                                                 className="w-7 h-7 rounded-full border border-white/20 object-cover bg-gray-700"
                                                                 onError={(e) => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E"; }}
@@ -1484,14 +1641,14 @@
                                                 <div className="col-span-1">
                                                     <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Entregable</span>
                                                     {isEditing ? (
-                                                        <input type="text" className="w-full bg-black/50 text-white border border-white/30 rounded px-2 py-1.5 text-xs outline-none focus:border-yellow-400" value={currentItem.Entregable || ''} onChange={(e) => setEditForm({...editForm, Entregable: e.target.value})} />
+                                                        <input type="text" className="w-full bg-black/50 text-white border border-white/30 rounded px-2 py-1.5 text-xs outline-none focus:border-yellow-400" value={currentItem.Entregable || ''} onChange={(e) => setEditForm({ ...editForm, Entregable: e.target.value })} />
                                                     ) : (
                                                         <span className="text-white font-medium text-xs break-words">{it.Entregable || '-'}</span>
                                                     )}
                                                 </div>
 
                                                 <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Plan (Fijas)</span>
+                                                    <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Plan</span>
                                                     <div className="bg-blue-900/10 p-2 rounded border border-blue-400/20 shadow-inner">
                                                         <span className="text-white/80 font-medium block text-[11px]"><span className="text-blue-300 font-bold w-4 inline-block">I:</span> {it.FechaBaselineInicio || '-'}</span>
                                                         <span className="text-white/80 font-medium block text-[11px] mt-1"><span className="text-blue-300 font-bold w-4 inline-block">F:</span> {it.FechaBaselineFin || '-'}</span>
@@ -1502,20 +1659,20 @@
                                                     <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Fechas Reales</span>
                                                     {isEditing ? (
                                                         <div className="flex flex-col gap-1.5 mt-1">
-                                                            <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-400">I:</span><input type="date" className="bg-yellow-900/10 text-white border border-yellow-500/30 px-1.5 py-1 text-xs rounded outline-none focus:border-yellow-400" value={currentItem.FechaInicio ? currentItem.FechaInicio.substring(0,10) : ''} onChange={e => setEditForm({...editForm, FechaInicio: e.target.value})} title="Fecha Inicio" /></div>
-                                                            <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-400">F:</span><input type="date" className="bg-yellow-900/10 text-white border border-yellow-500/30 px-1.5 py-1 text-xs rounded outline-none focus:border-yellow-400" value={currentItem.FechaFin ? currentItem.FechaFin.substring(0,10) : ''} onChange={e => setEditForm({...editForm, FechaFin: e.target.value})} title="Fecha Fin" /></div>
+                                                            <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-400">I:</span><input type="date" className="bg-yellow-900/10 text-white border border-yellow-500/30 px-1.5 py-1 text-xs rounded outline-none focus:border-yellow-400" value={currentItem.FechaInicio ? currentItem.FechaInicio.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, FechaInicio: e.target.value })} /></div>
+                                                            <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-400">F:</span><input type="date" className="bg-yellow-900/10 text-white border border-yellow-500/30 px-1.5 py-1 text-xs rounded outline-none focus:border-yellow-400" value={currentItem.FechaFin ? currentItem.FechaFin.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, FechaFin: e.target.value })} /></div>
                                                         </div>
                                                     ) : (
                                                         <div className="bg-yellow-900/10 p-2 rounded border border-yellow-400/20 shadow-inner">
-                                                            <span className="text-white font-medium block text-[11px]"><span className="text-yellow-400 font-bold w-4 inline-block">I:</span> {it.FechaInicio ? it.FechaInicio.substring(0,10) : '-'}</span>
-                                                            <span className="text-white font-medium block text-[11px] mt-1"><span className="text-yellow-400 font-bold w-4 inline-block">F:</span> {it.FechaFin ? it.FechaFin.substring(0,10) : '-'}</span>
+                                                            <span className="text-white font-medium block text-[11px]"><span className="text-yellow-400 font-bold w-4 inline-block">I:</span> {it.FechaInicio ? it.FechaInicio.substring(0, 10) : '-'}</span>
+                                                            <span className="text-white font-medium block text-[11px] mt-1"><span className="text-yellow-400 font-bold w-4 inline-block">F:</span> {it.FechaFin ? it.FechaFin.substring(0, 10) : '-'}</span>
                                                         </div>
                                                     )}
                                                 </div>
 
                                                 <div className="col-span-1">
                                                     <span className="text-white/40 block text-[10px] font-bold uppercase tracking-wider mb-1">Cumplimiento</span>
-                                                    <span className="text-green-400 font-black text-2xl drop-shadow">{calcularCumplimiento(it.FechaInicio, it.FechaFin)}%</span>
+                                                    <span className="text-green-400 font-black text-2xl drop-shadow">{isInactive ? 0 : calcularCumplimiento(it.FechaInicio, it.FechaFin)}%</span>
                                                 </div>
 
                                                 <div className="col-span-1">
@@ -1524,114 +1681,122 @@
                                                         <input type="number" className="w-20 bg-black/50 text-white border border-white/30 px-2 py-1 rounded outline-none focus:border-yellow-400 text-lg font-bold mt-1" value={currentItem.Avance || 0} onChange={e => {
                                                             let val = parseInt(e.target.value) || 0;
                                                             if (val >= 100 && (!evidenciasItem[it.Id] || evidenciasItem[it.Id].length === 0)) val = 99;
-                                                            setEditForm({...editForm, Avance: val});
+                                                            setEditForm({ ...editForm, Avance: val });
                                                         }} />
                                                     ) : (
-                                                        <span className="text-yellow-400 font-black text-2xl drop-shadow">{it.Avance || 0}%</span>
+                                                        <span className="text-yellow-400 font-black text-2xl drop-shadow">{isInactive ? 0 : (it.Avance || 0)}%</span>
                                                     )}
                                                 </div>
 
-                                                <div className="col-span-1 lg:col-span-6 border-t border-white/10 pt-3">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <span className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Evidencias Cargadas</span>
-                                                        <div className="flex gap-2">
-                                                            {evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0 && (
-                                                                <button onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(0); }} className="text-[10px] bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-300 px-2 py-1 rounded border border-yellow-500/30 transition-colors shadow flex items-center gap-1">
-                                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                                                    Ver Visualizador
-                                                                </button>
-                                                            )}
-                                                            <button onClick={() => cargarEvidencias(it.Id)} className="text-[10px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 px-2 py-1 rounded border border-blue-500/30 transition-colors shadow">
-                                                                &#8635; Cargar / Actualizar
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div className="space-y-3 bg-black/30 p-3 rounded-lg border border-white/5">
-                                                        {cargandoEvidencias[it.Id] ? (
-                                                            <span className="text-yellow-400 text-xs italic block text-center">Consultando servidor...</span>
-                                                        ) : (
-                                                            <div className="flex flex-wrap gap-3">
-                                                                {(!evidenciasItem[it.Id] || evidenciasItem[it.Id].length === 0) ? (
-                                                                    <span className="text-white/30 text-xs italic">Debes hacer clic en "Actualizar" para ver las evidencias, o no se ha cargado ninguna.</span>
-                                                                ) : (
-                                                                    evidenciasItem[it.Id].map(ev => (
-                                                                        <div key={ev.Id} className="relative group border border-white/20 rounded-md p-1 bg-black/60 shadow-lg">
-                                                                            {ev.Data && ev.Data.startsWith('data:image') ? (
-                                                                                <img src={ev.Data} className="h-16 w-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity" onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(evidenciasItem[it.Id].findIndex(e => e.Id === ev.Id)); }} title="Ver en visualizador" />
-                                                                            ) : (
-                                                                                <div className="h-16 w-16 flex flex-col items-center justify-center bg-white/5 text-[10px] font-bold text-white/70 rounded cursor-pointer hover:bg-white/10 transition-colors text-center" onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(evidenciasItem[it.Id].findIndex(e => e.Id === ev.Id)); }} title="Ver Documento">
-                                                                                    <svg className="w-6 h-6 mb-1 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                                                                    DOC
-                                                                                </div>
-                                                                            )}
-                                                                            {(isAdmin || isMyTask) && (
-                                                                                <button onClick={() => eliminarEvidencia(it.Id, ev.Id)} className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-md" title="Eliminar Evidencia">&times;</button>
-                                                                            )}
-                                                                        </div>
-                                                                    ))
+                                                {/* Evidencias (Solo visibles/cargables si está activo) */}
+                                                {!isInactive && (
+                                                    <div className="col-span-1 lg:col-span-6 border-t border-white/10 pt-3">
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <span className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Evidencias Cargadas</span>
+                                                            <div className="flex gap-2">
+                                                                {evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0 && (
+                                                                    <button onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(0); }} className="text-[10px] bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-300 px-2 py-1 rounded border border-yellow-500/30 transition-colors shadow flex items-center gap-1">
+                                                                        Ver Visualizador
+                                                                    </button>
                                                                 )}
+                                                                <button onClick={() => cargarEvidencias(it.Id)} className="text-[10px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 px-2 py-1 rounded border border-blue-500/30 transition-colors shadow">
+                                                                    &#8635; Cargar / Actualizar
+                                                                </button>
                                                             </div>
-                                                        )}
+                                                        </div>
 
-                                                        {(isMyTask || isAdmin) && (
-                                                            <div className="pt-2 border-t border-white/10">
-                                                                <input type="file" multiple className="text-[10px] text-white/70 w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-600/30 file:text-blue-300 hover:file:bg-blue-600/50 transition-all cursor-pointer block" onChange={(e) => handleFileUpload(it.Id, e)} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" title="Subir múltiples evidencias" disabled={isUploading} />
-                                                                {isUploading && <span className="text-yellow-400 text-xs mt-1 block">Procesando y subiendo archivo(s)... no cierres la pestaña.</span>}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="col-span-1 lg:col-span-6 mt-5 pt-4 border-t border-white/10">
-                                                <div className="flex justify-between items-center mb-3">
-                                                    <span className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Historial de Comentarios</span>
-                                                    {isAdmin && !isEditing && (
-                                                        <button onClick={() => toggleAlert(it)} className={`text-[10px] font-bold px-2 py-1 rounded border shadow-sm ${showAlert ? 'bg-red-500/20 text-red-300 border-red-500/50' : 'bg-white/10 text-white border-white/20'} transition-colors`}>
-                                                            {showAlert ? 'Quitar Alerta' : 'Marcar Alerta'}
-                                                        </button>
-                                                    )}
-                                                </div>
-
-                                                <div className="space-y-2 mb-4 max-h-40 overflow-y-auto pr-2">
-                                                    {(!it.HistorialComentarios || it.HistorialComentarios.length === 0) ? (
-                                                        <p className="text-white/30 italic text-sm">No hay comentarios.</p>
-                                                    ) : (
-                                                        it.HistorialComentarios.map((com, index) => (
-                                                            <div key={index} className="bg-white/5 p-3 rounded-lg border border-white/10">
-                                                                <div className="flex justify-between items-center mb-1 border-b border-white/5 pb-1">
-                                                                    <span className="text-yellow-400 font-bold text-xs">{com.autor}</span>
-                                                                    <span className="text-white/40 text-[10px]">{new Date(com.fecha).toLocaleString()}</span>
+                                                        <div className="space-y-3 bg-black/30 p-3 rounded-lg border border-white/5">
+                                                            {cargandoEvidencias[it.Id] ? (
+                                                                <span className="text-yellow-400 text-xs italic block text-center">Consultando servidor...</span>
+                                                            ) : (
+                                                                <div className="flex flex-wrap gap-3">
+                                                                    {(!evidenciasItem[it.Id] || evidenciasItem[it.Id].length === 0) ? (
+                                                                        <span className="text-white/30 text-xs italic">Debes hacer clic en "Actualizar" para ver las evidencias, o no se ha cargado ninguna.</span>
+                                                                    ) : (
+                                                                        evidenciasItem[it.Id].map(ev => (
+                                                                            <div key={ev.Id} className="relative group border border-white/20 rounded-md p-1 bg-black/60 shadow-lg">
+                                                                                {ev.Data && ev.Data.startsWith('data:image') ? (
+                                                                                    <img src={ev.Data} className="h-16 w-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity" onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(evidenciasItem[it.Id].findIndex(e => e.Id === ev.Id)); }} />
+                                                                                ) : (
+                                                                                    <div className="h-16 w-16 flex flex-col items-center justify-center bg-white/5 text-[10px] font-bold text-white/70 rounded cursor-pointer hover:bg-white/10 transition-colors text-center" onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(evidenciasItem[it.Id].findIndex(e => e.Id === ev.Id)); }}>
+                                                                                        DOC
+                                                                                    </div>
+                                                                                )}
+                                                                                {(isAdmin || isMyTask) && (
+                                                                                    <button onClick={() => eliminarEvidencia(it.Id, ev.Id)} className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-md">&times;</button>
+                                                                                )}
+                                                                            </div>
+                                                                        ))
+                                                                    )}
                                                                 </div>
-                                                                <p className="text-white/90 text-sm whitespace-pre-wrap">{com.texto}</p>
-                                                            </div>
-                                                        ))
-                                                    )}
-                                                </div>
+                                                            )}
 
-                                                {(isAdmin || isMyTask) && (
-                                                    <div className="flex gap-2">
-                                                        <textarea 
-                                                            className="flex-1 bg-black/50 text-white border border-white/30 p-2 text-sm rounded outline-none focus:border-yellow-400" 
-                                                            rows="1" 
-                                                            placeholder="Escribe un comentario..."
-                                                            value={nuevosComentarios[it.Id] || ''}
-                                                            onChange={(e) => setNuevosComentarios({...nuevosComentarios, [it.Id]: e.target.value})}
-                                                        ></textarea>
-                                                        <button 
-                                                            onClick={() => handleAgregarComentario(it.Id)}
-                                                            disabled={!nuevosComentarios[it.Id] || !nuevosComentarios[it.Id].trim()}
-                                                            className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:text-gray-400 text-white text-xs font-bold px-4 rounded transition-colors shadow"
-                                                        >
-                                                            Agregar
-                                                        </button>
+                                                            {(isMyTask || isAdmin) && (
+                                                                <div className="pt-2 border-t border-white/10">
+                                                                    <input type="file" multiple className="text-[10px] text-white/70 w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-600/30 file:text-blue-300 hover:file:bg-blue-600/50 transition-all cursor-pointer block" onChange={(e) => handleFileUpload(it.Id, e)} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" disabled={isUploading} />
+                                                                    {isUploading && <span className="text-yellow-400 text-xs mt-1 block">Procesando y subiendo archivo(s)... no cierres la pestaña.</span>}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
+
+                                            {/* Comentarios */}
+                                            {!isInactive && (
+                                                <div className="col-span-1 lg:col-span-6 mt-5 pt-4 border-t border-white/10">
+                                                    <div className="flex justify-between items-center mb-3">
+                                                        <span className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Historial de Comentarios</span>
+                                                        {isAdmin && !isEditing && (
+                                                            <button onClick={() => toggleAlert(it)} className={`text-[10px] font-bold px-2 py-1 rounded border shadow-sm ${showAlert ? 'bg-red-500/20 text-red-300 border-red-500/50' : 'bg-white/10 text-white border-white/20'} transition-colors`}>
+                                                                {showAlert ? 'Quitar Alerta' : 'Marcar Alerta'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="space-y-2 mb-4 max-h-40 overflow-y-auto pr-2">
+                                                        {(!it.HistorialComentarios || it.HistorialComentarios.length === 0) ? (
+                                                            <p className="text-white/30 italic text-sm">No hay comentarios.</p>
+                                                        ) : (
+                                                            it.HistorialComentarios.map((com, index) => (
+                                                                <div key={index} className="bg-white/5 p-3 rounded-lg border border-white/10">
+                                                                    <div className="flex justify-between items-center mb-1 border-b border-white/5 pb-1">
+                                                                        <span className="text-yellow-400 font-bold text-xs">{com.autor}</span>
+                                                                        <span className="text-white/40 text-[10px]">{new Date(com.fecha).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <p className="text-white/90 text-sm whitespace-pre-wrap">{com.texto}</p>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+
+                                                    {(isAdmin || isMyTask) && (
+                                                        <div className="flex gap-2">
+                                                            <textarea
+                                                                className="flex-1 bg-black/50 text-white border border-white/30 p-2 text-sm rounded outline-none focus:border-yellow-400"
+                                                                rows="1"
+                                                                placeholder="Escribe un comentario..."
+                                                                value={nuevosComentarios[it.Id] || ''}
+                                                                onChange={(e) => setNuevosComentarios({ ...nuevosComentarios, [it.Id]: e.target.value })}
+                                                            ></textarea>
+                                                            <button
+                                                                onClick={() => handleAgregarComentario(it.Id)}
+                                                                disabled={!nuevosComentarios[it.Id] || !nuevosComentarios[it.Id].trim()}
+                                                                className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:text-gray-400 text-white text-xs font-bold px-4 rounded transition-colors shadow"
+                                                            >
+                                                                Agregar
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex flex-col gap-2 min-w-[80px]">
-                                            {editingId === it.Id ? (
+
+                                        {/* Botonera de acciones (Derecha) */}
+                                        <div className="flex flex-col gap-2 min-w-[100px] justify-start pt-2 border-t lg:border-t-0 lg:border-l border-white/10 lg:pl-4">
+                                            {isInactive ? (
+                                                <button onClick={() => handleReactivarItem(it.Id)} className="bg-green-500/20 hover:bg-green-500/40 text-green-300 border border-green-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Reactivar</button>
+                                            ) : isEditing ? (
                                                 <>
                                                     <button onClick={handleSaveEdit} className="bg-green-500/20 hover:bg-green-500/40 text-green-300 border border-green-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Listo</button>
                                                     <button onClick={() => { setEditingId(null); setEditForm({}); }} className="bg-gray-500/20 hover:bg-gray-500/40 text-gray-300 border border-gray-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Cancelar</button>
@@ -1639,16 +1804,23 @@
                                             ) : (
                                                 (isAdmin || isMyTask) && <button onClick={() => handleStartEdit(it)} className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Editar</button>
                                             )}
-                                            {isAdmin && (
-                                                <button onClick={() => handleDeleteItemDetalle(it.Id)} className="bg-red-500/20 hover:bg-red-500/40 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Eliminar</button>
+                                            {/* Reemplace el botón de inactivar dentro de la columna de acciones por este */}
+                                            {!isInactive && isAdmin && (
+                                                <button
+                                                    onClick={() => openInactivateModal(it.Id)}
+                                                    className="bg-gray-500/20 hover:bg-gray-500/40 text-gray-300 border border-gray-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm"
+                                                >
+                                                    Inactivar
+                                                </button>
                                             )}
                                         </div>
+
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
-                    
+
                     <GanttChart items={checklist.items} />
                     <DashboardCharts items={checklist.items} />
 
@@ -1694,10 +1866,10 @@
                             <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
                                 {modalEvidences.length > 1 && (
                                     <button onClick={() => setActiveEvidenciaIndex(p => p === 0 ? modalEvidences.length - 1 : p - 1)} className="absolute left-4 p-4 bg-black/60 hover:bg-black/90 text-white rounded-full transition-colors z-10 border border-white/20">
-                                        <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
+                                        <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                                     </button>
                                 )}
-                                
+
                                 {modalEvidences[activeEvidenciaIndex].Data?.startsWith('data:image') ? (
                                     <img src={modalEvidences[activeEvidenciaIndex].Data} alt="Evidencia" className="max-h-[90vh] max-w-[90vw] object-contain drop-shadow-2xl rounded-lg" />
                                 ) : (
@@ -1706,7 +1878,7 @@
                                         <div className="text-white/70 text-lg font-medium text-center">Este documento (PDF, Word, Excel, etc.) requiere abrirse en una pestaña nueva.</div>
                                         <button onClick={() => {
                                             const data = modalEvidences[activeEvidenciaIndex].Data;
-                                            if(data) {
+                                            if (data) {
                                                 const win = window.open();
                                                 win.document.write(`<iframe src="${data}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
                                             }
@@ -1719,11 +1891,48 @@
 
                                 {modalEvidences.length > 1 && (
                                     <button onClick={() => setActiveEvidenciaIndex(p => p === modalEvidences.length - 1 ? 0 : p + 1)} className="absolute right-4 p-4 bg-black/60 hover:bg-black/90 text-white rounded-full transition-colors z-10 border border-white/20">
-                                        <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+                                        <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                                     </button>
                                 )}
                             </div>
                         </div>
+                    )}
+
+                  {/* MODAL JUSTIFICACIÓN DE INACTIVACIÓN DETALLE (RENDERIZADO MEDIANTE PORTAL AL BODY) */}
+                    {inactivatingItemId && ReactDOM.createPortal(
+                        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
+                            <div className="bg-gray-800 border border-white/20 p-6 rounded-2xl max-w-md w-full shadow-2xl text-white">
+                                <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                                    {"\u26a0 Inactivar Tarea"}
+                                </h3>
+                                <p className="text-xs text-white/80 mb-4 font-normal">
+                                    {"\u00bfPor qu\u00e9 lo vas a inactivar? Por favor ingrese una justificaci\u00f3n. Esta acci\u00f3n quedar\u00e1 registrada bajo su usuario corporativo."}
+                                </p>
+                                <textarea
+                                    className="w-full bg-black/50 text-white border border-white/20 rounded-lg p-3 text-sm outline-none focus:border-yellow-400 mb-4"
+                                    rows="3"
+                                    placeholder={"Raz\u00f3n de inactivaci\u00f3n..."}
+                                    value={inactivateReasonText}
+                                    onChange={(e) => setInactivateReasonText(e.target.value)}
+                                    required
+                                />
+                                <div className="flex justify-end gap-3 text-xs font-bold">
+                                    <button
+                                        onClick={() => { setInactivatingItemId(null); setInactivateReasonText(''); }}
+                                        className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleConfirmInactivate}
+                                        className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg transition-colors shadow-lg"
+                                    >
+                                        Inactivar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>,
+                        document.body
                     )}
                 </div>
             );
@@ -1733,10 +1942,14 @@
             const [checklists, setChecklists] = React.useState([]);
             const [loading, setLoading] = React.useState(true);
             const [showTemplateModal, setShowTemplateModal] = React.useState(false);
-            
+
             const [filtroNombre, setFiltroNombre] = React.useState('');
             const [filtroAlerta, setFiltroAlerta] = React.useState(false);
             const [filtroTipo, setFiltroTipo] = React.useState('');
+
+            // Paginación
+            const [currentPage, setCurrentPage] = React.useState(1);
+            const itemsPerPage = 50;
 
             React.useEffect(() => {
                 const fetchData = async () => {
@@ -1745,7 +1958,6 @@
                             headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
                         });
                         const dataChk = await resChk.json();
-                        
                         const combined = [];
                         for (const row of dataChk.d.results) {
                             if (row.Data) {
@@ -1757,7 +1969,6 @@
                                 }
                             }
                         }
-
                         const isResponsable = role === 'Responsable';
                         const visibleChecklists = isResponsable
                             ? combined.filter(chk => chk.items && chk.items.some(it => it.NombreResponsable === currentUser))
@@ -1772,7 +1983,9 @@
                 fetchData();
             }, [role, currentUser]);
 
-            if (loading) return <div className="text-center text-white mt-20">Cargando datos desde SharePoint DB...</div>;
+            React.useEffect(() => { setCurrentPage(1); }, [filtroNombre, filtroAlerta, filtroTipo]);
+
+            if (loading) return <div className="text-center text-white mt-20 font-bold">Cargando datos desde SharePoint DB...</div>;
 
             let filtrados = checklists;
             if (filtroNombre.trim()) {
@@ -1785,8 +1998,11 @@
                 filtrados = filtrados.filter(chk => chk.Tipo === filtroTipo);
             }
 
+            const totalPages = Math.ceil(filtrados.length / itemsPerPage);
+            const currentItems = filtrados.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
             return (
-                <div className="max-w-7xl mx-auto animate-[fadeIn_0.4s_ease-out]">
+                <div className="max-w-[95%] mx-auto animate-[fadeIn_0.4s_ease-out]">
                     <div className="flex flex-col justify-between items-start mb-8 gap-4 bg-black/80 backdrop-blur-2xl p-6 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.3)] border border-white/20">
                         <div className="flex justify-between w-full items-center">
                             <div>
@@ -1795,9 +2011,7 @@
                                     Listado de Checklists
                                     <span className="bg-yellow-400 text-black text-sm font-bold px-3 py-1 rounded-full">{filtrados.length}</span>
                                 </h2>
-                                <p className="text-white/60 mt-1">Directorio consolidado de actividades desde SharePoint.</p>
                             </div>
-
                             {(role === 'Administrador' || role === 'Desarrollador') && (
                                 <button className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:-translate-y-1" onClick={() => setShowTemplateModal(true)}>
                                     Crear Nuevo CheckList
@@ -1806,32 +2020,16 @@
                         </div>
 
                         <div className="flex flex-col md:flex-row gap-4 w-full mt-4 border-t border-white/10 pt-4">
-                            <input 
-                                type="text" 
-                                placeholder="Buscar por nombre..." 
-                                className="bg-black/50 text-white border border-white/20 rounded-lg px-4 py-2 outline-none focus:border-yellow-400 text-sm flex-1"
-                                value={filtroNombre}
-                                onChange={(e) => setFiltroNombre(e.target.value)}
-                            />
-                            <select 
-                                className="bg-black/50 text-white/80 border border-white/20 rounded-lg px-4 py-2 outline-none focus:border-yellow-400 text-sm"
-                                value={filtroTipo}
-                                onChange={(e) => setFiltroTipo(e.target.value)}
-                            >
+                            <input type="text" placeholder="Buscar por nombre..." className="bg-black/50 text-white border border-white/20 rounded-lg px-4 py-2 outline-none focus:border-yellow-400 text-sm flex-1" value={filtroNombre} onChange={(e) => setFiltroNombre(e.target.value)} />
+                            <select className="bg-black/50 text-white/80 border border-white/20 rounded-lg px-4 py-2 outline-none focus:border-yellow-400 text-sm" value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
                                 <option value="">Todos los Tipos</option>
-                                <option value="PROYECTO">Incorporaci&oacute;n por Proyectos</option>
-                                <option value="COMPRA INSTALADA">Incorporaci&oacute;n Compra Instalada</option>
-                                <option value="ENSAMBLE">Incorporaci&oacute;n por Ensamble</option>
+                                <option value="PROYECTO">Incorporación por Proyectos</option>
+                                <option value="COMPRA INSTALADA">Incorporación Compra Instalada</option>
+                                <option value="ENSAMBLE">Incorporación por Ensamble</option>
                                 <option value="GENERAL">General</option>
                             </select>
                             <label className="flex items-center gap-2 text-sm font-bold text-white cursor-pointer bg-black/50 border border-white/20 px-4 py-2 rounded-lg">
-                                <input 
-                                    type="checkbox" 
-                                    checked={filtroAlerta} 
-                                    onChange={(e) => setFiltroAlerta(e.target.checked)} 
-                                    className="accent-yellow-400"
-                                />
-                                Solo con Alertas
+                                <input type="checkbox" checked={filtroAlerta} onChange={(e) => setFiltroAlerta(e.target.checked)} className="accent-yellow-400" /> Solo con Alertas
                             </label>
                         </div>
                     </div>
@@ -1839,46 +2037,68 @@
                     {filtrados.length === 0 ? (
                         <div className="text-center py-20 bg-black/80 backdrop-blur-2xl rounded-3xl border border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
                             <h3 className="text-2xl font-bold text-white mb-2">No hay Checklists Disponibles</h3>
-                            {role === 'Responsable' && <p className="text-white/50">No tienes ninguna tarea asignada a\u00fan en ning\u00fan checklist.</p>}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {filtrados.map((chk) => {
-                                const itemCount = chk.items?.length || 0;
-                                const hasAlerts = chk.items?.some(it => it.Alerta === "Si");
-                                const promCalc = calcularPromedioChecklist(chk.items);
-                                const promReal = calcularPromedioReal(chk.items);
-                                const isDelayed = promReal < promCalc;
+                        <div className="bg-black/80 backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-white/10 text-white/60 text-xs uppercase tracking-wider">
+                                            <th className="p-4 border-b border-white/10">Nombre del Checklist</th>
+                                            <th className="p-4 border-b border-white/10">Progreso (Plan vs Real)</th>
+                                            <th className="p-4 border-b border-white/10">Líder</th>
+                                            <th className="p-4 border-b border-white/10">Custodio</th>
+                                            <th className="p-4 border-b border-white/10">Operador</th>
+                                            <th className="p-4 border-b border-white/10">Mantenedor</th>
+                                            <th className="p-4 border-b border-white/10 text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-sm text-white">
+                                        {currentItems.map((chk) => {
+                                            const promCalc = calcularPromedioChecklist(chk.items);
+                                            const promReal = calcularPromedioReal(chk.items);
+                                            const isDelayed = promReal < promCalc;
+                                            const hasAlerts = chk.items?.some(it => it.Alerta === "Si");
+                                            const extractName = (email) => email ? email.split('@')[0] : '-';
 
-                                return (
-                                    <div key={chk.ID_x002d_checklist} className={`bg-black/80 backdrop-blur-2xl rounded-3xl p-6 border transition-all hover:-translate-y-1 ${hasAlerts ? 'border-red-500/50 shadow-[0_5px_30px_rgba(239,68,68,0.4)]' : 'border-white/20 hover:shadow-[0_10px_40px_rgba(0,0,0,0.5)]'}`}>
-                                        <div className="flex justify-between items-start mb-4">
-                                            {hasAlerts && <span className="bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold px-2 py-1 rounded animate-pulse">ALERTA</span>}
-                                        </div>
-                                        <h3 className="text-lg font-bold text-white mb-1 line-clamp-1">{chk.Name || "Sin nombre"}</h3>
-                                        <p className="text-sm text-yellow-400 mb-4 font-medium">{itemCount} &Iacute;tems agrupados</p>
-                                        <div className="bg-white/5 p-3 rounded-xl mb-5 text-sm border border-white/10">
-                                            <div className="flex justify-between mb-2 pb-2 border-b border-white/10">
-                                                <span className="text-white/50">Cumplimiento Calc:</span>
-                                                <span className="text-white font-bold">{promCalc}%</span>
-                                            </div>
-                                            <div className="flex justify-between mb-2 pb-2 border-b border-white/10">
-                                                <span className="text-white/50">Avance Real:</span>
-                                                <span className={`font-bold flex items-center gap-2 ${isDelayed ? 'text-red-400' : 'text-green-400'}`}>
-                                                    {promReal}% 
-                                                    {isDelayed && (
-                                                        <svg className="w-4 h-4 text-red-500 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                                                    )}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between"><span className="text-white/50">ID:</span> <span className="text-white/70">{chk.ID_x002d_checklist}</span></div>
-                                        </div>
-                                        <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="w-full bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-300 font-bold py-2.5 rounded-xl transition-colors shadow">
-                                            Ver Detalles
-                                        </button>
+                                            return (
+                                                <tr key={chk.ID_x002d_checklist} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                                    <td className="p-4 font-bold max-w-[250px] truncate" title={chk.Name}>
+                                                        {hasAlerts && <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-[10px] mr-2 animate-pulse">ALERTA</span>}
+                                                        {chk.Name || "Sin nombre"}
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <div className="flex flex-col gap-1 text-xs">
+                                                            <span>Plan: <span className="font-bold">{promCalc}%</span></span>
+                                                            <span>Real: <span className={`font-bold ${isDelayed ? 'text-red-400' : 'text-green-400'}`}>{promReal}%</span></span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-4 text-xs text-white/70">{extractName(chk.Metadata?.roles?.lider?.persona)}</td>
+                                                    <td className="p-4 text-xs text-white/70">{extractName(chk.Metadata?.roles?.custodio?.persona)}</td>
+                                                    <td className="p-4 text-xs text-white/70">{extractName(chk.Metadata?.roles?.operador?.persona)}</td>
+                                                    <td className="p-4 text-xs text-white/70">{extractName(chk.Metadata?.roles?.mantenedor?.persona)}</td>
+                                                    <td className="p-4 text-center">
+                                                        <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="bg-blue-600/20 hover:bg-blue-600/50 text-blue-300 border border-blue-500/30 px-4 py-2 rounded-lg font-bold text-xs transition-colors shadow">
+                                                            Ver / Gestionar
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* PAGINADOR FRONTEND */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-between px-6 py-4 border-t border-white/10 bg-black/40">
+                                    <span className="text-white/50 text-sm">Mostrando pág {currentPage} de {totalPages}</span>
+                                    <div className="flex gap-2">
+                                        <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-30 rounded-lg text-white font-bold transition-colors">Anterior</button>
+                                        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-30 rounded-lg text-white font-bold transition-colors">Siguiente</button>
                                     </div>
-                                );
-                            })}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -1928,6 +2148,7 @@
             );
         };
 
+
         const Dashboard = ({ user, role, onLogout }) => {
             const [view, setView] = React.useState('checklist_all');
             const [selectedChecklistId, setSelectedChecklistId] = React.useState(null);
@@ -1940,14 +2161,19 @@
             return (
                 <div className="h-screen flex flex-col overflow-hidden text-white pattern-bg">
                     <nav className="bg-black/80 backdrop-blur-2xl border-b border-white/10 px-6 py-4 shadow-[0_5px_30px_rgba(0,0,0,0.5)] sticky top-0 z-50">
-                        <div className="max-w-7xl mx-auto flex justify-between items-center">
+                        <div className="max-w-[95%] w-full mx-auto flex justify-between items-center">
                             <div className="flex items-center gap-3 cursor-pointer group" onClick={() => handleNavigate('home')}>
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-black font-black text-xl shadow-lg group-hover:rotate-12 transition-transform duration-300">C</div>
-                                <span className="text-xl font-bold text-white tracking-wide group-hover:text-yellow-400 transition-colors">Gesti&oacute;n Cerrej&oacute;n</span>
+                                <img 
+                                    src="./img/Logo.png" 
+                                    alt="Logo" 
+                                    className="w-10 h-10 object-contain rounded-full shadow-lg transition-transform duration-300 group-hover:scale-105"
+                                    onError={(e) => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23eab308'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z'/%3E%3C/svg%3E"; }}
+                                />
+                                <span className="text-xl font-bold text-white tracking-wide group-hover:text-yellow-400 transition-colors">Incorporaci&oacute;n de Activos</span>
                             </div>
                             <div className="flex items-center gap-6">
                                 <button className="text-sm font-semibold hover:text-yellow-400 transition-colors hidden md:block" onClick={() => handleNavigate('checklist_all')}>Listar Checklists</button>
-                                <div className="hidden md:block flex-col text-right ml-4">
+                                <div className="hidden md:flex flex-col text-right ml-4">
                                     <span className="text-white/60 text-[10px] font-semibold uppercase tracking-wider block leading-tight">Usuario Activo</span>
                                     <span className="text-white font-bold block text-sm">{user} <span className="text-yellow-400 text-xs bg-yellow-400/10 px-2 py-0.5 rounded-full ml-1 border border-yellow-400/20">{role}</span></span>
                                 </div>
@@ -1959,7 +2185,7 @@
 
                     <main className="flex-1 overflow-y-auto p-4 md:p-8">
                         {view === 'home' && (
-                            <div className="max-w-7xl mx-auto flex flex-col items-center justify-center mt-8 md:mt-16 animate-[fadeIn_0.5s_ease-out]">
+                            <div className="max-w-[95%] mx-auto flex flex-col items-center justify-center mt-8 md:mt-16 animate-[fadeIn_0.5s_ease-out]">
                                 <div className="bg-black/80 backdrop-blur-2xl border border-white/20 p-10 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] text-center max-w-2xl w-full">
                                     <h1 className="text-4xl font-extrabold text-white mb-4 tracking-tight">&iexcl;Bienvenido al portal!</h1>
                                     <button onClick={() => handleNavigate('checklist_all')} className="bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold py-3.5 px-8 rounded-xl transition-all shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:shadow-[0_0_30px_rgba(234,179,8,0.5)]">
@@ -1973,8 +2199,9 @@
                         {view === 'checklist_detalle' && <CheckListDetalle checklistId={selectedChecklistId} role={role} currentUser={user} onAtras={() => handleNavigate('checklist_all')} />}
                     </main>
 
-                    <style dangerouslySetInnerHTML={{ __html: `
-                        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+                    <style dangerouslySetInnerHTML={{
+                        __html: `
+                        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                     `}} />
                 </div>
             );
@@ -1993,10 +2220,10 @@
                             credentials: 'same-origin'
                         });
                         const data = await res.json();
-                        const userEmail = data.d.Email || data.d.Title; 
-                        
+                        const userEmail = data.d.Email || data.d.Title;
+
                         setUser(userEmail);
-                        setRole(userEmail.toLowerCase() === 'jorge.almarales.ext@cerrejon.com' || 'samir.tenorio.ext@cerrejon.com' ? 'Administrador' : 'Responsable');
+                        setRole(userEmail.toLowerCase() === 'jorge.almarales.ext@cerrejon.com' || userEmail.toLowerCase() === 'samir.tenorio.ext@cerrejon.com' ? 'Administrador' : 'Responsable');
                     } catch (error) {
                         console.error("Error fetching current user:", error);
                         alert("No se pudo autenticar con SharePoint.");
@@ -2017,4 +2244,5 @@
         if (rootContainer) { const root = ReactDOM.createRoot(rootContainer); root.render(<App />); }
     </script>
 </body>
+
 </html>
