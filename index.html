@@ -1331,8 +1331,7 @@
                         {isSaving ? 'GUARDANDO EN SHAREPOINT...' : 'FINALIZAR Y GUARDAR CHECKLIST'}
                     </button>
 
-                    <DashboardCharts items={items} theme={theme} />
-
+                    
                     {/* MODAL PARA JUSTIFICAR INACTIVACIÓN (RENDERIZADO MEDIANTE PORTAL AL BODY) */}
                     {inactivatingItemId && ReactDOM.createPortal(
                         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
@@ -1392,6 +1391,8 @@
             const [evidenciasItem, setEvidenciasItem] = React.useState({});
             const [cargandoEvidencias, setCargandoEvidencias] = React.useState({});
             const [isUploading, setIsUploading] = React.useState(false);
+            // NUEVO ESTADO PARA EL MODAL GANTT
+            const [showGanttModal, setShowGanttModal] = React.useState(false);
 
             // Estados para inactivar tareas guardadas
             const [inactivatingItemId, setInactivatingItemId] = React.useState(null);
@@ -2135,7 +2136,19 @@
                         })}
                     </div>
 
-                    <GanttChart items={checklist.items} />
+                    {/* Botón para abrir el Gantt en un Modal y la sección de Gráficas de Torta/Barras */}
+                    <div className="mt-8 flex flex-col items-center justify-center gap-4">
+                        <button 
+                            onClick={() => setShowGanttModal(true)} 
+                            className="bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold py-3.5 px-8 rounded-xl transition-all shadow-lg flex items-center gap-2"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 13v-1m4 1v-3m4 3V8M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                            </svg>
+                            {"Ver Gantt Detallado"}
+                        </button>
+                    </div>
+
                     <DashboardCharts items={checklist.items} theme={theme} />
 
                     <div className={`${cardClass} border p-6 rounded-3xl mt-8`}>
@@ -2243,6 +2256,26 @@
                                     >
                                         Inactivar
                                     </button>
+                                </div>
+                            </div>
+                        </div>,
+                        document.body
+                    )}
+
+                    {/* MODAL GANTT DETALLADO (PORTAL AL BODY) */}
+                    {showGanttModal && ReactDOM.createPortal(
+                        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
+                            <div className={`w-full max-w-6xl max-h-[90vh] overflow-y-auto p-6 rounded-3xl border shadow-2xl relative ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                                <button 
+                                    onClick={() => setShowGanttModal(false)} 
+                                    className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-white/10 text-white/70' : 'hover:bg-slate-100 text-slate-700'}`}
+                                >
+                                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                                <div className="mt-4">
+                                    <GanttChart items={checklist.items} />
                                 </div>
                             </div>
                         </div>,
