@@ -591,7 +591,15 @@
             const activos = items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
             if (activos.length === 0) return null;
 
+            // Avance General (Real)
             const avanceGeneral = Math.round(activos.reduce((acc, it) => acc + (parseInt(it.Avance || it.avance) || 0), 0) / activos.length);
+
+            // Avance Esperado (Calculado dinámicamente según fechas de inicio y fin)
+            let totalEsperado = 0;
+            activos.forEach(it => {
+                totalEsperado += calcularCumplimiento(it.FechaInicio || it.fechaInicio, it.FechaFin || it.fechaFin);
+            });
+            const avanceEsperado = Math.round(totalEsperado / activos.length);
 
             const respMap = {};
             activos.forEach(it => {
@@ -606,9 +614,15 @@
                 avg: Math.round(respMap[k].total / respMap[k].count)
             })).sort((a, b) => b.avg - a.avg);
 
-            const radius = 60;
-            const circumference = 2 * Math.PI * radius;
-            const offset = circumference - (avanceGeneral / 100) * circumference;
+            // Cálculos para el Anillo Exterior (Avance Real - Radio: 60)
+            const radiusReal = 60;
+            const circumReal = 2 * Math.PI * radiusReal;
+            const offsetReal = circumReal - (avanceGeneral / 100) * circumReal;
+
+            // Cálculos para el Anillo Interior (Avance Esperado - Radio: 42)
+            const radiusEsp = 42;
+            const circumEsp = 2 * Math.PI * radiusEsp;
+            const offsetEsp = circumEsp - (avanceEsperado / 100) * circumEsp;
 
             const cardBg = theme === 'dark'
                 ? 'bg-black/80 border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)]'
@@ -622,13 +636,35 @@
             return (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 animate-[fadeIn_0.5s_ease-out]">
                     <div className={`${cardBg} backdrop-blur-2xl p-6 rounded-3xl border flex flex-col items-center justify-center`}>
-                        <h3 className={`text-xs font-bold uppercase tracking-wider mb-6 ${labelColor}`}>{"% Avance General"}</h3>
-                        <div className="relative w-40 h-40 flex items-center justify-center">
+                        <h3 className={`text-xs font-bold uppercase tracking-wider mb-6 ${labelColor}`}>{"% Avances de Checklist"}</h3>
+                        
+                        {/* Gráfica con dos Anillos Concéntricos */}
+                        <div className="relative w-40 h-40 flex flex-col items-center justify-center">
                             <svg className="w-full h-full transform -rotate-90">
-                                <circle cx="80" cy="80" r={radius} fill="transparent" stroke={trackStroke} strokeWidth="20" />
-                                <circle cx="80" cy="80" r={radius} fill="transparent" stroke="#eab308" strokeWidth="20" strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-1000 ease-out" strokeLinecap="round" />
+                                {/* Anillo Exterior (Real) */}
+                                <circle cx="80" cy="80" r={radiusReal} fill="transparent" stroke={trackStroke} strokeWidth="14" />
+                                <circle cx="80" cy="80" r={radiusReal} fill="transparent" stroke="#eab308" strokeWidth="14" strokeDasharray={circumReal} strokeDashoffset={offsetReal} className="transition-all duration-1000 ease-out" strokeLinecap="round" />
+                                
+                                {/* Anillo Interior (Esperado) */}
+                                <circle cx="80" cy="80" r={radiusEsp} fill="transparent" stroke={trackStroke} strokeWidth="10" />
+                                <circle cx="80" cy="80" r={radiusEsp} fill="transparent" stroke="#3b82f6" strokeWidth="10" strokeDasharray={circumEsp} strokeDashoffset={offsetEsp} className="transition-all duration-1000 ease-out" strokeLinecap="round" />
                             </svg>
-                            <span className={`absolute text-3xl font-black ${textColor}`}>{avanceGeneral}%</span>
+                            <div className="absolute flex flex-col items-center justify-center text-center">
+                                <span className={`text-2xl font-black ${textColor}`}>{avanceGeneral}%</span>
+                                <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Real</span>
+                            </div>
+                        </div>
+
+                        {/* Leyenda de Variables */}
+                        <div className="flex gap-4 mt-6 text-[11px] font-bold">
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
+                                <span className={textColor}>Real: {avanceGeneral}%</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-3 h-3 rounded-full bg-blue-500 inline-block"></span>
+                                <span className={textColor}>Esperado: {avanceEsperado}%</span>
+                            </div>
                         </div>
                     </div>
 
@@ -1229,25 +1265,46 @@
                                     const isEditing = editingId === it.id;
 
                                     return (
-                                        <div key={it.id} className={`p-4 rounded-xl border transition-all ${isInactive ? 'opacity-40 border-dashed bg-black/5 dark:bg-black/20' : isEditing ? 'border-yellow-500 ring-2 ring-yellow-400/20' : theme==='dark' ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/50 border-slate-200'}`}>
+                                        <div 
+                                            key={it.id} 
+                                            className={`p-4 rounded-xl border transition-all ${
+                                                isInactive 
+                                                    ? (theme === 'dark' ? 'border-dashed border-slate-700 bg-slate-950/70 shadow-sm' : 'border-dashed border-slate-300 bg-slate-100/95 shadow-sm') 
+                                                    : isEditing ? 'border-yellow-500 ring-2 ring-yellow-400/20' 
+                                                    : theme==='dark' ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/50 border-slate-200'
+                                            }`}
+                                        >
                                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                                                 
                                                 {/* Left Side: Number & Description */}
                                                 <div className="flex-1 min-w-0 flex items-start gap-3">
-                                                    <span className={`text-xs font-bold px-2 py-1 rounded mt-0.5 ${isInactive ? 'bg-black/5 text-slate-400' : 'bg-amber-600 text-white shadow'}`}>
+                                                    <span className={`text-xs font-bold px-2 py-1 rounded mt-0.5 ${
+                                                        isInactive 
+                                                            ? (theme === 'dark' ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600') 
+                                                            : 'bg-amber-600 text-white shadow'
+                                                    }`}>
                                                         #{idx + 1}
                                                     </span>
                                                     <div className="flex-1 min-w-0">
                                                         {isEditing ? (
                                                             <textarea className={`${inputClasses} text-xs font-semibold`} value={it.actividades} onChange={(e) => handleItemEdit(it.id, 'actividades', e.target.value)} rows="2" />
                                                         ) : (
-                                                            <p className={`font-bold text-sm leading-snug break-words ${isInactive ? 'text-slate-400 line-through' : theme==='dark' ? 'text-yellow-400' : 'text-slate-800'}`}>
+                                                            <p className={`font-bold text-sm leading-snug break-words ${
+                                                                isInactive 
+                                                                    ? (theme === 'dark' ? 'text-slate-400 line-through decoration-slate-500/80' : 'text-slate-500 line-through decoration-slate-450') 
+                                                                    : theme==='dark' ? 'text-yellow-400' : 'text-slate-800'
+                                                            }`}>
                                                                 {it.actividades}
                                                             </p>
                                                         )}
                                                         {isInactive && (
-                                                            <div className="text-[10px] text-red-500/80 font-medium mt-1">
-                                                                ⚠ {"Inactivado por: "}<span className="underline">{it.inactivadoPor}</span> - {"Raz\u00f3n: \""}{it.inactivadoRazon}{"\""}
+                                                            <div className={`text-xs font-bold mt-2 flex flex-wrap items-center gap-1 ${
+                                                                theme === 'dark' ? 'text-red-400' : 'text-red-600'
+                                                            }`} style={{ color: theme === 'light' ? '#b91c1c' : undefined }}>
+                                                                <span>&#9888;</span>
+                                                                <span>{"Inactivado por: "}</span>
+                                                                <span className="underline font-semibold">{it.inactivadoPor}</span>
+                                                                <span>{" - Causa: \""}{it.inactivadoRazon}{"\""}</span>
                                                             </div>
                                                         )}
                                                     </div>
@@ -1290,9 +1347,16 @@
                                                 )}
 
                                                 {/* Right Action buttons */}
-                                                <div className="flex items-center gap-2 min-w-[140px] justify-end">
+                                                <div className="flex items-center gap-2 min-w-[145px] justify-end">
                                                     {isInactive ? (
-                                                        <button onClick={() => handleReactivarItem(it.id)} className="bg-green-500/20 hover:bg-green-500/40 text-green-600 dark:text-green-300 border border-green-500/30 px-3 py-1 rounded text-xs font-bold transition-colors w-full shadow-sm">
+                                                        <button 
+                                                            onClick={() => handleReactivarItem(it.id)} 
+                                                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-colors w-full shadow-md border ${
+                                                                theme === 'dark' 
+                                                                    ? 'bg-green-600 hover:bg-green-500 text-white border-green-700' 
+                                                                    : 'bg-green-500 hover:bg-green-600 text-white border-green-600'
+                                                            }`}
+                                                        >
                                                             {"Reactivar"}
                                                         </button>
                                                     ) : isEditing ? (
@@ -1537,7 +1601,7 @@
             const handleSaveEdit = async () => {
                 const tieneEvidenciasCargadas = (evidenciasItem[editForm.Id] && evidenciasItem[editForm.Id].length > 0) || evidenciasPresence[editForm.Id];
                 if (parseInt(editForm.Avance) >= 100 && !tieneEvidenciasCargadas) {
-                    alert("⚠ Error: No puedes guardar el avance al 100% sin antes haber cargado al menos una evidencia.");
+                    alert("Error: No puedes guardar el avance al 100% sin antes haber cargado al menos una evidencia.");
                     return;
                 }
 
@@ -1999,7 +2063,7 @@
                                                                 <span>&#9888;</span>
                                                                 <span>{"Inactivado por: "}</span>
                                                                 <span className="underline font-semibold">{it.InactivadoPor || it.inactivadoPor}</span>
-                                                                <span>{" - Razón: \""}{it.InactivadoRazon || it.inactivadoRazon}{"\""}</span>
+                                                                <span>{" - Causa: \""}{it.InactivadoRazon || it.inactivadoRazon}{"\""}</span>
                                                             </div>
                                                         )}
                                                     </div>
@@ -2061,7 +2125,7 @@
                                                 </div>
 
                                                 <div className="col-span-1">
-                                                    <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-500' : 'text-slate-400 dark:text-slate-500'}`}>Cumplimiento</span>
+                                                    <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-500' : 'text-slate-400 dark:text-slate-500'}`}>Avance Esperado</span>
                                                     <span className="text-green-500 font-black text-2xl drop-shadow">{isInactive ? 0 : calcularCumplimiento(it.FechaInicio, it.FechaFin)}%</span>
                                                 </div>
 
