@@ -1501,8 +1501,13 @@
                 }
             };
 
+            const editingIdRef = React.useRef(editingId);
             React.useEffect(() => {
-                const fetchDetails = async () => {
+                editingIdRef.current = editingId;
+            }, [editingId]);
+
+            React.useEffect(() => {
+                const fetchDetails = async (isBackgroundPoll = false) => {
                     try {
                         const listRes = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('DB_CHECKLIST_APP')/items?$filter=Title eq '${checklistId}'`, {
                             headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
@@ -1512,17 +1517,51 @@
                         if (listJson.d.results.length > 0) {
                             const row = listJson.d.results[0];
                             const parsedData = JSON.parse(row.Data);
-                            setChecklist({ ...parsedData, SharePointId: row.Id });
-                            setGeneralComment(parsedData.ComentarioGeneral || '');
-                            fetchEvidencePresence();
+                            
+                            if (isBackgroundPoll) {
+                                setChecklist(prevChecklist => {
+                                    if (!prevChecklist) return { ...parsedData, SharePointId: row.Id };
+                                    const mergedItems = parsedData.items.map(newItem => {
+                                        if (editingIdRef.current === newItem.Id) {
+                                            const currentEditingItem = prevChecklist.items.find(it => it.Id === newItem.Id);
+                                            return currentEditingItem || newItem;
+                                        }
+                                        return newItem;
+                                    });
+                                    return {
+                                        ...parsedData,
+                                        items: mergedItems,
+                                        SharePointId: row.Id
+                                    };
+                                });
+                                fetchEvidencePresence();
+                            } else {
+                                setChecklist({ ...parsedData, SharePointId: row.Id });
+                                setGeneralComment(parsedData.ComentarioGeneral || '');
+                                fetchEvidencePresence();
+                            }
                         }
                     } catch (error) {
                         console.error("Error loading details:", error);
                     } finally {
-                        setLoading(false);
+                        if (!isBackgroundPoll) {
+                            setLoading(false);
+                        }
                     }
                 };
-                fetchDetails();
+
+                fetchDetails(false);
+
+                const intervalId = setInterval(() => {
+                    if (document.hidden) {
+                        return;
+                    }
+                    fetchDetails(true);
+                }, 20000);
+
+                return () => {
+                    clearInterval(intervalId);
+                };
             }, [checklistId]);
 
             const cargarEvidencias = async (itemId) => {
