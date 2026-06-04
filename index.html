@@ -11,6 +11,8 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
@@ -2214,6 +2216,133 @@
                 }
             };
 
+            const handleDescargarPDF = async () => {
+                try {
+                    const container = document.createElement('div');
+                    container.style.cssText = 'position:absolute;left:-9999px;top:0;width:750px;padding:30px;font-family:sans-serif;color:#1f2937;background:#fff;';
+
+                    const titulo = document.createElement('h1');
+                    titulo.textContent = `Checklist: ${checklist.Name}`;
+                    titulo.style.cssText = 'font-size:24px;font-weight:800;margin-bottom:6px;color:#1e3a5f;border-bottom:3px solid #eab308;padding-bottom:10px;';
+                    container.appendChild(titulo);
+
+                    const meta = document.createElement('p');
+                    meta.style.cssText = 'font-size:11px;color:#64748b;margin-bottom:20px;';
+                    const tipo = checklist.Tipo || '';
+                    const fechaFin = checklist.Metadata?.fechaFinDiligenciamiento || new Date().toISOString().split('T')[0];
+                    meta.textContent = `Tipo: ${tipo} | Finalizado: ${fechaFin} | Tareas: ${activas.length}`;
+                    container.appendChild(meta);
+
+                    activas.forEach((it, i) => {
+                        const card = document.createElement('div');
+                        card.style.cssText = 'border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px;background:#f8fafc;';
+
+                        const header = document.createElement('div');
+                        header.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;';
+                        const num = document.createElement('span');
+                        num.style.cssText = 'background:#eab308;color:#fff;font-weight:800;font-size:11px;padding:3px 10px;border-radius:6px;flex-shrink:0;';
+                        num.textContent = `#${i + 1}`;
+                        const desc = document.createElement('span');
+                        desc.style.cssText = 'font-size:14px;font-weight:700;color:#1e293b;margin-left:10px;flex:1;line-height:1.4;';
+                        desc.textContent = it.Descripcion || '';
+                        header.appendChild(num);
+                        header.appendChild(desc);
+                        card.appendChild(header);
+
+                        const grid = document.createElement('div');
+                        grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-bottom:8px;';
+                        const campos = [
+                            { label: 'Fechas Plan', val: `I: ${it.FechaBaselineInicio || '-'}  F: ${it.FechaBaselineFin || '-'}` },
+                            { label: 'Fechas Reales', val: `I: ${it.FechaInicio || '-'}  F: ${it.FechaFin || '-'}` },
+                            { label: 'Avance', val: `${it.Avance || it.avance || 0}%` },
+                            { label: 'Entregable', val: it.Entregable || '-' }
+                        ];
+                        campos.forEach(c => {
+                            const field = document.createElement('div');
+                            const lbl = document.createElement('span');
+                            lbl.style.cssText = 'font-weight:700;color:#64748b;display:block;font-size:10px;text-transform:uppercase;';
+                            lbl.textContent = c.label;
+                            const val = document.createElement('span');
+                            val.style.cssText = 'font-weight:600;color:#1e293b;';
+                            val.textContent = c.val;
+                            field.appendChild(lbl);
+                            field.appendChild(val);
+                            grid.appendChild(field);
+                        });
+                        card.appendChild(grid);
+
+                        if (it.HistorialComentarios && it.HistorialComentarios.length > 0) {
+                            const commDiv = document.createElement('div');
+                            commDiv.style.cssText = 'border-top:1px dashed #cbd5e1;padding-top:8px;margin-top:4px;';
+                            const commTitle = document.createElement('span');
+                            commTitle.style.cssText = 'font-weight:700;color:#64748b;font-size:10px;text-transform:uppercase;display:block;margin-bottom:4px;';
+                            commTitle.textContent = 'Comentarios';
+                            commDiv.appendChild(commTitle);
+                            it.HistorialComentarios.forEach(c => {
+                                const cLine = document.createElement('p');
+                                cLine.style.cssText = 'font-size:10px;color:#475569;margin:3px 0;padding:3px 6px;background:#fff;border-radius:4px;border:1px solid #f1f5f9;';
+                                cLine.textContent = `[${c.fecha || ''}] ${c.autor || ''}: ${c.texto || ''}`;
+                                commDiv.appendChild(cLine);
+                            });
+                            card.appendChild(commDiv);
+                        }
+
+                        container.appendChild(card);
+                    });
+
+                    document.body.appendChild(container);
+                    await new Promise(r => setTimeout(r, 300));
+
+                    const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+                    document.body.removeChild(container);
+
+                    const { jsPDF } = jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pageWidth = pdf.internal.pageSize.getWidth();
+                    const pageHeight = pdf.internal.pageSize.getHeight();
+                    const imgWidth = pageWidth - 16;
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                    let heightLeft = imgHeight;
+                    let position = 8;
+                    const imgData = canvas.toDataURL('image/png');
+
+                    pdf.addImage(imgData, 'PNG', 8, position, imgWidth, imgHeight);
+                    heightLeft -= (pageHeight - 16);
+
+                    while (heightLeft > 0) {
+                        position = -(pageHeight - 16) + 8;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 8, position, imgWidth, imgHeight);
+                        heightLeft -= (pageHeight - 16);
+                    }
+
+                    const nombreArchivo = `${(checklist.Name || 'checklist').replace(/[^a-z0-9]/gi, '_')}.pdf`;
+                    pdf.save(nombreArchivo);
+
+                    try {
+                        const arrayBuffer = pdf.output('arraybuffer');
+                        const digest = await getRequestDigest();
+                        const uploadUrl = `${SITE_URL}/_api/web/GetFolderByServerRelativeUrl('/sites/co-lmn-sgia/checklist/PDFs')/Files/add(url='${encodeURIComponent(nombreArchivo)}', overwrite=true)`;
+                        await fetch(uploadUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/octet-stream',
+                                'X-RequestDigest': digest,
+                                'Accept': 'application/json;odata=verbose'
+                            },
+                            body: arrayBuffer,
+                            credentials: 'same-origin'
+                        });
+                    } catch (uploadErr) {
+                        console.error('Error subiendo PDF a SharePoint:', uploadErr);
+                    }
+                } catch (error) {
+                    alert('Error generando el PDF.');
+                    console.error(error);
+                }
+            };
+
             const handleSaveEdit = async () => {
                 const tieneEvidenciasCargadas = (evidenciasItem[editForm.Id] && evidenciasItem[editForm.Id].length > 0) || evidenciasPresence[editForm.Id];
                 if (parseInt(editForm.Avance) > 90 && !tieneEvidenciasCargadas) {
@@ -2468,6 +2597,12 @@
                                 <button onClick={handleFinalizar} className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors shadow-lg border border-green-400/30 flex items-center gap-2 whitespace-nowrap">
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
                                     Finalizar Checklist
+                                </button>
+                            )}
+                            {isFinalizado && (
+                                <button onClick={handleDescargarPDF} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors shadow-lg border border-blue-400/30 flex items-center gap-2 whitespace-nowrap">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                    Descargar PDF
                                 </button>
                             )}
                             <button className={`${theme === 'dark' ? 'bg-white/10 hover:bg-white/20 border-white/30 text-white' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'} border py-2 px-4 rounded-lg flex items-center gap-2 font-semibold transition-colors`} onClick={onAtras}>
