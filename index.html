@@ -2323,7 +2323,7 @@
                     try {
                         const arrayBuffer = pdf.output('arraybuffer');
                         const digest = await getRequestDigest();
-                        const uploadUrl = `${SITE_URL}/_api/web/GetFolderByServerRelativeUrl('/sites/co-lmn-sgia/checklist/PDFs')/Files/add(url='${encodeURIComponent(nombreArchivo)}', overwrite=true)`;
+                        const uploadUrl = `${SITE_URL}/_api/web/GetFolderByServerRelativeUrl('/sites/co-lmn-sgia/checklist/SiteAssets/CheckList-Cerrejon/PDFs')/Files/add(url='${encodeURIComponent(nombreArchivo)}',overwrite=true)`;
                         await fetch(uploadUrl, {
                             method: 'POST',
                             headers: {
