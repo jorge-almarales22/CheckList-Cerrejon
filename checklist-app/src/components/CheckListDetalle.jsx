@@ -4,6 +4,7 @@ import { calcularCumplimiento } from '../utils/calculations';
 import { notificarTeams } from '../utils/notifications';
 import { getRequestDigest, saveToSPList, updateSPListItem, deleteSPListItem } from '../utils/sharepointApi';
 import { fileToBase64, comprimirImagen } from '../utils/imageCompression';
+import { AREAS } from '../data/constants';
 import PeoplePicker from './PeoplePicker';
 import DashboardCharts from './DashboardCharts';
 import GanttChart from './GanttChart';
@@ -54,6 +55,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [evidenciasPresence, setEvidenciasPresence] = useState({});
 
     const isAdmin = role === 'Administrador';
+
+    const [isEditingMetadata, setIsEditingMetadata] = useState(false);
+    const [editMetadataForm, setEditMetadataForm] = useState(null);
 
     const fetchEvidencePresence = async () => {
         try {
@@ -356,6 +360,10 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     };
 
     const handleSaveEdit = async () => {
+        if (isFinalizado) {
+            alert("No se puede editar un checklist finalizado.");
+            return;
+        }
         const tieneEvidenciasCargadas = (evidenciasItem[editForm.Id] && evidenciasItem[editForm.Id].length > 0) || evidenciasPresence[editForm.Id];
         if (parseInt(editForm.Avance) > 90 && !tieneEvidenciasCargadas) {
             alert("Error: No puedes guardar un avance superior al 90% sin antes haber cargado al menos una evidencia.");
@@ -369,6 +377,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 Descripcion: editForm.Descripcion,
                 NombreResponsable: editForm.NombreResponsable,
                 Entregable: editForm.Entregable,
+                FechaBaselineInicio: editForm.FechaBaselineInicio,
+                FechaBaselineFin: editForm.FechaBaselineFin,
                 FechaInicio: editForm.FechaInicio,
                 FechaFin: editForm.FechaFin,
                 Avance: editForm.Avance ? editForm.Avance.toString() : "0",
@@ -502,6 +512,27 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         }
     };
 
+    const handleStartEditMetadata = () => {
+        setEditMetadataForm(JSON.parse(JSON.stringify(checklist.Metadata)));
+        setIsEditingMetadata(true);
+    };
+
+    const handleSaveMetadata = async () => {
+        try {
+            const digest = await getRequestDigest();
+            const updatedChecklist = { ...checklist, Metadata: editMetadataForm };
+            await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
+                Data: JSON.stringify(updatedChecklist)
+            }, digest);
+            setChecklist(updatedChecklist);
+            setIsEditingMetadata(false);
+            setEditMetadataForm(null);
+        } catch (error) {
+            alert("Error guardando metadatos.");
+            console.error(error);
+        }
+    };
+
     const toggleAlert = async (item) => {
         const newAlerta = item.Alerta === "Si" ? "No" : "Si";
         try {
@@ -625,6 +656,25 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
             {checklist.Metadata && (
                 <div className={`border rounded-2xl overflow-hidden text-sm mb-8 shadow-lg ${theme === 'dark' ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'}`}>
+                    {isAdmin && !isFinalizado && (
+                        <div className={`px-5 py-2 border-b flex justify-between items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-amber-50'}`}>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Metadatos del Checklist</span>
+                            {!isEditingMetadata ? (
+                                <button onClick={handleStartEditMetadata} className="bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 text-xs font-bold px-3 py-1 rounded border border-amber-500/30 transition-colors">
+                                    Editar Metadatos
+                                </button>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <button onClick={handleSaveMetadata} className="bg-green-500/20 hover:bg-green-500/40 text-green-600 dark:text-green-300 text-xs font-bold px-3 py-1 rounded border border-green-500/30 transition-colors">
+                                        Guardar Cambios
+                                    </button>
+                                    <button onClick={() => { setIsEditingMetadata(false); setEditMetadataForm(null); }} className="bg-gray-500/20 hover:bg-gray-500/40 text-gray-600 dark:text-gray-300 text-xs font-bold px-3 py-1 rounded border border-gray-500/30 transition-colors">
+                                        Cancelar
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <div className={`flex flex-col md:flex-row border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                         <div className={`w-full md:w-1/3 p-5 border-r flex flex-col gap-2 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                             <span className="font-extrabold text-[10px] uppercase tracking-widest text-slate-500 mb-2">DESCRIPCIÓN DE EQUIPO(S) A INCORPORAR</span>
@@ -661,10 +711,23 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         {roleKey === 'lider' ? 'LÍDER DE PROYECTO' : roleKey}
                                     </div>
                                     <div className={`col-span-4 p-3 border-r ${theme === 'dark' ? 'border-slate-800 text-slate-300' : 'border-slate-200 text-slate-800'} flex items-center text-xs`}>
-                                        {checklist.Metadata.roles[roleKey].area || '-'}
+                                        {isEditingMetadata && (roleKey === 'custodio' || roleKey === 'mantenedor') ? (
+                                            <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.roles?.[roleKey]?.area || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, roles: { ...editMetadataForm.roles, [roleKey]: { ...editMetadataForm.roles[roleKey], area: e.target.value } } })}>
+                                                <option value="">Seleccionar...</option>
+                                                {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                                            </select>
+                                        ) : (
+                                            checklist.Metadata.roles[roleKey].area || '-'
+                                        )}
                                     </div>
                                     <div className={`col-span-5 p-3 flex items-center gap-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-800'}`}>
-                                        {checklist.Metadata.roles[roleKey].persona ? (
+                                        {isEditingMetadata && (roleKey === 'custodio' || roleKey === 'mantenedor') ? (
+                                            <PeoplePicker
+                                                className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none"
+                                                value={editMetadataForm?.roles?.[roleKey]?.persona || ''}
+                                                onChange={val => setEditMetadataForm({ ...editMetadataForm, roles: { ...editMetadataForm.roles, [roleKey]: { ...editMetadataForm.roles[roleKey], persona: val } } })}
+                                            />
+                                        ) : checklist.Metadata.roles[roleKey].persona ? (
                                             <React.Fragment>
                                                 <img
                                                     src={`https://glencore.sharepoint.com/_layouts/15/userphoto.aspx?size=S&accountname=${checklist.Metadata.roles[roleKey].persona}`}
@@ -806,7 +869,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         }`}>
                                             #{idx + 1}
                                         </span>
-                                        {isEditing ? (
+                                        {isEditing && isAdmin ? (
                                             <textarea className={`${inputClasses} text-sm font-semibold`} rows="2" value={currentItem.Descripcion} onChange={e => setEditForm({ ...editForm, Descripcion: e.target.value })} />
                                         ) : (
                                             <div className="flex flex-col flex-1">
@@ -835,7 +898,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     <div className={`grid grid-cols-2 lg:grid-cols-6 gap-6 mt-4 text-sm ${isInactive ? 'opacity-70' : ''}`}>
                                         <div className="col-span-1">
                                             <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-500' : 'text-slate-400 dark:text-slate-500'}`}>{"Responsable"}</span>
-                                            {isEditing ? (
+                                            {isEditing && isAdmin ? (
                                                 <PeoplePicker
                                                     className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none"
                                                     value={currentItem.NombreResponsable || ''}
@@ -855,15 +918,26 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                                         <div className="col-span-1">
                                             <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-500' : 'text-slate-400 dark:text-slate-500'}`}>{"Entregable"}</span>
-                                            <span className={`font-semibold text-xs break-words ${isInactive ? (theme === 'dark' ? 'text-slate-300' : 'text-slate-750') : ''}`}>{it.Entregable || '-'}</span>
+                                            {isEditing && isAdmin ? (
+                                                <input type="text" className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={currentItem.Entregable || ''} onChange={e => setEditForm({ ...editForm, Entregable: e.target.value })} />
+                                            ) : (
+                                                <span className={`font-semibold text-xs break-words ${isInactive ? (theme === 'dark' ? 'text-slate-300' : 'text-slate-750') : ''}`}>{it.Entregable || '-'}</span>
+                                            )}
                                         </div>
 
                                         <div className="col-span-1 md:col-span-2 lg:col-span-1">
                                             <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-500' : 'text-slate-400 dark:text-slate-500'}`}>Fechas Plan</span>
-                                            <div className={`p-2 rounded border shadow-inner ${theme==='dark'?'bg-slate-950 border-slate-850':'bg-slate-100 border-slate-200 text-slate-700'}`}>
-                                                <span className="font-semibold block text-[11px]"><span className="text-blue-500 dark:text-blue-300 font-bold w-4 inline-block">I:</span> {it.FechaBaselineInicio || '-'}</span>
-                                                <span className="font-semibold block text-[11px] mt-1"><span className="text-blue-500 dark:text-blue-300 font-bold w-4 inline-block">F:</span> {it.FechaBaselineFin || '-'}</span>
-                                            </div>
+                                            {isEditing && isAdmin ? (
+                                                <div className="flex flex-col gap-1.5 mt-1">
+                                                    <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-500">I:</span><input type="date" className="bg-transparent border-none text-xs w-full" value={currentItem.FechaBaselineInicio ? currentItem.FechaBaselineInicio.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, FechaBaselineInicio: e.target.value })} /></div>
+                                                    <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-500">F:</span><input type="date" className="bg-transparent border-none text-xs w-full" value={currentItem.FechaBaselineFin ? currentItem.FechaBaselineFin.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, FechaBaselineFin: e.target.value })} /></div>
+                                                </div>
+                                            ) : (
+                                                <div className={`p-2 rounded border shadow-inner ${theme==='dark'?'bg-slate-950 border-slate-850':'bg-slate-100 border-slate-200 text-slate-700'}`}>
+                                                    <span className="font-semibold block text-[11px]"><span className="text-blue-500 dark:text-blue-300 font-bold w-4 inline-block">I:</span> {it.FechaBaselineInicio || '-'}</span>
+                                                    <span className="font-semibold block text-[11px] mt-1"><span className="text-blue-500 dark:text-blue-300 font-bold w-4 inline-block">F:</span> {it.FechaBaselineFin || '-'}</span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="col-span-1 md:col-span-2 lg:col-span-1">

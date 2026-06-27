@@ -18,7 +18,8 @@ const App = () => {
                 const userEmail = data.d.Email || data.d.Title;
 
                 setUser(userEmail);
-                setRole(userEmail.toLowerCase() === 'jorge.almarales.ext@cerrejon.com' || userEmail.toLowerCase() === 'samir.tenorio.ext@cerrejon.com' ? 'Administrador' : 'Responsable');
+                const admins = ['jorge.almarales.ext@cerrejon.com', 'samir.tenorio.ext@cerrejon.com', 'dilson.zuleta.ext@cerrejon.com', 'gary.hernandez@cerrejon.com', 'roberto.lequerica@cerrejon.com', 'jose.c.barrios@cerrejon.com'];
+                setRole(admins.includes(userEmail.toLowerCase()) ? 'Administrador' : 'Responsable');
             } catch (error) {
                 console.error("Error fetching current user:", error);
                 alert("No se pudo autenticar con SharePoint.");
