@@ -54,6 +54,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [showGanttModal, setShowGanttModal] = useState(false);
     const [evidenciasPresence, setEvidenciasPresence] = useState({});
 
+    const [acData, setAcData] = useState({ gerencias: [], superintendencias: [], unidades: [] });
+    const [acLoading, setAcLoading] = useState(true);
+
     const isAdmin = role === 'Administrador';
 
     const [isEditingMetadata, setIsEditingMetadata] = useState(false);
@@ -138,6 +141,29 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             clearInterval(intervalId);
         };
     }, [checklistId]);
+
+    useEffect(() => {
+        const fetchAcList = async () => {
+            try {
+                const AC_SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/ac";
+                const res = await fetch(`${AC_SITE_URL}/_api/web/lists/getbytitle('EquiposAC')/items?$select=BranchGerencia,SiteSuperintendencia,UnidadProceso&$top=5000`, {
+                    headers: { "Accept": "application/json;odata=verbose" },
+                    credentials: 'same-origin'
+                });
+                const json = await res.json();
+                const results = json.d?.results || [];
+                const uniqueGerencias = [...new Set(results.map(r => r.BranchGerencia).filter(Boolean))].sort();
+                const uniqueSuperintendencias = [...new Set(results.map(r => r.SiteSuperintendencia).filter(Boolean))].sort();
+                const uniqueUnidades = [...new Set(results.map(r => r.UnidadProceso).filter(Boolean))].sort();
+                setAcData({ gerencias: uniqueGerencias, superintendencias: uniqueSuperintendencias, unidades: uniqueUnidades });
+            } catch (err) {
+                console.error("Error fetching AC list:", err);
+            } finally {
+                setAcLoading(false);
+            }
+        };
+        fetchAcList();
+    }, []);
 
     const cargarEvidencias = async (itemId) => {
         setCargandoEvidencias(prev => ({ ...prev, [itemId]: true }));
@@ -339,7 +365,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             try {
                 const arrayBuffer = pdf.output('arraybuffer');
                 const digest = await getRequestDigest();
-                const uploadUrl = `${SITE_URL}/_api/web/GetFolderByServerRelativeUrl('/sites/co-lmn-sgia/checklist/SiteAssets/CheckList-Cerrejon/PDFs')/Files/add(url='${encodeURIComponent(nombreArchivo)}',overwrite=true)`;
+                const AC_SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/ac";
+                const uploadUrl = `${AC_SITE_URL}/_api/web/GetFolderByServerRelativeUrl('/sites/co-lmn-sgia/ac/SiteAssets/CheckList/PDFs')/Files/add(url='${encodeURIComponent(nombreArchivo)}',overwrite=true)`;
                 await fetch(uploadUrl, {
                     method: 'POST',
                     headers: {
@@ -678,23 +705,87 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     <div className={`flex flex-col md:flex-row border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                         <div className={`w-full md:w-1/3 p-5 border-r flex flex-col gap-2 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                             <span className="font-extrabold text-[10px] uppercase tracking-widest text-slate-500 mb-2">DESCRIPCIÓN DE EQUIPO(S) A INCORPORAR</span>
-                            {checklist.Metadata.equipos.map((eq, idx) => (
-                                <div key={idx} className={`p-3 rounded-lg border text-xs whitespace-pre-wrap ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>{eq || '-'}</div>
-                            ))}
-                            {((checklist.Metadata.imagenesEquipo && checklist.Metadata.imagenesEquipo.length > 0) || checklist.Metadata.imagenEquipo) && (
-                                <div className={`mt-3 pt-3 border-t ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-                                    <span className="font-bold text-[10px] uppercase tracking-wider text-slate-500 block mb-2">FOTOS DEL EQUIPO</span>
+                            {isEditingMetadata ? (
+                                <>
+                                    {(editMetadataForm?.equipos || ['']).map((eq, idx) => (
+                                        <div key={idx} className="relative group w-full flex items-center">
+                                            <textarea
+                                                className={`${inputClasses} text-xs pr-14`}
+                                                placeholder={"Describe aquí un equipo a incorporar..."}
+                                                rows="2"
+                                                value={eq}
+                                                onChange={(e) => {
+                                                    const newEquipos = [...(editMetadataForm.equipos || [''])];
+                                                    newEquipos[idx] = e.target.value;
+                                                    setEditMetadataForm({ ...editMetadataForm, equipos: newEquipos });
+                                                }}
+                                            />
+                                            {idx > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newEquipos = editMetadataForm.equipos.filter((_, i) => i !== idx);
+                                                        setEditMetadataForm({ ...editMetadataForm, equipos: newEquipos });
+                                                    }}
+                                                    className="absolute right-2 px-2 py-1 text-red-500 hover:text-red-400 font-bold text-xs bg-slate-950/20 rounded border border-red-500/20"
+                                                >
+                                                    Eliminar
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <button onClick={() => setEditMetadataForm({ ...editMetadataForm, equipos: [...(editMetadataForm.equipos || []), ''] })} className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-1.5 px-3 rounded self-start transition-colors border border-amber-500/20 shadow">Añadir otro activo</button>
+                                </>
+                            ) : (
+                                checklist.Metadata.equipos.map((eq, idx) => (
+                                    <div key={idx} className={`p-3 rounded-lg border text-xs whitespace-pre-wrap ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>{eq || '-'}</div>
+                                ))
+                            )}
+                            <div className={`mt-3 pt-3 border-t ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
+                                <span className="font-bold text-[10px] uppercase tracking-wider text-slate-500 block mb-2">FOTOS DEL EQUIPO</span>
+                                {(checklist.Metadata.imagenesEquipo && checklist.Metadata.imagenesEquipo.length > 0) || checklist.Metadata.imagenEquipo || isEditingMetadata ? (
                                     <div className="flex flex-wrap gap-2">
-                                        {checklist.Metadata.imagenesEquipo ? (
-                                            checklist.Metadata.imagenesEquipo.map((img, idx) => (
-                                                <img key={idx} src={img} alt="Equipo" className="max-h-24 rounded-lg border border-slate-300 dark:border-slate-700 object-cover shadow-lg" />
+                                        {(isEditingMetadata ? (editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo) : checklist.Metadata.imagenesEquipo) ? (
+                                            (isEditingMetadata ? (editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo) : checklist.Metadata.imagenesEquipo).map((img, idx) => (
+                                                <div key={idx} className="relative inline-block">
+                                                    <img src={img} alt="Equipo" className="max-h-24 rounded-lg border border-slate-300 dark:border-slate-700 object-cover shadow-lg" />
+                                                    {isEditingMetadata && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const newImgs = [...(editMetadataForm.imagenesEquipo || checklist.Metadata.imagenesEquipo)].filter((_, i) => i !== idx);
+                                                                setEditMetadataForm({ ...editMetadataForm, imagenesEquipo: newImgs });
+                                                            }}
+                                                            className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-lg"
+                                                        >
+                                                            &times;
+                                                        </button>
+                                                    )}
+                                                </div>
                                             ))
-                                        ) : (
+                                        ) : checklist.Metadata.imagenEquipo ? (
                                             <img src={checklist.Metadata.imagenEquipo} alt="Equipo" className="max-h-24 rounded-lg border border-slate-300 dark:border-slate-700 object-cover shadow-lg" />
+                                        ) : null}
+                                        {isEditingMetadata && ((editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo || []).length < 3) && (
+                                            <input type="file" accept="image/*" onChange={async (e) => {
+                                                const files = Array.from(e.target.files);
+                                                const currentImages = editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo || [];
+                                                if (currentImages.length >= 3) { alert("Máximo 3 fotos."); return; }
+                                                const spacesLeft = 3 - currentImages.length;
+                                                const filesToProcess = files.slice(0, spacesLeft);
+                                                const processed = [];
+                                                for (let file of filesToProcess) {
+                                                    try {
+                                                        const base64 = await comprimirImagen(file, 600, 0.4);
+                                                        processed.push(base64);
+                                                    } catch (err) { console.error("Error compressing image:", err); }
+                                                }
+                                                setEditMetadataForm({ ...editMetadataForm, imagenesEquipo: [...currentImages, ...processed] });
+                                            }} className="text-[10px] text-slate-500 w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-500 transition-all cursor-pointer" />
                                         )}
                                     </div>
-                                </div>
-                            )}
+                                ) : null}
+                            </div>
                         </div>
                         <div className="w-full md:w-2/3 flex flex-col">
                             <div className={`grid grid-cols-12 border-b font-bold text-[10px] uppercase tracking-wider text-slate-500 ${theme === 'dark' ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-100'}`}>
@@ -711,7 +802,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         {roleKey === 'lider' ? 'LÍDER DE PROYECTO' : roleKey}
                                     </div>
                                     <div className={`col-span-4 p-3 border-r ${theme === 'dark' ? 'border-slate-800 text-slate-300' : 'border-slate-200 text-slate-800'} flex items-center text-xs`}>
-                                        {isEditingMetadata && (roleKey === 'custodio' || roleKey === 'mantenedor') ? (
+                                        {isEditingMetadata ? (
                                             <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.roles?.[roleKey]?.area || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, roles: { ...editMetadataForm.roles, [roleKey]: { ...editMetadataForm.roles[roleKey], area: e.target.value } } })}>
                                                 <option value="">Seleccionar...</option>
                                                 {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
@@ -721,7 +812,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         )}
                                     </div>
                                     <div className={`col-span-5 p-3 flex items-center gap-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-800'}`}>
-                                        {isEditingMetadata && (roleKey === 'custodio' || roleKey === 'mantenedor') ? (
+                                        {isEditingMetadata ? (
                                             <PeoplePicker
                                                 className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none"
                                                 value={editMetadataForm?.roles?.[roleKey]?.persona || ''}
@@ -745,15 +836,36 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                             <div className={`grid grid-cols-12 border-b items-stretch ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20' : 'border-slate-200 bg-slate-50'}`}>
                                 <div className={`col-span-3 p-3 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 text-yellow-100' : 'border-slate-200 text-slate-600'}`}>GERENCIA</div>
-                                <div className="col-span-9 p-3 flex items-center text-xs font-semibold">{checklist.Metadata?.gerencia || '-'}</div>
+                                <div className="col-span-9 p-3 flex items-center text-xs font-semibold">
+                                    {isEditingMetadata ? (
+                                        <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.gerencia || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, gerencia: e.target.value })}>
+                                            <option value="">{acLoading ? "Cargando..." : "Seleccione Gerencia"}</option>
+                                            {acData.gerencias.map(g => <option key={g} value={g}>{g}</option>)}
+                                        </select>
+                                    ) : (checklist.Metadata?.gerencia || '-')}
+                                </div>
                             </div>
                             <div className={`grid grid-cols-12 border-b items-stretch ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20' : 'border-slate-200 bg-slate-50'}`}>
                                 <div className={`col-span-3 p-3 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 text-yellow-100' : 'border-slate-200 text-slate-600'}`}>SUPERINTENDENCIA</div>
-                                <div className="col-span-9 p-3 flex items-center text-xs font-semibold">{checklist.Metadata?.superintendencia || '-'}</div>
+                                <div className="col-span-9 p-3 flex items-center text-xs font-semibold">
+                                    {isEditingMetadata ? (
+                                        <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.superintendencia || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, superintendencia: e.target.value })}>
+                                            <option value="">{acLoading ? "Cargando..." : "Seleccione Superintendencia"}</option>
+                                            {acData.superintendencias.map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    ) : (checklist.Metadata?.superintendencia || '-')}
+                                </div>
                             </div>
                             <div className={`grid grid-cols-12 items-stretch ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20' : 'border-slate-200 bg-slate-50'}`}>
                                 <div className={`col-span-3 p-3 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 text-yellow-100' : 'border-slate-200 text-slate-600'}`}>UNIDAD DE PROCESO</div>
-                                <div className="col-span-9 p-3 flex items-center text-xs font-semibold">{checklist.Metadata?.unidadProceso || '-'}</div>
+                                <div className="col-span-9 p-3 flex items-center text-xs font-semibold">
+                                    {isEditingMetadata ? (
+                                        <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.unidadProceso || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, unidadProceso: e.target.value })}>
+                                            <option value="">{acLoading ? "Cargando..." : "Seleccione Unidad"}</option>
+                                            {acData.unidades.map(u => <option key={u} value={u}>{u}</option>)}
+                                        </select>
+                                    ) : (checklist.Metadata?.unidadProceso || '-')}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -761,15 +873,23 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         <div className={`w-full md:w-1/3 flex border-b md:border-b-0 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                             <div className={`w-1/2 p-3 font-bold text-[10px] uppercase flex flex-col justify-center border-r text-slate-400 dark:text-slate-500 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                                 Inicio Diligenciamiento
-                                <span className="text-slate-700 dark:text-slate-300 text-xs mt-1">
-                                    {checklist.Metadata.fechaInicioDiligenciamiento || '-'}
-                                </span>
+                                {isEditingMetadata ? (
+                                    <input type="date" className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs mt-1 w-full outline-none" value={editMetadataForm?.fechaInicioDiligenciamiento || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, fechaInicioDiligenciamiento: e.target.value })} />
+                                ) : (
+                                    <span className="text-slate-700 dark:text-slate-300 text-xs mt-1">
+                                        {checklist.Metadata.fechaInicioDiligenciamiento || '-'}
+                                    </span>
+                                )}
                             </div>
                             <div className={`w-1/2 p-3 font-bold text-[10px] uppercase flex flex-col justify-center border-r text-slate-400 dark:text-slate-500 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                                 Fin Diligenciamiento
-                                <span className="text-slate-700 dark:text-slate-300 text-xs mt-1">
-                                    {checklist.Metadata.fechaFinDiligenciamiento || '-'}
-                                </span>
+                                {isEditingMetadata ? (
+                                    <input type="date" className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs mt-1 w-full outline-none" value={editMetadataForm?.fechaFinDiligenciamiento || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, fechaFinDiligenciamiento: e.target.value })} />
+                                ) : (
+                                    <span className="text-slate-700 dark:text-slate-300 text-xs mt-1">
+                                        {checklist.Metadata.fechaFinDiligenciamiento || '-'}
+                                    </span>
+                                )}
                             </div>
                         </div>
                         <div className="w-full md:w-2/3 flex">
@@ -777,9 +897,13 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 <span className="font-bold text-[10px] uppercase text-slate-400 dark:text-slate-500 block mb-1">
                                     Comentarios Generales Metadatos:
                                 </span>
-                                <span className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap font-semibold">
-                                    {checklist.Metadata.comentarios || '-'}
-                                </span>
+                                {isEditingMetadata ? (
+                                    <textarea className={`${inputClasses} text-xs`} rows="2" placeholder="Escribe aquí cualquier observación..." value={editMetadataForm?.comentarios || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, comentarios: e.target.value })} />
+                                ) : (
+                                    <span className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap font-semibold">
+                                        {checklist.Metadata.comentarios || '-'}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
