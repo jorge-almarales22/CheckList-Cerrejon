@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 
 // Abre una URL en Microsoft Edge usando el protocolo microsoft-edge:
 // Si el navegador actual ya es Edge, el protocolo abre una nueva pestaña.
@@ -102,14 +102,50 @@ const NAV_ITEMS = [
     },
 ];
 
+// Hook para detectar si un submenú debe abrirse hacia la izquierda o derecha
+// basado en la posición del elemento padre relativo al viewport.
+const useDropdownDirection = (isOpen) => {
+    const ref = useRef(null);
+    const [direction, setDirection] = useState('right'); // 'right' | 'left'
+
+    useLayoutEffect(() => {
+        if (!isOpen || !ref.current) return;
+        const rect = ref.current.getBoundingClientRect();
+        const submenuWidth = 280; // min-w-[260px] + padding aprox
+        const spaceRight = window.innerWidth - rect.right;
+        const spaceLeft = rect.left;
+        // Si no hay espacio suficiente a la derecha pero sí a la izquierda, abrir hacia la izquierda
+        if (spaceRight < submenuWidth && spaceLeft >= submenuWidth) {
+            setDirection('left');
+        } else {
+            setDirection('right');
+        }
+    }, [isOpen]);
+
+    return { ref, direction };
+};
+
+// Clases de color segun tema
+const useNavTheme = (theme) => {
+    const isDark = theme === 'dark';
+    return {
+        isDark,
+        navBg: isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200',
+        collapseBg: isDark ? 'bg-slate-900' : 'bg-white',
+        linkText: isDark ? 'text-slate-200 hover:bg-yellow-500/10 hover:text-yellow-400' : 'text-slate-700 hover:bg-yellow-50 hover:text-amber-700',
+        dropdownBg: isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200',
+        togglerText: isDark ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100',
+        collapseBorder: isDark ? 'border-slate-700' : 'border-slate-200',
+    };
+};
+
 // Renderiza un item de menú (link simple)
-const NavLink = ({ item, onNavigate }) => {
+const NavLink = ({ item, theme }) => {
+    const t = useNavTheme(theme);
     const handleClick = (e) => {
         if (item.edge) {
             e.preventDefault();
             abrirEnEdge(item.edge);
-        } else if (onNavigate && item.target !== '_blank') {
-            // navegacion interna
         }
     };
     return (
@@ -118,39 +154,88 @@ const NavLink = ({ item, onNavigate }) => {
             target={item.target === '_blank' ? '_blank' : undefined}
             rel={item.target === '_blank' ? 'noopener noreferrer' : undefined}
             onClick={handleClick}
-            className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-yellow-50 hover:text-amber-700 transition-colors whitespace-nowrap"
+            className={`block px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${t.linkText}`}
         >
             {item.texto}
         </a>
     );
 };
 
-// Renderiza un submenú (recursivo para nivel 2+)
-const SubMenu = ({ items, level = 1, onNavigate }) => {
+// Item de submenu (nivel 2+) con deteccion de direccion
+const SubMenuItem = ({ sub, theme }) => {
+    const t = useNavTheme(theme);
+    const [isOpen, setIsOpen] = useState(false);
+    const { ref, direction } = useDropdownDirection(isOpen);
+
+    if (sub.submenu) {
+        return (
+            <li
+                ref={ref}
+                className="relative navbar-dropdown-item"
+                onMouseEnter={() => { if (window.innerWidth >= 1024) setIsOpen(true); }}
+                onMouseLeave={() => { if (window.innerWidth >= 1024) setIsOpen(false); }}
+            >
+                <a
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); if (window.innerWidth < 1024) setIsOpen(!isOpen); }}
+                    className={`flex items-center justify-between px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${t.linkText}`}
+                >
+                    <span>{sub.texto}</span>
+                    <svg className="w-3 h-3 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </a>
+                <ul className={`navbar-submenu border rounded-lg shadow-lg min-w-[260px] ${isOpen ? 'block' : 'hidden'} lg:absolute lg:top-0 ${t.dropdownBg} ${direction === 'left' ? 'lg:right-full' : 'lg:left-full'} navbar-submenu-hover`}>
+                    {sub.submenu.map((sub2, s2idx) => (
+                        <li key={s2idx}>
+                            <NavLink item={sub2} theme={theme} />
+                        </li>
+                    ))}
+                </ul>
+            </li>
+        );
+    }
+    return <NavLink item={sub} theme={theme} />;
+};
+
+// Item de dropdown de primer nivel con deteccion de direccion
+const DropdownItem = ({ item, idx, openDropdown, setOpenDropdown, theme }) => {
+    const t = useNavTheme(theme);
+    const { ref, direction } = useDropdownDirection(openDropdown === idx);
+    const isOpen = openDropdown === idx;
+
+    const handleItemClick = () => {
+        if (window.innerWidth < 1024) {
+            setOpenDropdown(isOpen ? null : idx);
+        }
+    };
+
     return (
-        <ul className={`navbar-submenu navbar-submenu-level-${level}`}>
-            {items.map((sub, idx) => (
-                <li key={idx} className="relative navbar-submenu-item">
-                    {sub.submenu ? (
-                        <>
-                            <a
-                                href="#"
-                                onClick={(e) => e.preventDefault()}
-                                className="flex items-center justify-between px-4 py-2 text-sm font-medium text-slate-700 hover:bg-yellow-50 hover:text-amber-700 transition-colors whitespace-nowrap"
-                            >
-                                <span>{sub.texto}</span>
-                                <svg className="w-3 h-3 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                            <SubMenu items={sub.submenu} level={level + 1} onNavigate={onNavigate} />
-                        </>
-                    ) : (
-                        <NavLink item={sub} onNavigate={onNavigate} />
-                    )}
-                </li>
-            ))}
-        </ul>
+        <li
+            ref={ref}
+            className="relative navbar-nav-item navbar-has-dropdown"
+            onMouseEnter={() => { if (window.innerWidth >= 1024) setOpenDropdown(idx); }}
+            onMouseLeave={() => { if (window.innerWidth >= 1024) setOpenDropdown(null); }}
+        >
+            <button
+                onClick={handleItemClick}
+                className={`flex items-center justify-between w-full lg:w-auto px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${t.linkText}`}
+                aria-expanded={isOpen}
+            >
+                <span>{item.texto}</span>
+                <svg className={`w-3 h-3 ml-1.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            {/* Dropdown de primer nivel */}
+            <div className={`${isOpen ? 'block' : 'hidden'} lg:navbar-dropdown`}>
+                <ul className={`navbar-dropdown-menu border rounded-lg shadow-lg min-w-[260px] lg:absolute lg:top-full mt-1 lg:mt-0 ${t.dropdownBg} ${direction === 'left' ? 'lg:right-0' : 'lg:left-0'}`}>
+                    {item.submenu.map((sub, sidx) => (
+                        <SubMenuItem key={sidx} sub={sub} theme={theme} />
+                    ))}
+                </ul>
+            </div>
+        </li>
     );
 };
 
@@ -158,6 +243,7 @@ const Navbar = ({ role, theme }) => {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [openDropdown, setOpenDropdown] = useState(null);
     const navRef = useRef(null);
+    const t = useNavTheme(theme);
     const isAdmin = role === 'Administrador';
 
     // Filtra items segun rol
@@ -175,22 +261,10 @@ const Navbar = ({ role, theme }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleItemClick = (item, idx) => {
-        if (item.submenu) {
-            // En movil, toggle del dropdown
-            if (window.innerWidth < 1024) {
-                setOpenDropdown(openDropdown === idx ? null : idx);
-            }
-        } else {
-            setMobileOpen(false);
-            setOpenDropdown(null);
-        }
-    };
-
     return (
         <nav
             ref={navRef}
-            className="navbar-sgia sticky top-0 z-[1000] bg-white border-b border-slate-200 shadow-sm"
+            className={`navbar-sgia sticky top-0 z-[1000] border-b shadow-sm transition-colors duration-300 ${t.navBg}`}
         >
             <div className="max-w-full mx-auto px-3 md:px-6">
                 <div className="flex items-center justify-between h-[60px] md:h-[75px]">
@@ -211,7 +285,7 @@ const Navbar = ({ role, theme }) => {
                     {/* Botón hamburguesa (movil) */}
                     <button
                         onClick={() => setMobileOpen(!mobileOpen)}
-                        className="lg:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
+                        className={`lg:hidden p-2 rounded-lg transition-colors ${t.togglerText}`}
                         aria-label="Toggle navigation"
                         aria-expanded={mobileOpen}
                     >
@@ -225,69 +299,23 @@ const Navbar = ({ role, theme }) => {
                     </button>
 
                     {/* Menu principal */}
-                    <div className={`navbar-collapse ${mobileOpen ? 'block' : 'hidden'} lg:block absolute lg:relative top-full lg:top-0 left-0 right-0 lg:w-auto bg-white lg:bg-transparent border-b lg:border-b-0 border-slate-200 shadow-lg lg:shadow-none`}>
+                    <div className={`navbar-collapse ${mobileOpen ? 'block' : 'hidden'} lg:block absolute lg:relative top-full lg:top-0 left-0 right-0 lg:w-auto border-b lg:border-b-0 shadow-lg lg:shadow-none ${t.collapseBg} ${t.collapseBorder}`}>
                         <ul className="flex flex-col lg:flex-row lg:items-center lg:gap-1 py-2 lg:py-0">
                             {visibleItems.map((item, idx) => (
-                                <li
-                                    key={idx}
-                                    className={`relative navbar-nav-item ${item.submenu ? 'navbar-has-dropdown' : ''}`}
-                                    onMouseEnter={() => {
-                                        if (window.innerWidth >= 1024) setOpenDropdown(idx);
-                                    }}
-                                    onMouseLeave={() => {
-                                        if (window.innerWidth >= 1024) setOpenDropdown(null);
-                                    }}
-                                >
-                                    {item.submenu ? (
-                                        <>
-                                            <button
-                                                onClick={() => handleItemClick(item, idx)}
-                                                className="flex items-center justify-between w-full lg:w-auto px-4 py-2 text-sm font-medium text-slate-700 hover:bg-yellow-50 hover:text-amber-700 transition-colors whitespace-nowrap"
-                                                aria-expanded={openDropdown === idx}
-                                            >
-                                                <span>{item.texto}</span>
-                                                <svg className={`w-3 h-3 ml-1.5 transition-transform ${openDropdown === idx ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                                </svg>
-                                            </button>
-                                            {/* Dropdown de primer nivel */}
-                                            <div className={`${openDropdown === idx ? 'block' : 'hidden'} lg:group-hover:block lg:navbar-dropdown`}>
-                                                <ul className="navbar-dropdown-menu bg-white border border-slate-200 rounded-lg shadow-lg min-w-[260px] lg:absolute lg:left-0 lg:top-full mt-1 lg:mt-0">
-                                                    {item.submenu.map((sub, sidx) => (
-                                                        <li key={sidx} className="relative navbar-dropdown-item">
-                                                            {sub.submenu ? (
-                                                                <>
-                                                                    <a
-                                                                        href="#"
-                                                                        onClick={(e) => e.preventDefault()}
-                                                                        className="flex items-center justify-between px-4 py-2 text-sm font-medium text-slate-700 hover:bg-yellow-50 hover:text-amber-700 transition-colors whitespace-nowrap"
-                                                                    >
-                                                                        <span>{sub.texto}</span>
-                                                                        <svg className="w-3 h-3 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                                                        </svg>
-                                                                    </a>
-                                                                    {/* Submenu nivel 2 */}
-                                                                    <ul className="navbar-submenu bg-white border border-slate-200 rounded-lg shadow-lg min-w-[260px] hidden lg:absolute lg:left-full lg:top-0 navbar-submenu-hover">
-                                                                        {sub.submenu.map((sub2, s2idx) => (
-                                                                            <li key={s2idx}>
-                                                                                <NavLink item={sub2} />
-                                                                            </li>
-                                                                        ))}
-                                                                    </ul>
-                                                                </>
-                                                            ) : (
-                                                                <NavLink item={sub} />
-                                                            )}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <NavLink item={item} />
-                                    )}
-                                </li>
+                                item.submenu ? (
+                                    <DropdownItem
+                                        key={idx}
+                                        item={item}
+                                        idx={idx}
+                                        openDropdown={openDropdown}
+                                        setOpenDropdown={setOpenDropdown}
+                                        theme={theme}
+                                    />
+                                ) : (
+                                    <li key={idx} className="relative navbar-nav-item">
+                                        <NavLink item={item} theme={theme} />
+                                    </li>
+                                )
                             ))}
                         </ul>
                     </div>
