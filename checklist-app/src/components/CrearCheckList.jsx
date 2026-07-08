@@ -592,15 +592,15 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
 
             {inactivatingItemId && ReactDOM.createPortal(
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
-                    <div className="bg-gray-800 border border-white/20 p-6 rounded-2xl max-w-md w-full shadow-2xl text-white">
-                        <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                    <div className={`${theme === 'dark' ? 'bg-gray-800 border-white/20 text-white' : 'bg-white border-slate-200 text-slate-900'} border p-6 rounded-2xl max-w-md w-full shadow-2xl`}>
+                        <h3 className={`text-lg font-bold mb-3 flex items-center gap-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-600'}`}>
                             {"⚠ Inactivar Tarea"}
                         </h3>
-                        <p className="text-xs text-white/80 mb-4 font-normal">
+                        <p className={`text-xs mb-4 font-normal ${theme === 'dark' ? 'text-white/80' : 'text-slate-600'}`}>
                             {"¿Por qué lo vas a inactivar? Por favor ingrese una justificación. Esta acción quedará registrada bajo su usuario corporativo."}
                         </p>
                         <textarea
-                            className="w-full bg-slate-900 text-white border border-slate-700 rounded-lg p-3 text-sm outline-none focus:border-yellow-400 mb-4"
+                            className={`w-full rounded-lg p-3 text-sm outline-none focus:border-yellow-400 mb-4 ${theme === 'dark' ? 'bg-slate-900 text-white border border-slate-700' : 'bg-slate-50 text-slate-900 border border-slate-300'}`}
                             rows="3"
                             placeholder={"Razón de inactivación..."}
                             value={inactivateReasonText}
@@ -610,7 +610,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                         <div className="flex justify-end gap-3 text-xs font-bold">
                             <button
                                 onClick={() => { setInactivatingItemId(null); setInactivateReasonText(''); }}
-                                className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors"
+                                className={`${theme === 'dark' ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'} px-4 py-2 rounded-lg transition-colors`}
                             >
                                 {"Cancelar"}
                             </button>
