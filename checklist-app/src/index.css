@@ -40,3 +40,36 @@ input:-webkit-autofill:active {
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
+/* ===== Navbar SGIA ===== */
+.navbar-sgia {
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* En desktop (lg+), los dropdowns de primer nivel se abren con hover */
+@media (min-width: 1024px) {
+    .navbar-sgia .navbar-nav-item.navbar-has-dropdown:hover > div > .navbar-dropdown-menu {
+        display: block;
+    }
+    .navbar-sgia .navbar-nav-item.navbar-has-dropdown > div > .navbar-dropdown-menu {
+        display: none;
+    }
+    /* Submenu nivel 2: se abre con hover sobre el item padre */
+    .navbar-sgia .navbar-dropdown-item:hover > .navbar-submenu-hover {
+        display: block;
+    }
+    .navbar-sgia .navbar-dropdown-item > .navbar-submenu-hover {
+        display: none;
+    }
+}
+
+/* En movil, los submenus nivel 2 se abren con click del toggle */
+@media (max-width: 1023px) {
+    .navbar-sgia .navbar-submenu-hover {
+        display: block;
+        position: static;
+        box-shadow: none;
+        border: none;
+        margin-left: 1rem;
+    }
+}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import CheckListAll from './CheckListAll';
 import CrearCheckList from './CrearCheckList';
 import CheckListDetalle from './CheckListDetalle';
+import Navbar from './Navbar';
 
 const Dashboard = ({ user, role, onLogout }) => {
     const [view, setView] = useState('checklist_all');
@@ -43,6 +44,7 @@ const Dashboard = ({ user, role, onLogout }) => {
 
     return (
         <div className={`h-screen flex flex-col overflow-hidden transition-all duration-300 ${activeWrapperClass}`}>
+            <Navbar role={role} theme={theme} />
             <main
                 ref={mainRef}
                 onScroll={handleScroll}
