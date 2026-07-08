@@ -104,41 +104,48 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
 
     return (
         <div className="max-w-[95%] mx-auto animate-[fadeIn_0.4s_ease-out]">
-            <div className={`${cardClass} border p-6 rounded-3xl flex flex-col justify-between items-start gap-4 mb-8`}>
-                <div className="flex justify-between w-full items-center">
-                    <div>
-                        <h2 className="text-3xl font-black flex items-center gap-3">
-                            <svg className={`w-8 h-8 ${theme==='dark'?'text-yellow-400':'text-amber-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
-                            Listado de Checklists
-                            <span className="bg-yellow-500 text-black text-sm font-bold px-3 py-1 rounded-full">{filtrados.length}</span>
-                        </h2>
-                    </div>
+            {/* Header */}
+            <div className={`${cardClass} border p-4 md:p-6 rounded-3xl mb-6`}>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
+                    <h2 className="text-2xl md:text-3xl font-black flex items-center gap-3 flex-wrap">
+                        <svg className={`w-7 h-7 md:w-8 md:h-8 ${theme==='dark'?'text-yellow-400':'text-amber-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                        Listado de Checklists
+                        <span className="bg-yellow-500 text-black text-sm font-bold px-3 py-1 rounded-full">{filtrados.length}</span>
+                    </h2>
                     {(role === 'Administrador' || role === 'Desarrollador') && (
-                        <button className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-3 px-6 rounded-xl transition-all shadow shadow-slate-900/10" onClick={() => setShowTemplateModal(true)}>
+                        <button className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-2.5 md:py-3 px-5 md:px-6 rounded-xl transition-all shadow shadow-slate-900/10 w-full sm:w-auto" onClick={() => setShowTemplateModal(true)}>
                             Crear Nuevo CheckList
                         </button>
                     )}
                 </div>
+            </div>
 
-                <div className="flex flex-col md:flex-row gap-4 w-full mt-4 border-t border-slate-200 dark:border-slate-800 pt-4">
-                    <input type="text" placeholder="Buscar por nombre..." className={`${inputClasses} flex-1`} value={filtroNombre} onChange={(e) => setFiltroNombre(e.target.value)} />
-                    <select className={inputClasses} value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
+            {/* Gráficas de torta por gerencia */}
+            {filtrados.length > 0 && (
+                <GerenciaPieCharts checklists={filtrados} theme={theme} />
+            )}
+
+            {/* Filtros */}
+            <div className={`${cardClass} border p-4 md:p-6 rounded-3xl mb-6`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 w-full">
+                    <input type="text" placeholder="Buscar por nombre..." className={`${inputClasses} w-full`} value={filtroNombre} onChange={(e) => setFiltroNombre(e.target.value)} />
+                    <select className={`${inputClasses} w-full`} value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
                         <option value="">Todos los Tipos</option>
                         <option value="PROYECTO">Incorporación por Proyectos</option>
                         <option value="COMPRA INSTALADA">Incorporación Compra Instalada</option>
                         <option value="ENSAMBLE">Incorporación por Ensamble</option>
                         <option value="GENERAL">General</option>
                     </select>
-                    <select className={inputClasses} value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+                    <select className={`${inputClasses} w-full`} value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
                         <option value="">Todos los Estados</option>
                         <option value="En Progreso">En Progreso</option>
                         <option value="Finalizado">Finalizado</option>
                     </select>
-                    <select className={inputClasses} value={filtroGerencia} onChange={(e) => setFiltroGerencia(e.target.value)}>
+                    <select className={`${inputClasses} w-full`} value={filtroGerencia} onChange={(e) => setFiltroGerencia(e.target.value)}>
                         <option value="">Todas las Gerencias</option>
                         {gerenciasUnicas.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
-                    <select className={inputClasses} value={filtroSuperintendencia} onChange={(e) => setFiltroSuperintendencia(e.target.value)}>
+                    <select className={`${inputClasses} w-full`} value={filtroSuperintendencia} onChange={(e) => setFiltroSuperintendencia(e.target.value)}>
                         <option value="">Todas las Superintendencias</option>
                         {superintendenciasUnicas.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
@@ -148,29 +155,28 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                 </div>
             </div>
 
+            {/* Tabla o mensaje */}
             {filtrados.length === 0 ? (
                 <div className={`text-center py-20 rounded-3xl border ${cardClass}`}>
                     <h3 className="text-2xl font-bold mb-2">No hay Checklists Disponibles</h3>
                 </div>
             ) : (
-                <>
-                <GerenciaPieCharts checklists={filtrados} theme={theme} />
                 <div className={`rounded-3xl border overflow-hidden ${cardClass}`}>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className={`${theme==='dark'?'bg-slate-950/40 text-slate-400':'bg-slate-100 text-slate-600'} text-xs uppercase font-extrabold tracking-wider`}>
-                                    <th className="p-4 border-b border-slate-200 dark:border-slate-800">Nombre del Checklist</th>
-                                    <th className="p-4 border-b border-slate-200 dark:border-slate-800">Progreso (Plan vs Real)</th>
-                                    <th className="p-4 border-b border-slate-200 dark:border-slate-800">Gerencia</th>
-                                    <th className="p-4 border-b border-slate-200 dark:border-slate-800">Superintendencia</th>
-                                    <th className="p-4 border-b border-slate-200 dark:border-slate-800">Tipo de incorporación</th>
-                                    <th className="p-4 border-b border-slate-200 dark:border-slate-800">Flota</th>
-                                    <th className="p-4 border-b border-slate-200 dark:border-slate-800">Equipo(s)</th>
-                                    <th className="p-4 border-b border-slate-200 dark:border-slate-800">Fecha inicio</th>
-                                    <th className="p-4 border-b border-slate-200 dark:border-slate-800">Fecha fin</th>
-                                    <th className="p-4 border-b border-slate-200 dark:border-slate-800">Completado</th>
-                                    <th className="p-4 border-b border-slate-200 dark:border-slate-800 text-center">Acciones</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800">Nombre del Checklist</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800">Progreso (Plan vs Real)</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">Gerencia</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden xl:table-cell">Superintendencia</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Tipo de incorporación</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden xl:table-cell">Flota</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">Equipo(s)</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Fecha inicio</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Fecha fin</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800">Completado</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="text-sm">
@@ -182,42 +188,42 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
 
                                     return (
                                         <tr key={chk.ID_x002d_checklist} className="border-b border-slate-200 dark:border-slate-800/50 hover:bg-slate-500/5 transition-colors">
-                                            <td className="p-4 font-bold max-w-[250px] truncate" title={chk.Name}>
+                                            <td className="p-3 md:p-4 font-bold max-w-[180px] md:max-w-[250px] truncate" title={chk.Name}>
                                                 {chk.Estado === 'Finalizado' && <span className="bg-green-500/20 text-green-500 dark:text-green-400 px-2 py-0.5 rounded text-[10px] mr-2 font-extrabold">FINALIZADO</span>}
                                                 {hasAlerts && <span className="bg-red-500/20 text-red-500 dark:text-red-400 px-2 py-0.5 rounded text-[10px] mr-2 animate-pulse">ALERTA</span>}
                                                 {chk.Name || "Sin nombre"}
                                             </td>
-                                            <td className="p-4">
+                                            <td className="p-3 md:p-4">
                                                 <div className="flex flex-col gap-1 text-xs">
                                                     <span>Plan: <span className="font-bold">{promCalc}%</span></span>
                                                     <span>Real: <span className={`font-bold ${isDelayed ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{promReal}%</span></span>
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold">{chk.Metadata?.gerencia || '-'}</td>
-                                            <td className="p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold">{chk.Metadata?.superintendencia || '-'}</td>
-                                            <td className="p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold">{chk.Tipo || '-'}</td>
-                                            <td className="p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold">{chk.Flota || '-'}</td>
-                                            <td className="p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold max-w-[200px] truncate" title={(chk.Metadata?.equipos || []).filter(Boolean).join(', ')}>
+                                            <td className="p-3 md:p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold hidden lg:table-cell">{chk.Metadata?.gerencia || '-'}</td>
+                                            <td className="p-3 md:p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold hidden xl:table-cell">{chk.Metadata?.superintendencia || '-'}</td>
+                                            <td className="p-3 md:p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold hidden md:table-cell">{chk.Tipo || '-'}</td>
+                                            <td className="p-3 md:p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold hidden xl:table-cell">{chk.Flota || '-'}</td>
+                                            <td className="p-3 md:p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold max-w-[200px] truncate hidden lg:table-cell" title={(chk.Metadata?.equipos || []).filter(Boolean).join(', ')}>
                                                 {(chk.Metadata?.equipos || []).filter(Boolean).join(', ') || '-'}
                                             </td>
-                                            <td className="p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold whitespace-nowrap">{chk.Metadata?.fechaInicioDiligenciamiento || '-'}</td>
-                                            <td className="p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold whitespace-nowrap">
+                                            <td className="p-3 md:p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold whitespace-nowrap hidden md:table-cell">{chk.Metadata?.fechaInicioDiligenciamiento || '-'}</td>
+                                            <td className="p-3 md:p-4 text-xs text-slate-500 dark:text-slate-400 font-semibold whitespace-nowrap hidden md:table-cell">
                                                 {chk.Estado === 'Finalizado' ? (chk.Metadata?.fechaFinDiligenciamiento || '-') : 'En curso'}
                                             </td>
-                                            <td className="p-4 text-xs">
+                                            <td className="p-3 md:p-4 text-xs">
                                                 {chk.Estado === 'Finalizado' ? (
                                                     <span className="bg-green-500/20 text-green-600 dark:text-green-400 px-2 py-1 rounded font-bold">Completado</span>
                                                 ) : (
                                                     <span className={`font-bold ${promReal >= 100 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>{promReal}%</span>
                                                 )}
                                             </td>
-                                            <td className="p-4 text-center">
+                                            <td className="p-3 md:p-4 text-center">
                                                 {chk.Estado === 'Finalizado' ? (
-                                                    <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-300 border border-green-500/20 px-4 py-2 rounded-lg font-bold text-xs transition-colors shadow-sm">
+                                                    <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-300 border border-green-500/20 px-3 md:px-4 py-2 rounded-lg font-bold text-xs transition-colors shadow-sm">
                                                         Ver
                                                     </button>
                                                 ) : (
-                                                    <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-4 py-2 rounded-lg font-bold text-xs transition-colors shadow-sm">
+                                                    <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-3 md:px-4 py-2 rounded-lg font-bold text-xs transition-colors shadow-sm">
                                                         Ver / Gestionar
                                                     </button>
                                                 )}
@@ -230,7 +236,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                     </div>
 
                     {totalPages > 1 && (
-                        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-black/5 dark:bg-black/25">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 md:px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-black/5 dark:bg-black/25">
                             <span className="text-slate-500 text-sm">Mostrando pág {currentPage} de {totalPages}</span>
                             <div className="flex gap-2">
                                 <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-30 rounded-lg font-bold transition-colors">Anterior</button>
@@ -239,7 +245,6 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                         </div>
                     )}
                 </div>
-                </>
             )}
 
             {showTemplateModal && (
