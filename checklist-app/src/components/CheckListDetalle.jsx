@@ -1259,7 +1259,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 </button>
             </div>
 
-            <DashboardCharts items={checklist.items} theme={theme} />
+            <DashboardCharts items={checklist.items} checklist={checklist} theme={theme} />
 
             <div className={`${cardClass} border p-6 rounded-3xl mt-8`}>
                 <h3 className={`text-xl font-bold mb-4 flex items-center gap-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-700'}`}>

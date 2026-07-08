@@ -1,12 +1,16 @@
 import React from 'react';
-import { calcularCumplimiento } from '../utils/calculations';
+import { calcularCumplimiento, calcularRealChecklist } from '../utils/calculations';
 
-const DashboardCharts = ({ items, theme }) => {
+const DashboardCharts = ({ items, checklist, theme }) => {
     if (!items || items.length === 0) return null;
     const activos = items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
     if (activos.length === 0) return null;
 
-    const avanceGeneral = Math.round(activos.reduce((acc, it) => acc + (parseInt(it.Avance || it.avance) || 0), 0) / activos.length);
+    // Avance real: si el checklist es historico, usar el valor de la DB (o 100%).
+    // Si no, calcular el promedio de avance de items activos.
+    const avanceGeneral = checklist
+        ? calcularRealChecklist(checklist)
+        : Math.round(activos.reduce((acc, it) => acc + (parseInt(it.Avance || it.avance) || 0), 0) / activos.length);
 
     let totalEsperado = 0;
     activos.forEach(it => {

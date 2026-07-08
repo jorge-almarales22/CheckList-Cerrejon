@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { calcularPromedioChecklist, calcularPromedioReal } from '../utils/calculations';
+import { calcularPromedioChecklist, calcularRealChecklist } from '../utils/calculations';
+import GerenciaPieCharts from './GerenciaPieCharts';
 
 const CheckListAll = ({ onView, role, currentUser, theme }) => {
     const [checklists, setChecklists] = useState([]);
@@ -152,6 +153,8 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                     <h3 className="text-2xl font-bold mb-2">No hay Checklists Disponibles</h3>
                 </div>
             ) : (
+                <>
+                <GerenciaPieCharts checklists={filtrados} theme={theme} />
                 <div className={`rounded-3xl border overflow-hidden ${cardClass}`}>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
@@ -173,7 +176,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                             <tbody className="text-sm">
                                 {currentItems.map((chk) => {
                                     const promCalc = calcularPromedioChecklist(chk.items);
-                                    const promReal = calcularPromedioReal(chk.items);
+                                    const promReal = calcularRealChecklist(chk);
                                     const isDelayed = promReal < promCalc;
                                     const hasAlerts = chk.items?.some(it => it.Alerta === "Si");
 
@@ -236,6 +239,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                         </div>
                     )}
                 </div>
+                </>
             )}
 
             {showTemplateModal && (
