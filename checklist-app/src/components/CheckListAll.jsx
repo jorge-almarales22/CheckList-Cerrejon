@@ -127,29 +127,29 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
 
             {/* Filtros */}
             <div className={`${cardClass} border p-4 md:p-6 rounded-3xl mb-6`}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 w-full">
-                    <input type="text" placeholder="Buscar por nombre..." className={`${inputClasses} w-full`} value={filtroNombre} onChange={(e) => setFiltroNombre(e.target.value)} />
-                    <select className={`${inputClasses} w-full`} value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
+                <div className="flex flex-col lg:flex-row lg:flex-nowrap gap-2 md:gap-3 w-full items-stretch lg:items-center">
+                    <input type="text" placeholder="Buscar por nombre..." className={`${inputClasses} flex-1 min-w-[160px] lg:max-w-[260px]`} value={filtroNombre} onChange={(e) => setFiltroNombre(e.target.value)} />
+                    <select className={`${inputClasses} lg:w-40`} value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
                         <option value="">Todos los Tipos</option>
                         <option value="PROYECTO">Incorporación por Proyectos</option>
                         <option value="COMPRA INSTALADA">Incorporación Compra Instalada</option>
                         <option value="ENSAMBLE">Incorporación por Ensamble</option>
                         <option value="GENERAL">General</option>
                     </select>
-                    <select className={`${inputClasses} w-full`} value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+                    <select className={`${inputClasses} lg:w-32`} value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
                         <option value="">Todos los Estados</option>
                         <option value="En Progreso">En Progreso</option>
                         <option value="Finalizado">Finalizado</option>
                     </select>
-                    <select className={`${inputClasses} w-full`} value={filtroGerencia} onChange={(e) => setFiltroGerencia(e.target.value)}>
+                    <select className={`${inputClasses} lg:w-40`} value={filtroGerencia} onChange={(e) => setFiltroGerencia(e.target.value)}>
                         <option value="">Todas las Gerencias</option>
                         {gerenciasUnicas.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
-                    <select className={`${inputClasses} w-full`} value={filtroSuperintendencia} onChange={(e) => setFiltroSuperintendencia(e.target.value)}>
+                    <select className={`${inputClasses} lg:w-48`} value={filtroSuperintendencia} onChange={(e) => setFiltroSuperintendencia(e.target.value)}>
                         <option value="">Todas las Superintendencias</option>
                         {superintendenciasUnicas.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
-                    <label className={`flex items-center gap-2 text-sm font-bold cursor-pointer border px-4 py-2 rounded-lg ${theme==='dark'?'bg-slate-950/85 border-slate-800':'bg-slate-100 border-slate-300'}`}>
+                    <label className={`flex items-center gap-2 text-sm font-bold cursor-pointer border px-3 py-2 rounded-lg shrink-0 whitespace-nowrap ${theme==='dark'?'bg-slate-950/85 border-slate-800':'bg-slate-100 border-slate-300'}`}>
                         <input type="checkbox" checked={filtroAlerta} onChange={(e) => setFiltroAlerta(e.target.checked)} className="accent-yellow-500" /> Solo con Alertas
                     </label>
                 </div>

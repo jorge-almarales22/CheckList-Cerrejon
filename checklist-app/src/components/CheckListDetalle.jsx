@@ -238,8 +238,118 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         setEditForm({ ...item });
     };
 
+    // Ruta SharePoint donde se guarda el PDF como registro documental al finalizar.
+    const PDF_FOLDER_RELATIVE = '/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/PDFs';
+    const AC_SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/ac";
+
+    // Construye el PDF del checklist a partir de un snapshot (puede ser el checklist actual
+    // o uno ya finalizado). Devuelve { pdf, nombreArchivo }.
+    const construirPDF = async (data) => {
+        const container = document.createElement('div');
+        container.style.cssText = 'position:absolute;left:-9999px;top:0;width:750px;padding:30px;font-family:sans-serif;color:#1f2937;background:#fff;';
+
+        const titulo = document.createElement('h1');
+        titulo.textContent = `Checklist: ${data.Name}`;
+        titulo.style.cssText = 'font-size:24px;font-weight:800;margin-bottom:6px;color:#1e3a5f;border-bottom:3px solid #eab308;padding-bottom:10px;';
+        container.appendChild(titulo);
+
+        const meta = document.createElement('p');
+        meta.style.cssText = 'font-size:11px;color:#64748b;margin-bottom:20px;';
+        const tipo = data.Tipo || '';
+        const fechaFin = data.Metadata?.fechaFinDiligenciamiento || new Date().toISOString().split('T')[0];
+        const activas = data.items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
+        meta.textContent = `Tipo: ${tipo} | Finalizado: ${fechaFin} | Tareas: ${activas.length}`;
+        container.appendChild(meta);
+
+        activas.forEach((it, i) => {
+            const card = document.createElement('div');
+            card.style.cssText = 'border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px;background:#f8fafc;';
+
+            const header = document.createElement('div');
+            header.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;';
+            const num = document.createElement('span');
+            num.style.cssText = 'background:#eab308;color:#fff;font-weight:800;font-size:11px;padding:3px 10px;border-radius:6px;flex-shrink:0;';
+            num.textContent = `#${i + 1}`;
+            const desc = document.createElement('span');
+            desc.style.cssText = 'font-size:14px;font-weight:700;color:#1e293b;margin-left:10px;flex:1;line-height:1.4;';
+            desc.textContent = it.Descripcion || '';
+            header.appendChild(num);
+            header.appendChild(desc);
+            card.appendChild(header);
+
+            const grid = document.createElement('div');
+            grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-bottom:8px;';
+            const campos = [
+                { label: 'Fechas Plan', val: `I: ${it.FechaBaselineInicio || '-'}  F: ${it.FechaBaselineFin || '-'}` },
+                { label: 'Fechas Reales', val: `I: ${it.FechaInicio || '-'}  F: ${it.FechaFin || '-'}` },
+                { label: 'Avance', val: `${it.Avance || it.avance || 0}%` },
+                { label: 'Entregable', val: it.Entregable || '-' }
+            ];
+            campos.forEach(c => {
+                const field = document.createElement('div');
+                const lbl = document.createElement('span');
+                lbl.style.cssText = 'font-weight:700;color:#64748b;display:block;font-size:10px;text-transform:uppercase;';
+                lbl.textContent = c.label;
+                const val = document.createElement('span');
+                val.style.cssText = 'font-weight:600;color:#1e293b;';
+                val.textContent = c.val;
+                field.appendChild(lbl);
+                field.appendChild(val);
+                grid.appendChild(field);
+            });
+            card.appendChild(grid);
+
+            if (it.HistorialComentarios && it.HistorialComentarios.length > 0) {
+                const commDiv = document.createElement('div');
+                commDiv.style.cssText = 'border-top:1px dashed #cbd5e1;padding-top:8px;margin-top:4px;';
+                const commTitle = document.createElement('span');
+                commTitle.style.cssText = 'font-weight:700;color:#64748b;font-size:10px;text-transform:uppercase;display:block;margin-bottom:4px;';
+                commTitle.textContent = 'Comentarios';
+                commDiv.appendChild(commTitle);
+                it.HistorialComentarios.forEach(c => {
+                    const cLine = document.createElement('p');
+                    cLine.style.cssText = 'font-size:10px;color:#475569;margin:3px 0;padding:3px 6px;background:#fff;border-radius:4px;border:1px solid #f1f5f9;';
+                    cLine.textContent = `[${c.fecha || ''}] ${c.autor || ''}: ${c.texto || ''}`;
+                    commDiv.appendChild(cLine);
+                });
+                card.appendChild(commDiv);
+            }
+
+            container.appendChild(card);
+        });
+
+        document.body.appendChild(container);
+        await new Promise(r => setTimeout(r, 300));
+
+        const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+        document.body.removeChild(container);
+
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = pageWidth - 16;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        let heightLeft = imgHeight;
+        let position = 8;
+        const imgData = canvas.toDataURL('image/png');
+
+        pdf.addImage(imgData, 'PNG', 8, position, imgWidth, imgHeight);
+        heightLeft -= (pageHeight - 16);
+
+        while (heightLeft > 0) {
+            position = -(pageHeight - 16) + 8;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 8, position, imgWidth, imgHeight);
+            heightLeft -= (pageHeight - 16);
+        }
+
+        const nombreArchivo = `${(data.Name || 'checklist').replace(/[^a-z0-9]/gi, '_')}.pdf`;
+        return { pdf, nombreArchivo };
+    };
+
     const handleFinalizar = async () => {
-        if (!window.confirm('¿Estás seguro de finalizar este checklist? Una vez finalizado no podrá ser editado.')) return;
+        if (!window.confirm('¿Estás seguro de finalizar este checklist? Una vez finalizado no podrá ser editado y se guardará un PDF como registro documental.')) return;
         try {
             const digest = await getRequestDigest();
             const hoy = new Date().toISOString().split('T')[0];
@@ -252,121 +362,12 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 Data: JSON.stringify(updatedChecklist)
             }, digest);
             setChecklist(updatedChecklist);
-        } catch (error) {
-            alert('Error finalizando el checklist.');
-            console.error(error);
-        }
-    };
 
-    const handleDescargarPDF = async () => {
-        try {
-            const container = document.createElement('div');
-            container.style.cssText = 'position:absolute;left:-9999px;top:0;width:750px;padding:30px;font-family:sans-serif;color:#1f2937;background:#fff;';
-
-            const titulo = document.createElement('h1');
-            titulo.textContent = `Checklist: ${checklist.Name}`;
-            titulo.style.cssText = 'font-size:24px;font-weight:800;margin-bottom:6px;color:#1e3a5f;border-bottom:3px solid #eab308;padding-bottom:10px;';
-            container.appendChild(titulo);
-
-            const meta = document.createElement('p');
-            meta.style.cssText = 'font-size:11px;color:#64748b;margin-bottom:20px;';
-            const tipo = checklist.Tipo || '';
-            const fechaFin = checklist.Metadata?.fechaFinDiligenciamiento || new Date().toISOString().split('T')[0];
-            const activas = checklist.items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
-            meta.textContent = `Tipo: ${tipo} | Finalizado: ${fechaFin} | Tareas: ${activas.length}`;
-            container.appendChild(meta);
-
-            activas.forEach((it, i) => {
-                const card = document.createElement('div');
-                card.style.cssText = 'border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px;background:#f8fafc;';
-
-                const header = document.createElement('div');
-                header.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;';
-                const num = document.createElement('span');
-                num.style.cssText = 'background:#eab308;color:#fff;font-weight:800;font-size:11px;padding:3px 10px;border-radius:6px;flex-shrink:0;';
-                num.textContent = `#${i + 1}`;
-                const desc = document.createElement('span');
-                desc.style.cssText = 'font-size:14px;font-weight:700;color:#1e293b;margin-left:10px;flex:1;line-height:1.4;';
-                desc.textContent = it.Descripcion || '';
-                header.appendChild(num);
-                header.appendChild(desc);
-                card.appendChild(header);
-
-                const grid = document.createElement('div');
-                grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-bottom:8px;';
-                const campos = [
-                    { label: 'Fechas Plan', val: `I: ${it.FechaBaselineInicio || '-'}  F: ${it.FechaBaselineFin || '-'}` },
-                    { label: 'Fechas Reales', val: `I: ${it.FechaInicio || '-'}  F: ${it.FechaFin || '-'}` },
-                    { label: 'Avance', val: `${it.Avance || it.avance || 0}%` },
-                    { label: 'Entregable', val: it.Entregable || '-' }
-                ];
-                campos.forEach(c => {
-                    const field = document.createElement('div');
-                    const lbl = document.createElement('span');
-                    lbl.style.cssText = 'font-weight:700;color:#64748b;display:block;font-size:10px;text-transform:uppercase;';
-                    lbl.textContent = c.label;
-                    const val = document.createElement('span');
-                    val.style.cssText = 'font-weight:600;color:#1e293b;';
-                    val.textContent = c.val;
-                    field.appendChild(lbl);
-                    field.appendChild(val);
-                    grid.appendChild(field);
-                });
-                card.appendChild(grid);
-
-                if (it.HistorialComentarios && it.HistorialComentarios.length > 0) {
-                    const commDiv = document.createElement('div');
-                    commDiv.style.cssText = 'border-top:1px dashed #cbd5e1;padding-top:8px;margin-top:4px;';
-                    const commTitle = document.createElement('span');
-                    commTitle.style.cssText = 'font-weight:700;color:#64748b;font-size:10px;text-transform:uppercase;display:block;margin-bottom:4px;';
-                    commTitle.textContent = 'Comentarios';
-                    commDiv.appendChild(commTitle);
-                    it.HistorialComentarios.forEach(c => {
-                        const cLine = document.createElement('p');
-                        cLine.style.cssText = 'font-size:10px;color:#475569;margin:3px 0;padding:3px 6px;background:#fff;border-radius:4px;border:1px solid #f1f5f9;';
-                        cLine.textContent = `[${c.fecha || ''}] ${c.autor || ''}: ${c.texto || ''}`;
-                        commDiv.appendChild(cLine);
-                    });
-                    card.appendChild(commDiv);
-                }
-
-                container.appendChild(card);
-            });
-
-            document.body.appendChild(container);
-            await new Promise(r => setTimeout(r, 300));
-
-            const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-            document.body.removeChild(container);
-
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = pdf.internal.pageSize.getHeight();
-            const imgWidth = pageWidth - 16;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-            let heightLeft = imgHeight;
-            let position = 8;
-            const imgData = canvas.toDataURL('image/png');
-
-            pdf.addImage(imgData, 'PNG', 8, position, imgWidth, imgHeight);
-            heightLeft -= (pageHeight - 16);
-
-            while (heightLeft > 0) {
-                position = -(pageHeight - 16) + 8;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 8, position, imgWidth, imgHeight);
-                heightLeft -= (pageHeight - 16);
-            }
-
-            const nombreArchivo = `${(checklist.Name || 'checklist').replace(/[^a-z0-9]/gi, '_')}.pdf`;
-            pdf.save(nombreArchivo);
-
+            // Generar y subir el PDF como registro documental a la nueva ruta SharePoint.
             try {
+                const { pdf, nombreArchivo } = await construirPDF(updatedChecklist);
                 const arrayBuffer = pdf.output('arraybuffer');
-                const digest = await getRequestDigest();
-                const AC_SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/ac";
-                const uploadUrl = `${AC_SITE_URL}/_api/web/GetFolderByServerRelativeUrl('/sites/co-lmn-sgia/ac/SiteAssets/CheckList/PDFs')/Files/add(url='${encodeURIComponent(nombreArchivo)}',overwrite=true)`;
+                const uploadUrl = `${AC_SITE_URL}/_api/web/GetFolderByServerRelativeUrl('${PDF_FOLDER_RELATIVE}')/Files/add(url='${encodeURIComponent(nombreArchivo)}',overwrite=true)`;
                 await fetch(uploadUrl, {
                     method: 'POST',
                     headers: {
@@ -379,7 +380,19 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 });
             } catch (uploadErr) {
                 console.error('Error subiendo PDF a SharePoint:', uploadErr);
+                alert('El checklist se finalizó, pero hubo un error al guardar el PDF en SharePoint. Revisa la consola.');
             }
+        } catch (error) {
+            alert('Error finalizando el checklist.');
+            console.error(error);
+        }
+    };
+
+    const handleDescargarPDF = async () => {
+        try {
+            const { pdf, nombreArchivo } = await construirPDF(checklist);
+            // Descarga local al PC del usuario (no se sube a SharePoint).
+            pdf.save(nombreArchivo);
         } catch (error) {
             alert('Error generando el PDF.');
             console.error(error);

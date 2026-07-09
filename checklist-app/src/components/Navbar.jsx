@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 // Abre una URL en Microsoft Edge usando el protocolo microsoft-edge:
 // Si el navegador actual ya es Edge, el protocolo abre una nueva pestaña.
@@ -102,26 +102,11 @@ const NAV_ITEMS = [
     },
 ];
 
-// Hook para detectar si un submenú debe abrirse hacia la izquierda o derecha
-// basado en la posición del elemento padre relativo al viewport.
+// Los submenús siempre se abren hacia la izquierda para evitar el parpadeo
+// de intentar abrir a la derecha y rebotar a la izquierda.
 const useDropdownDirection = (isOpen) => {
     const ref = useRef(null);
-    const [direction, setDirection] = useState('right'); // 'right' | 'left'
-
-    useLayoutEffect(() => {
-        if (!isOpen || !ref.current) return;
-        const rect = ref.current.getBoundingClientRect();
-        const submenuWidth = 280; // min-w-[260px] + padding aprox
-        const spaceRight = window.innerWidth - rect.right;
-        const spaceLeft = rect.left;
-        // Si no hay espacio suficiente a la derecha pero sí a la izquierda, abrir hacia la izquierda
-        if (spaceRight < submenuWidth && spaceLeft >= submenuWidth) {
-            setDirection('left');
-        } else {
-            setDirection('right');
-        }
-    }, [isOpen]);
-
+    const direction = 'left'; // siempre izquierda
     return { ref, direction };
 };
 

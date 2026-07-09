@@ -14,7 +14,20 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
     const [inactivateReasonText, setInactivateReasonText] = useState('');
     const [backupItem, setBackupItem] = useState(null);
 
-    const [acData, setAcData] = useState({ gerencias: [], superintendencias: [], unidades: [] });
+    // Lista oficial de gerencias (alineada con las tortas del dashboard GerenciaPieCharts).
+    const GERENCIAS_OFICIALES = [
+        'SERV CORPORATIVOS',
+        'MATERIALES',
+        'PRODUCCION',
+        'MTTO DRUGAS',
+        'MTTO LLANTAS',
+        'GMIC',
+        'MDC',
+        'GGAE',
+        'GTI',
+        'SALUD & SEGURIDAD'
+    ];
+    const [acData, setAcData] = useState({ superintendencias: [], unidades: [] });
     const [acLoading, setAcLoading] = useState(true);
 
     const openInactivateModal = (id) => {
@@ -83,12 +96,10 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                 const json = await res.json();
                 const results = json.d?.results || [];
 
-                const uniqueGerencias = [...new Set(results.map(r => r.BranchGerencia).filter(Boolean))].sort();
                 const uniqueSuperintendencias = [...new Set(results.map(r => r.SiteSuperintendencia).filter(Boolean))].sort();
                 const uniqueUnidades = [...new Set(results.map(r => r.UnidadProceso).filter(Boolean))].sort();
 
                 setAcData({
-                    gerencias: uniqueGerencias,
                     superintendencias: uniqueSuperintendencias,
                     unidades: uniqueUnidades
                 });
@@ -367,8 +378,8 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                             <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-700'}`}>{"Gerencia"}</div>
                             <div className={`col-span-8 p-2 flex items-center ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                                 <select className={inputClasses + " text-xs py-1.5 px-2"} value={metadata.gerencia || ''} onChange={(e) => setMetadata(p => ({ ...p, gerencia: e.target.value }))}>
-                                    <option value="">{acLoading ? "Cargando Gerencias..." : "Seleccione Gerencia"}</option>
-                                    {acData.gerencias.map(g => <option key={g} value={g}>{g}</option>)}
+                                    <option value="">Seleccione Gerencia</option>
+                                    {GERENCIAS_OFICIALES.map(g => <option key={g} value={g}>{g}</option>)}
                                 </select>
                             </div>
                         </div>
