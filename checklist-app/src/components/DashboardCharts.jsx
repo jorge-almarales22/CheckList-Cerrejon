@@ -40,13 +40,13 @@ const DashboardCharts = ({ items, checklist, theme }) => {
     const offsetEsp = circumEsp - (avanceEsperado / 100) * circumEsp;
 
     const cardBg = theme === 'dark'
-        ? 'bg-black/80 border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)]'
-        : 'bg-white border-slate-200 shadow-md shadow-slate-100';
+        ? 'bg-black/80 border-white/30 shadow-[0_0_30px_rgba(0,0,0,0.3)]'
+        : 'bg-white border-slate-300 shadow-md shadow-slate-100';
 
-    const textColor = theme === 'dark' ? 'text-white' : 'text-slate-900';
-    const labelColor = theme === 'dark' ? 'text-white/50' : 'text-slate-500';
-    const trackStroke = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
-    const barBg = theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-slate-100 border-slate-200';
+    const textColor = theme === 'dark' ? 'text-white font-bold' : 'text-slate-900 font-bold';
+    const labelColor = theme === 'dark' ? 'text-white font-bold' : 'text-slate-800 font-bold';
+    const trackStroke = theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)';
+    const barBg = theme === 'dark' ? 'bg-white/10 border-white/10' : 'bg-slate-100 border-slate-300';
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 animate-[fadeIn_0.5s_ease-out]">
@@ -63,7 +63,7 @@ const DashboardCharts = ({ items, checklist, theme }) => {
                     </svg>
                     <div className="absolute flex flex-col items-center justify-center text-center">
                         <span className={`text-2xl font-black ${textColor}`}>{avanceGeneral}%</span>
-                        <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Real</span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Real</span>
                     </div>
                 </div>
 
@@ -84,7 +84,7 @@ const DashboardCharts = ({ items, checklist, theme }) => {
                 <div className="space-y-4 max-h-[200px] overflow-y-auto pr-2">
                     {dataChart.map((d, i) => (
                         <div key={i} className="flex items-center gap-4 text-xs">
-                            <div className={`w-[140px] truncate text-right font-medium ${theme === 'dark' ? 'text-white/80' : 'text-slate-700'}`} title={d.name}>{d.name}</div>
+                            <div className={`w-[140px] truncate text-right font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`} title={d.name}>{d.name}</div>
                             <div className={`flex-1 h-6 rounded-full overflow-hidden relative border ${barBg}`}>
                                 <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-1000" style={{ width: `${d.avg}%` }}></div>
                             </div>

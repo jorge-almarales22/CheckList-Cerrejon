@@ -31,35 +31,68 @@ export const calcularPromedioReal = (items) => {
     return Math.round(total / activos.length);
 };
 
-// % esperado de un checklist basado en la fecha de inicio de diligenciamiento
-// y la fecha de fin planificada (fechaFinDiligenciamiento si ya finalizo, o la
-// fecha fin maxima de sus items si esta en curso). Si no hay fecha fin, usa
-// la fecha de inicio + 30 dias como ventana por defecto.
+// % esperado de un checklist calculado a partir de la fecha mas temprana de
+// inicio y la fecha mas lejana de fin de TODAS las tareas activas del checklist.
+// Se toma la ventana total (min inicio -> max fin) y se calcula a cuanto equivale
+// cada dia en porcentaje, igual que para una tarea individual. NO es un promedio
+// de los porcentajes de cada tarea.
 export const calcularEsperadoChecklist = (checklist) => {
     if (!checklist) return 0;
-    const meta = checklist.Metadata || {};
-    const fechaInicio = meta.fechaInicioDiligenciamiento;
-    let fechaFin = meta.fechaFinDiligenciamiento;
+    const items = (checklist.items || []).filter(it => (it.Estado || it.estado) !== 'Inactivo');
+    if (items.length === 0) return 0;
 
-    // Si no esta finalizado o la fecha fin no es valida, derivar de los items
-    if (!fechaFin || fechaFin === 'Se completará al finalizar' || isNaN(new Date(fechaFin).getTime())) {
-        const items = checklist.items || [];
-        const fechasFin = items
-            .map(it => it.FechaFin || it.fechaFin)
-            .filter(f => f && !isNaN(new Date(f).getTime()))
-            .map(f => new Date(f).getTime());
-        if (fechasFin.length > 0) {
-            fechaFin = new Date(Math.max(...fechasFin)).toISOString().split('T')[0];
-        } else if (fechaInicio) {
-            // ventana por defecto de 30 dias
-            const d = new Date(fechaInicio);
-            d.setDate(d.getDate() + 30);
-            fechaFin = d.toISOString().split('T')[0];
-        } else {
-            return 0;
-        }
-    }
-    return calcularCumplimiento(fechaInicio, fechaFin);
+    const fechasInicio = items
+        .map(it => it.FechaInicio || it.fechaInicio)
+        .filter(f => f && !isNaN(new Date(f).getTime()))
+        .map(f => new Date(f).getTime());
+    const fechasFin = items
+        .map(it => it.FechaFin || it.fechaFin)
+        .filter(f => f && !isNaN(new Date(f).getTime()))
+        .map(f => new Date(f).getTime());
+
+    if (fechasInicio.length === 0 || fechasFin.length === 0) return 0;
+
+    const minInicio = Math.min(...fechasInicio);
+    const maxFin = Math.max(...fechasFin);
+
+    return calcularCumplimiento(new Date(minInicio), new Date(maxFin));
+};
+
+// % esperado global de todos los checklists: toma la fecha mas temprana de inicio
+// y la mas lejana de fin de TODAS las tareas activas de TODOS los checklists, y
+// calcula el cumplimiento sobre esa ventana total (igual que un checklist).
+export const calcularEsperadoGlobal = (checklists) => {
+    if (!checklists || checklists.length === 0) return 0;
+    let minInicio = Infinity;
+    let maxFin = -Infinity;
+    let encontradas = false;
+
+    checklists.forEach(chk => {
+        const items = (chk.items || []).filter(it => (it.Estado || it.estado) !== 'Inactivo');
+        items.forEach(it => {
+            const fi = it.FechaInicio || it.fechaInicio;
+            const ff = it.FechaFin || it.fechaFin;
+            if (fi && !isNaN(new Date(fi).getTime())) {
+                minInicio = Math.min(minInicio, new Date(fi).getTime());
+                encontradas = true;
+            }
+            if (ff && !isNaN(new Date(ff).getTime())) {
+                maxFin = Math.max(maxFin, new Date(ff).getTime());
+                encontradas = true;
+            }
+        });
+    });
+
+    if (!encontradas || minInicio === Infinity || maxFin === -Infinity) return 0;
+    return calcularCumplimiento(new Date(minInicio), new Date(maxFin));
+};
+
+// % real global de todos los checklists: promedio de los % reales de cada checklist.
+export const calcularRealGlobal = (checklists) => {
+    if (!checklists || checklists.length === 0) return 0;
+    let total = 0;
+    checklists.forEach(chk => { total += calcularRealChecklist(chk); });
+    return Math.round(total / checklists.length);
 };
 
 // % real general de un checklist.

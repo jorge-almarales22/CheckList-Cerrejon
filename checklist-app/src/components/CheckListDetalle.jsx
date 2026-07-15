@@ -717,7 +717,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     )}
                     <div className={`flex flex-col md:flex-row border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                         <div className={`w-full md:w-1/3 p-5 border-r flex flex-col gap-2 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-                            <span className="font-extrabold text-[10px] uppercase tracking-widest text-slate-500 mb-2">DESCRIPCIÓN DE EQUIPO(S) A INCORPORAR</span>
+                            <span className="font-extrabold text-[10px] uppercase tracking-widest text-slate-700 dark:text-slate-200 mb-2">DESCRIPCIÓN DE EQUIPO(S) A INCORPORAR</span>
                             {isEditingMetadata ? (
                                 <>
                                     {(editMetadataForm?.equipos || ['']).map((eq, idx) => (
@@ -751,11 +751,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 </>
                             ) : (
                                 checklist.Metadata.equipos.map((eq, idx) => (
-                                    <div key={idx} className={`p-3 rounded-lg border text-xs whitespace-pre-wrap ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>{eq || '-'}</div>
+                                    <div key={idx} className={`p-3 rounded-lg border text-xs whitespace-pre-wrap font-bold ${theme === 'dark' ? 'bg-slate-950/40 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'}`}>{eq || '-'}</div>
                                 ))
                             )}
                             <div className={`mt-3 pt-3 border-t ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-                                <span className="font-bold text-[10px] uppercase tracking-wider text-slate-500 block mb-2">FOTOS DEL EQUIPO</span>
+                                <span className="font-bold text-[10px] uppercase tracking-wider text-slate-700 dark:text-slate-200 block mb-2">FOTOS DEL EQUIPO</span>
                                 {(checklist.Metadata.imagenesEquipo && checklist.Metadata.imagenesEquipo.length > 0) || checklist.Metadata.imagenEquipo || isEditingMetadata ? (
                                     <div className="flex flex-wrap gap-2">
                                         {(isEditingMetadata ? (editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo) : checklist.Metadata.imagenesEquipo) ? (
@@ -794,14 +794,14 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     } catch (err) { console.error("Error compressing image:", err); }
                                                 }
                                                 setEditMetadataForm({ ...editMetadataForm, imagenesEquipo: [...currentImages, ...processed] });
-                                            }} className="text-[10px] text-slate-500 w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-500 transition-all cursor-pointer" />
+                                            }} className="text-[10px] text-slate-700 dark:text-slate-200 font-bold w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-500 transition-all cursor-pointer" />
                                         )}
                                     </div>
                                 ) : null}
                             </div>
                         </div>
                         <div className="w-full md:w-2/3 flex flex-col">
-                            <div className={`grid grid-cols-12 border-b font-bold text-[10px] uppercase tracking-wider text-slate-500 ${theme === 'dark' ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-100'}`}>
+                            <div className={`grid grid-cols-12 border-b font-bold text-[10px] uppercase tracking-wider text-slate-700 dark:text-slate-200 ${theme === 'dark' ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-100'}`}>
                                 <div className={`col-span-3 p-3 border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} flex items-center`}>ROL</div>
                                 <div className={`col-span-4 p-3 border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} flex items-center`}>Área</div>
                                 <div className="col-span-5 p-3 flex items-center">Nombre representante</div>
@@ -814,7 +814,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     <div className={`col-span-3 p-3 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-700'}`}>
                                         {roleKey === 'lider' ? 'LÍDER DE PROYECTO' : roleKey}
                                     </div>
-                                    <div className={`col-span-4 p-3 border-r ${theme === 'dark' ? 'border-slate-800 text-slate-300' : 'border-slate-200 text-slate-800'} flex items-center text-xs`}>
+                                    <div className={`col-span-4 p-3 border-r ${theme === 'dark' ? 'border-slate-800 text-slate-200 font-bold' : 'border-slate-200 text-slate-800 font-bold'} flex items-center text-xs`}>
                                         {isEditingMetadata ? (
                                             <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.roles?.[roleKey]?.area || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, roles: { ...editMetadataForm.roles, [roleKey]: { ...editMetadataForm.roles[roleKey], area: e.target.value } } })}>
                                                 <option value="">Seleccionar...</option>
@@ -824,7 +824,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                             checklist.Metadata.roles[roleKey].area || '-'
                                         )}
                                     </div>
-                                    <div className={`col-span-5 p-3 flex items-center gap-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-800'}`}>
+                                    <div className={`col-span-5 p-3 flex items-center gap-3 ${theme === 'dark' ? 'text-slate-200 font-bold' : 'text-slate-800 font-bold'}`}>
                                         {isEditingMetadata ? (
                                             <PeoplePicker
                                                 className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none"
@@ -842,13 +842,13 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     {checklist.Metadata.roles[roleKey].persona}
                                                 </span>
                                             </React.Fragment>
-                                        ) : <span className="text-slate-400 text-xs italic">-</span>}
+                                        ) : <span className="text-slate-700 dark:text-slate-200 font-bold text-xs italic">-</span>}
                                     </div>
                                 </div>
                             ))}
 
                             <div className={`grid grid-cols-12 border-b items-stretch ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20' : 'border-slate-200 bg-slate-50'}`}>
-                                <div className={`col-span-3 p-3 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 text-yellow-100' : 'border-slate-200 text-slate-600'}`}>GERENCIA</div>
+                                <div className={`col-span-3 p-3 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 text-yellow-100' : 'border-slate-200 text-slate-800'}`}>GERENCIA</div>
                                 <div className="col-span-9 p-3 flex items-center text-xs font-semibold">
                                     {isEditingMetadata ? (
                                         <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.gerencia || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, gerencia: e.target.value })}>
@@ -859,7 +859,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 </div>
                             </div>
                             <div className={`grid grid-cols-12 border-b items-stretch ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20' : 'border-slate-200 bg-slate-50'}`}>
-                                <div className={`col-span-3 p-3 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 text-yellow-100' : 'border-slate-200 text-slate-600'}`}>SUPERINTENDENCIA</div>
+                                <div className={`col-span-3 p-3 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 text-yellow-100' : 'border-slate-200 text-slate-800'}`}>SUPERINTENDENCIA</div>
                                 <div className="col-span-9 p-3 flex items-center text-xs font-semibold">
                                     {isEditingMetadata ? (
                                         <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.superintendencia || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, superintendencia: e.target.value })}>
@@ -870,7 +870,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 </div>
                             </div>
                             <div className={`grid grid-cols-12 items-stretch ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20' : 'border-slate-200 bg-slate-50'}`}>
-                                <div className={`col-span-3 p-3 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 text-yellow-100' : 'border-slate-200 text-slate-600'}`}>UNIDAD DE PROCESO</div>
+                                <div className={`col-span-3 p-3 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 text-yellow-100' : 'border-slate-200 text-slate-800'}`}>UNIDAD DE PROCESO</div>
                                 <div className="col-span-9 p-3 flex items-center text-xs font-semibold">
                                     {isEditingMetadata ? (
                                         <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.unidadProceso || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, unidadProceso: e.target.value })}>
@@ -884,22 +884,22 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     </div>
                     <div className={`flex flex-col md:flex-row border border-b-0 ${theme === 'dark' ? 'bg-slate-950/20 border-slate-800' : 'bg-slate-100/50 border-slate-200'}`}>
                         <div className={`w-full md:w-1/3 flex border-b md:border-b-0 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-                            <div className={`w-1/2 p-3 font-bold text-[10px] uppercase flex flex-col justify-center border-r text-slate-400 dark:text-slate-500 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
+                            <div className={`w-1/2 p-3 font-bold text-[10px] uppercase flex flex-col justify-center border-r text-slate-700 dark:text-slate-200 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                                 Inicio Diligenciamiento
                                 {isEditingMetadata ? (
                                     <input type="date" className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs mt-1 w-full outline-none" value={editMetadataForm?.fechaInicioDiligenciamiento || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, fechaInicioDiligenciamiento: e.target.value })} />
                                 ) : (
-                                    <span className="text-slate-700 dark:text-slate-300 text-xs mt-1">
+                                    <span className="text-slate-800 dark:text-slate-200 font-bold text-xs mt-1">
                                         {checklist.Metadata.fechaInicioDiligenciamiento || '-'}
                                     </span>
                                 )}
                             </div>
-                            <div className={`w-1/2 p-3 font-bold text-[10px] uppercase flex flex-col justify-center border-r text-slate-400 dark:text-slate-500 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
+                            <div className={`w-1/2 p-3 font-bold text-[10px] uppercase flex flex-col justify-center border-r text-slate-700 dark:text-slate-200 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                                 Fin Diligenciamiento
                                 {isEditingMetadata ? (
                                     <input type="date" className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs mt-1 w-full outline-none" value={editMetadataForm?.fechaFinDiligenciamiento || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, fechaFinDiligenciamiento: e.target.value })} />
                                 ) : (
-                                    <span className="text-slate-700 dark:text-slate-300 text-xs mt-1">
+                                    <span className="text-slate-800 dark:text-slate-200 font-bold text-xs mt-1">
                                         {checklist.Metadata.fechaFinDiligenciamiento || '-'}
                                     </span>
                                 )}
@@ -907,13 +907,13 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         </div>
                         <div className="w-full md:w-2/3 flex">
                             <div className="w-full p-4 text-xs">
-                                <span className="font-bold text-[10px] uppercase text-slate-400 dark:text-slate-500 block mb-1">
+                                <span className="font-bold text-[10px] uppercase text-slate-700 dark:text-slate-200 block mb-1">
                                     Comentarios Generales Metadatos:
                                 </span>
                                 {isEditingMetadata ? (
                                     <textarea className={`${inputClasses} text-xs`} rows="2" placeholder="Escribe aquí cualquier observación..." value={editMetadataForm?.comentarios || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, comentarios: e.target.value })} />
                                 ) : (
-                                    <span className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap font-semibold">
+                                    <span className="text-slate-800 dark:text-slate-200 font-bold whitespace-pre-wrap">
                                         {checklist.Metadata.comentarios || '-'}
                                     </span>
                                 )}
@@ -926,7 +926,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             <div className={`${cardClass} border p-5 rounded-2xl mb-6 flex flex-col md:flex-row gap-4 items-center justify-between`}>
                 <div className="flex flex-col md:flex-row gap-4 flex-1 w-full">
                     <div className="flex flex-col w-full md:w-1/3">
-                        <span className="text-[10px] uppercase font-bold text-slate-500 mb-1">{"Filtrar por Responsable"}</span>
+                        <span className="text-[10px] uppercase font-bold text-slate-700 dark:text-slate-200 mb-1">{"Filtrar por Responsable"}</span>
                         <select className={`${inputClasses} text-xs font-semibold`} value={filterResponsable} onChange={(e) => setFilterResponsable(e.target.value)}>
                             <option value="">{"Todos los Responsables"}</option>
                             {listadoResponsablesUnicos.map(r => <option key={r} value={r}>{r}</option>)}
@@ -934,7 +934,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     </div>
                     <div className="flex items-center gap-2 mt-4 md:mt-0">
                         <input type="checkbox" id="detAlertCheckbox" checked={filterAlertaOnly} onChange={(e) => setFilterAlertaOnly(e.target.checked)} className="accent-yellow-500 cursor-pointer h-4 w-4" />
-                        <label htmlFor="detAlertCheckbox" className="text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">{"Mostrar solo tareas en Alerta"}</label>
+                        <label htmlFor="detAlertCheckbox" className="text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer">{"Mostrar solo tareas en Alerta"}</label>
                     </div>
                 </div>
                 {!isFinalizado && isAdmin && (
@@ -949,15 +949,15 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     <form onSubmit={handleSaveNewTask} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                             <div className="md:col-span-12">
-                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{"Descripción de la Tarea"}</label>
+                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{"Descripción de la Tarea"}</label>
                                 <textarea className={inputClasses + " text-xs"} value={newTaskData.actividades} onChange={(e) => setNewTaskData({ ...newTaskData, actividades: e.target.value })} rows="2" required></textarea>
                             </div>
                             <div className="md:col-span-4">
-                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Responsable</label>
+                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>Responsable</label>
                                 <PeoplePicker className={inputClasses + " text-xs"} value={newTaskData.nombreResponsable} onChange={(val) => setNewTaskData(prev => ({ ...prev, nombreResponsable: val }))} />
                             </div>
                             <div className="md:col-span-4">
-                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Entregable</label>
+                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>Entregable</label>
                                 <input type="text" className={inputClasses + " text-xs"} value={newTaskData.entregable} onChange={(e) => setNewTaskData({ ...newTaskData, entregable: e.target.value })} required></input>
                             </div>
                             <div className="md:col-span-2">
@@ -1000,7 +1000,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     <div className="flex items-start gap-3 mb-2 border-b border-slate-200 dark:border-slate-800 pb-3">
                                         <span className={`text-xs font-bold px-2.5 py-1 rounded-md mt-0.5 shadow-inner ${
                                             isInactive 
-                                                ? (theme === 'dark' ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600') 
+                                                ? (theme === 'dark' ? 'bg-slate-800 text-slate-200 font-bold' : 'bg-slate-200 text-slate-800 font-bold') 
                                                 : showAlert ? 'bg-red-500 text-white' 
                                                 : 'bg-amber-600 text-white shadow'
                                         }`}>
@@ -1034,7 +1034,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                                     <div className={`grid grid-cols-2 lg:grid-cols-6 gap-6 mt-4 text-sm ${isInactive ? 'opacity-70' : ''}`}>
                                         <div className="col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-500' : 'text-slate-400 dark:text-slate-500'}`}>{"Responsable"}</span>
+                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-700 dark:text-slate-200' : 'text-slate-700 dark:text-slate-200'}`}>{"Responsable"}</span>
                                             {isEditing && isAdmin ? (
                                                 <PeoplePicker
                                                     className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none"
@@ -1054,7 +1054,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         </div>
 
                                         <div className="col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-500' : 'text-slate-400 dark:text-slate-500'}`}>{"Entregable"}</span>
+                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-700 dark:text-slate-200' : 'text-slate-700 dark:text-slate-200'}`}>{"Entregable"}</span>
                                             {isEditing && isAdmin ? (
                                                 <input type="text" className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={currentItem.Entregable || ''} onChange={e => setEditForm({ ...editForm, Entregable: e.target.value })} />
                                             ) : (
@@ -1063,7 +1063,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         </div>
 
                                         <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-500' : 'text-slate-400 dark:text-slate-500'}`}>Fechas Plan</span>
+                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-700 dark:text-slate-200' : 'text-slate-700 dark:text-slate-200'}`}>Fechas Plan</span>
                                             {isEditing && isAdmin ? (
                                                 <div className="flex flex-col gap-1.5 mt-1">
                                                     <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-500">I:</span><input type="date" className="bg-transparent border-none text-xs w-full" value={currentItem.FechaBaselineInicio ? currentItem.FechaBaselineInicio.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, FechaBaselineInicio: e.target.value })} /></div>
@@ -1078,7 +1078,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         </div>
 
                                         <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-500' : 'text-slate-400 dark:text-slate-500'}`}>Fechas Reales</span>
+                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-700 dark:text-slate-200' : 'text-slate-700 dark:text-slate-200'}`}>Fechas Reales</span>
                                             {isEditing ? (
                                                 <div className="flex flex-col gap-1.5 mt-1">
                                                     <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-500">I:</span><input type="date" className="bg-transparent border-none text-xs w-full" value={currentItem.FechaInicio ? currentItem.FechaInicio.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, FechaInicio: e.target.value })} /></div>
@@ -1093,12 +1093,12 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         </div>
 
                                         <div className="col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-500' : 'text-slate-400 dark:text-slate-500'}`}>Avance Esperado</span>
+                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-700 dark:text-slate-200' : 'text-slate-700 dark:text-slate-200'}`}>Avance Esperado</span>
                                             <span className="text-green-500 font-black text-2xl drop-shadow">{isInactive ? 0 : calcularCumplimiento(it.FechaInicio, it.FechaFin)}%</span>
                                         </div>
 
                                         <div className="col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-500' : 'text-slate-400 dark:text-slate-500'}`}>Avance Real</span>
+                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-700 dark:text-slate-200' : 'text-slate-700 dark:text-slate-200'}`}>Avance Real</span>
                                             {isEditing ? (
                                                 <input type="number" className="w-20 bg-transparent border-b border-slate-300 focus:border-yellow-500 text-lg font-bold mt-1 outline-none" value={currentItem.Avance || 0} onChange={e => {
                                                     let val = parseInt(e.target.value) || 0;
@@ -1113,7 +1113,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                          {!isInactive && (
                                             <div className="col-span-1 lg:col-span-6 border-t border-slate-200 dark:border-slate-800 pt-3">
                                                 <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
+                                                    <span className="text-slate-700 dark:text-slate-200 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
                                                         Evidencias Cargadas
                                                         {evidenciasPresence[it.Id] && (
                                                             <span className="bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 px-1.5 py-0.5 rounded text-[9px] font-black tracking-normal uppercase">
@@ -1139,14 +1139,14 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     ) : (
                                                         <div className="flex flex-wrap gap-3">
                                                             {(!evidenciasItem[it.Id] || evidenciasItem[it.Id].length === 0) ? (
-                                                                <span className="text-slate-400 text-xs italic">Debes hacer clic en "Actualizar" para ver las evidencias, o no se ha cargado ninguna.</span>
+                                                                <span className="text-slate-700 dark:text-slate-200 font-bold text-xs italic">Debes hacer clic en "Actualizar" para ver las evidencias, o no se ha cargado ninguna.</span>
                                                             ) : (
                                                                 evidenciasItem[it.Id].map(ev => (
                                                                     <div key={ev.Id} className="relative group border border-slate-200 dark:border-slate-800 rounded-md p-1 bg-white dark:bg-slate-900 shadow-lg">
                                                                         {ev.Data && ev.Data.startsWith('data:image') ? (
                                                                             <img src={ev.Data} className="h-16 w-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity" onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(evidenciasItem[it.Id].findIndex(e => e.Id === ev.Id)); }} />
                                                                         ) : (
-                                                                            <div className="h-16 w-16 flex flex-col items-center justify-center text-[10px] font-bold text-slate-500 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-850 transition-colors text-center" onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(evidenciasItem[it.Id].findIndex(e => e.Id === ev.Id)); }}>
+                                                                            <div className="h-16 w-16 flex flex-col items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-200 font-bold rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-850 transition-colors text-center" onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(evidenciasItem[it.Id].findIndex(e => e.Id === ev.Id)); }}>
                                                                                 DOC
                                                                             </div>
                                                                         )}
@@ -1161,7 +1161,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                                                     {!isFinalizado && (isMyTask || isAdmin) && (
                                                         <div className={`pt-2 border-t ${theme==='dark'?'border-slate-800':'border-slate-200'}`}>
-                                                            <input type="file" multiple className="text-[10px] text-slate-500 w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 transition-all cursor-pointer block" onChange={(e) => handleFileUpload(it.Id, e)} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" disabled={isUploading} />
+                                                            <input type="file" multiple className="text-[10px] text-slate-700 dark:text-slate-200 font-bold w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 transition-all cursor-pointer block" onChange={(e) => handleFileUpload(it.Id, e)} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" disabled={isUploading} />
                                                             {isUploading && <span className="text-yellow-500 text-xs mt-1 block font-semibold">Procesando y subiendo archivo(s)... no cierres la pestaña.</span>}
                                                         </div>
                                                     )}
@@ -1173,9 +1173,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                      {!isInactive && (
                                         <div className="col-span-1 lg:col-span-6 mt-5 pt-4 border-t border-slate-200 dark:border-slate-800">
                                             <div className="flex justify-between items-center mb-3">
-                                                <span className="text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-wider">Historial de Comentarios</span>
+                                                <span className="text-slate-700 dark:text-slate-200 text-[10px] font-bold uppercase tracking-wider">Historial de Comentarios</span>
                                                 {!isFinalizado && isAdmin && !isEditing && (
-                                                    <button onClick={() => toggleAlert(it)} className={`text-[10px] font-bold px-2 py-1 rounded border shadow-sm ${showAlert ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'} transition-colors`}>
+                                                    <button onClick={() => toggleAlert(it)} className={`text-[10px] font-bold px-2 py-1 rounded border shadow-sm ${showAlert ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700'} transition-colors`}>
                                                         {showAlert ? 'Quitar Alerta' : 'Marcar Alerta'}
                                                     </button>
                                                 )}
@@ -1183,15 +1183,15 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                                             <div className="space-y-2 mb-4 max-h-40 overflow-y-auto pr-2">
                                                 {(!it.HistorialComentarios || it.HistorialComentarios.length === 0) ? (
-                                                    <p className="text-slate-400 text-xs italic">No hay comentarios.</p>
+                                                    <p className="text-slate-700 dark:text-slate-200 font-bold text-xs italic">No hay comentarios.</p>
                                                 ) : (
                                                     it.HistorialComentarios.map((com, index) => (
                                                         <div key={index} className={`p-3 rounded-lg border ${theme==='dark'?'bg-slate-950/20 border-slate-850':'bg-white border-slate-200'}`}>
                                                             <div className="flex justify-between items-center mb-1 border-b border-slate-200 dark:border-slate-800 pb-1">
                                                                 <span className="text-yellow-600 dark:text-yellow-500 font-bold text-xs">{com.autor}</span>
-                                                                <span className="text-slate-400 text-[10px]">{new Date(com.fecha).toLocaleString()}</span>
+                                                                <span className="text-slate-700 dark:text-slate-200 font-bold text-[10px]">{new Date(com.fecha).toLocaleString()}</span>
                                                             </div>
-                                                            <p className="text-slate-700 dark:text-slate-300 text-sm whitespace-pre-wrap">{com.texto}</p>
+                                                            <p className="text-slate-800 dark:text-slate-200 font-bold text-sm whitespace-pre-wrap">{com.texto}</p>
                                                         </div>
                                                     ))
                                                 )}
@@ -1221,7 +1221,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                                 <div className="flex flex-col gap-2 min-w-[110px] justify-start pt-2 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 lg:pl-4">
                                     {isFinalizado ? (
-                                        <span className="px-4 py-2.5 rounded-xl text-xs font-black text-center w-full shadow-md border bg-slate-500/10 border-slate-500/20 text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1">
+                                        <span className="px-4 py-2.5 rounded-xl text-xs font-black text-center w-full shadow-md border bg-slate-500/10 border-slate-500/20 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center gap-1">
                                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                                             Finalizado
                                         </span>
@@ -1296,7 +1296,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         {generalComment ? (
                             <p className="whitespace-pre-wrap">{generalComment}</p>
                         ) : (
-                            <p className="text-slate-400 italic">Sin comentarios generales por el momento.</p>
+                            <p className="text-slate-700 dark:text-slate-200 font-bold italic">Sin comentarios generales por el momento.</p>
                         )}
                     </div>
                 )}
@@ -1324,7 +1324,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         ) : (
                             <div className="flex flex-col items-center justify-center space-y-6 bg-slate-900 p-10 rounded-2xl border border-slate-800 shadow-2xl">
                                 <svg className="w-24 h-24 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                <div className="text-white/70 text-lg font-medium text-center">Este documento (PDF, Word, Excel, etc.) requiere abrirse en una pestaña nueva.</div>
+                                <div className="text-white text-lg font-bold text-center">Este documento (PDF, Word, Excel, etc.) requiere abrirse en una pestaña nueva.</div>
                                 <button onClick={() => {
                                     const data = modalEvidences[activeEvidenciaIndex].Data;
                                     if (data) {
@@ -1353,7 +1353,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
                             {"⚠ Inactivar Tarea"}
                         </h3>
-                        <p className="text-xs text-white/80 mb-4 font-normal">
+                        <p className="text-xs text-white mb-4 font-bold">
                             {"¿Por qué lo vas a inactivar? Por favor ingrese una justificación. Esta acción quedará registrada bajo su usuario corporativo."}
                         </p>
                         <textarea
@@ -1388,7 +1388,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     <div className={`w-full max-w-6xl max-h-[90vh] overflow-y-auto p-6 rounded-3xl border shadow-2xl relative ${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                         <button 
                             onClick={() => setShowGanttModal(false)} 
-                            className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-white/10 text-white/70' : 'hover:bg-slate-100 text-slate-700'}`}
+                            className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-800'}`}
                         >
                             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
