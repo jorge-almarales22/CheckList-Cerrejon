@@ -876,12 +876,12 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
     return (
         <div className="max-w-[95%] mx-auto animate-[fadeIn_0.3s_ease-out]">
-            <div className={`${cardClass} border p-6 rounded-3xl mb-6 flex justify-between items-center flex-wrap gap-3`}>
-                <div className="flex items-center gap-3">
-                    <h2 className="text-3xl font-extrabold mb-1"><span className={theme==='dark' ? 'text-yellow-400' : 'text-amber-600'}>{"Checklist:"}</span> {checklist.Name}</h2>
+            <div className={`${cardClass} border p-4 md:p-6 rounded-3xl mb-6 flex justify-between items-start gap-3`}>
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <h2 className="text-xl md:text-3xl font-extrabold mb-1 break-words min-w-0"><span className={theme==='dark' ? 'text-yellow-400' : 'text-amber-600'}>{"Checklist:"}</span> {checklist.Name}</h2>
                     {isFinalizado && <span className="bg-green-500/20 text-green-500 dark:text-green-400 px-3 py-1 rounded-full text-xs font-extrabold border border-green-500/30 whitespace-nowrap">FINALIZADO</span>}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                     {allTasksComplete && !isFinalizado && (
                         <button onClick={handleFinalizar} className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors shadow-lg border border-green-400/30 flex items-center gap-2 whitespace-nowrap">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
