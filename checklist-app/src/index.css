@@ -1,6 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
+/* El modo oscuro lo decide el boton de tema de la app (clase .dark en <html>),
+   NO la preferencia del sistema operativo. Sin esto, un SO en modo oscuro
+   aplicaba las variantes dark:* sobre el tema claro y dejaba los textos
+   grises ilegibles sobre fondo blanco. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 body,
 html {
     margin: 0;

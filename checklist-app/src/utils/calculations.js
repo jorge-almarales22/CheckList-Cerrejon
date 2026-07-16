@@ -1,3 +1,5 @@
+// % de tiempo transcurrido dentro de una ventana (inicio -> fin).
+// Si la ventana dura 10 dias, cada dia equivale a un 10%.
 export const calcularCumplimiento = (fechaInicio, fechaFin) => {
     if (!fechaFin || !fechaInicio) return 0;
     const start = new Date(fechaInicio); start.setHours(0, 0, 0, 0);
@@ -13,86 +15,50 @@ export const calcularCumplimiento = (fechaInicio, fechaFin) => {
     return Math.round(percent);
 };
 
+const esFechaValida = (f) => !!f && !isNaN(new Date(f).getTime());
+
+const itemsActivos = (items) => (items || []).filter(it => (it.Estado || it.estado) !== 'Inactivo');
+
+export const esHistorico = (chk) => chk?.historico === true || chk?.Historico === true;
+
+export const esFinalizado = (chk) => chk?.Estado === 'Finalizado';
+
+// El avance ESPERADO se mide contra el plan, por eso se usan las fechas baseline.
+// Si una tarea no tiene baseline, se cae a las fechas reales.
+const getInicioPlan = (it) => it.FechaBaselineInicio || it.fechaBaselineInicio || it.FechaInicio || it.fechaInicio;
+const getFinPlan = (it) => it.FechaBaselineFin || it.fechaBaselineFin || it.FechaFin || it.fechaFin;
+
+// Ventana total de un conjunto de tareas: el inicio mas temprano y el fin mas lejano.
+const ventanaFechas = (items) => {
+    const inicios = [];
+    const fines = [];
+    items.forEach(it => {
+        const fi = getInicioPlan(it);
+        const ff = getFinPlan(it);
+        if (esFechaValida(fi)) inicios.push(new Date(fi).getTime());
+        if (esFechaValida(ff)) fines.push(new Date(ff).getTime());
+    });
+    if (inicios.length === 0 || fines.length === 0) return null;
+    return { inicio: Math.min(...inicios), fin: Math.max(...fines) };
+};
+
 export const calcularPromedioChecklist = (items) => {
     if (!items || items.length === 0) return 0;
-    const activos = items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
+    const activos = itemsActivos(items);
     if (activos.length === 0) return 0;
     let total = 0;
     activos.forEach(it => { total += calcularCumplimiento(it.FechaInicio || it.fechaInicio, it.FechaFin || it.fechaFin); });
     return Math.round(total / activos.length);
 };
 
+// % real de un checklist: promedio simple del avance de sus tareas activas.
 export const calcularPromedioReal = (items) => {
     if (!items || items.length === 0) return 0;
-    const activos = items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
+    const activos = itemsActivos(items);
     if (activos.length === 0) return 0;
     let total = 0;
     activos.forEach(it => { total += parseInt(it.Avance || it.avance) || 0; });
     return Math.round(total / activos.length);
-};
-
-// % esperado de un checklist calculado a partir de la fecha mas temprana de
-// inicio y la fecha mas lejana de fin de TODAS las tareas activas del checklist.
-// Se toma la ventana total (min inicio -> max fin) y se calcula a cuanto equivale
-// cada dia en porcentaje, igual que para una tarea individual. NO es un promedio
-// de los porcentajes de cada tarea.
-export const calcularEsperadoChecklist = (checklist) => {
-    if (!checklist) return 0;
-    const items = (checklist.items || []).filter(it => (it.Estado || it.estado) !== 'Inactivo');
-    if (items.length === 0) return 0;
-
-    const fechasInicio = items
-        .map(it => it.FechaInicio || it.fechaInicio)
-        .filter(f => f && !isNaN(new Date(f).getTime()))
-        .map(f => new Date(f).getTime());
-    const fechasFin = items
-        .map(it => it.FechaFin || it.fechaFin)
-        .filter(f => f && !isNaN(new Date(f).getTime()))
-        .map(f => new Date(f).getTime());
-
-    if (fechasInicio.length === 0 || fechasFin.length === 0) return 0;
-
-    const minInicio = Math.min(...fechasInicio);
-    const maxFin = Math.max(...fechasFin);
-
-    return calcularCumplimiento(new Date(minInicio), new Date(maxFin));
-};
-
-// % esperado global de todos los checklists: toma la fecha mas temprana de inicio
-// y la mas lejana de fin de TODAS las tareas activas de TODOS los checklists, y
-// calcula el cumplimiento sobre esa ventana total (igual que un checklist).
-export const calcularEsperadoGlobal = (checklists) => {
-    if (!checklists || checklists.length === 0) return 0;
-    let minInicio = Infinity;
-    let maxFin = -Infinity;
-    let encontradas = false;
-
-    checklists.forEach(chk => {
-        const items = (chk.items || []).filter(it => (it.Estado || it.estado) !== 'Inactivo');
-        items.forEach(it => {
-            const fi = it.FechaInicio || it.fechaInicio;
-            const ff = it.FechaFin || it.fechaFin;
-            if (fi && !isNaN(new Date(fi).getTime())) {
-                minInicio = Math.min(minInicio, new Date(fi).getTime());
-                encontradas = true;
-            }
-            if (ff && !isNaN(new Date(ff).getTime())) {
-                maxFin = Math.max(maxFin, new Date(ff).getTime());
-                encontradas = true;
-            }
-        });
-    });
-
-    if (!encontradas || minInicio === Infinity || maxFin === -Infinity) return 0;
-    return calcularCumplimiento(new Date(minInicio), new Date(maxFin));
-};
-
-// % real global de todos los checklists: promedio de los % reales de cada checklist.
-export const calcularRealGlobal = (checklists) => {
-    if (!checklists || checklists.length === 0) return 0;
-    let total = 0;
-    checklists.forEach(chk => { total += calcularRealChecklist(chk); });
-    return Math.round(total / checklists.length);
 };
 
 // % real general de un checklist.
@@ -102,7 +68,7 @@ export const calcularRealGlobal = (checklists) => {
 // - Si no es historico, se calcula como el promedio de avance de items activos.
 export const calcularRealChecklist = (checklist) => {
     if (!checklist) return 0;
-    if (checklist.historico === true || checklist.Historico === true) {
+    if (esHistorico(checklist)) {
         const realRaw = checklist.Real ?? checklist.real;
         if (realRaw === undefined || realRaw === null || realRaw === '') return 100;
         // Formato esperado: "23.04%" o "23.04" o 23.04
@@ -112,6 +78,58 @@ export const calcularRealChecklist = (checklist) => {
     }
     if (!checklist.items) return 0;
     return calcularPromedioReal(checklist.items);
+};
+
+// % esperado de un checklist: se toma la ventana completa (fecha mas temprana de
+// inicio -> fecha mas lejana de fin de TODAS sus tareas activas) y se mide cuanto
+// tiempo ha transcurrido. NO es el promedio de los % de cada tarea.
+export const calcularEsperadoChecklist = (checklist) => {
+    if (!checklist) return 0;
+    // Un historico ya completado al 100% se considera tambien 100% planeado.
+    if (esHistorico(checklist) && calcularRealChecklist(checklist) >= 100) return 100;
+
+    const items = itemsActivos(checklist.items);
+    if (items.length === 0) return 0;
+    const v = ventanaFechas(items);
+    if (!v) return 0;
+    return calcularCumplimiento(new Date(v.inicio), new Date(v.fin));
+};
+
+// % esperado global: misma logica que un checklist pero sobre la ventana de TODAS
+// las tareas activas de TODOS los checklists sin finalizar.
+export const calcularEsperadoGlobal = (checklists) => {
+    const abiertos = (checklists || []).filter(chk => !esFinalizado(chk));
+    if (abiertos.length === 0) return 0;
+
+    const todasLasTareas = [];
+    abiertos.forEach(chk => { todasLasTareas.push(...itemsActivos(chk.items)); });
+    if (todasLasTareas.length === 0) return 0;
+
+    const v = ventanaFechas(todasLasTareas);
+    if (!v) return 0;
+    return calcularCumplimiento(new Date(v.inicio), new Date(v.fin));
+};
+
+// % real global: promedio de los % reales de los checklists sin finalizar.
+export const calcularRealGlobal = (checklists) => {
+    const abiertos = (checklists || []).filter(chk => !esFinalizado(chk));
+    if (abiertos.length === 0) return 0;
+    let total = 0;
+    abiertos.forEach(chk => { total += calcularRealChecklist(chk); });
+    return Math.round(total / abiertos.length);
+};
+
+// SPI = Real / Esperado, en %. Si todavia no se espera avance no puede haber atraso.
+export const calcularSPI = (real, esperado) => {
+    if (!esperado || esperado <= 0) return 100;
+    return Math.round((real / esperado) * 100);
+};
+
+// Semaforo del SPI: <90 rojo, 90-94 amarillo, >=95 verde.
+export const getSPIStatus = (spi) => {
+    if (spi < 90) return { nivel: 'malo', icono: '✕', texto: 'Atrasado' };
+    if (spi < 95) return { nivel: 'advertencia', icono: '!', texto: 'En riesgo' };
+    return { nivel: 'ok', icono: '✓', texto: 'En tiempo' };
 };
 
 // Agrupa checklists por gerencia y calcula el promedio esperado y real de cada una.

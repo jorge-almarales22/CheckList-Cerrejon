@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { calcularResumenPorGerencia, calcularEsperadoGlobal, calcularRealGlobal } from '../utils/calculations';
+import SPIBadge from './SPIBadge';
 
 // Torta (donut) SVG que muestra el % esperado (gris) y el % real (amarillo).
 // El pedazo gris representa el esperado promedio de todos los checklist de la gerencia.
@@ -18,7 +19,7 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
 
     // Colores fuertes y legibles (no tenues).
     const labelColor = isDark ? 'text-white font-bold' : 'text-slate-900 font-bold';
-    const subLabelColor = isDark ? 'text-slate-200 font-semibold' : 'text-slate-700 font-semibold';
+    const subLabelColor = isDark ? 'text-slate-200 font-semibold' : 'text-slate-900 font-semibold';
     const trackStroke = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)';
 
     const radius = 52;
@@ -64,7 +65,7 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
                     </svg>
                     <div className="absolute flex flex-col items-center justify-center text-center">
                         <span className={`text-base font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{real}%</span>
-                        <span className={`text-[8px] font-black uppercase tracking-widest mt-0.5 ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>Real</span>
+                        <span className={`text-[8px] font-black uppercase tracking-widest mt-0.5 ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>Real</span>
                     </div>
                 </div>
 
@@ -101,6 +102,7 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
                         <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
                         <span className={isDark ? 'text-white' : 'text-slate-900'}>Real Global: {realGlobal}%</span>
                     </div>
+                    <SPIBadge real={realGlobal} esperado={esperadoGlobal} />
                 </div>
             </div>
             <p className={`text-xs mt-1 mb-3 font-bold ${subLabelColor}`}>

@@ -117,9 +117,9 @@ const useNavTheme = (theme) => {
         isDark,
         navBg: isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200',
         collapseBg: isDark ? 'bg-slate-900' : 'bg-white',
-        linkText: isDark ? 'text-slate-200 hover:bg-yellow-500/10 hover:text-yellow-400' : 'text-slate-700 hover:bg-yellow-50 hover:text-amber-700',
+        linkText: isDark ? 'text-slate-200 hover:bg-yellow-500/10 hover:text-yellow-400' : 'text-slate-900 hover:bg-yellow-50 hover:text-amber-700',
         dropdownBg: isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200',
-        togglerText: isDark ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100',
+        togglerText: isDark ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-900 hover:bg-slate-100',
         collapseBorder: isDark ? 'border-slate-700' : 'border-slate-200',
     };
 };

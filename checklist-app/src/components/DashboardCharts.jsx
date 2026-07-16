@@ -44,7 +44,7 @@ const DashboardCharts = ({ items, checklist, theme }) => {
         : 'bg-white border-slate-300 shadow-md shadow-slate-100';
 
     const textColor = theme === 'dark' ? 'text-white font-bold' : 'text-slate-900 font-bold';
-    const labelColor = theme === 'dark' ? 'text-white font-bold' : 'text-slate-800 font-bold';
+    const labelColor = theme === 'dark' ? 'text-white font-bold' : 'text-slate-900 font-bold';
     const trackStroke = theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)';
     const barBg = theme === 'dark' ? 'bg-white/10 border-white/10' : 'bg-slate-100 border-slate-300';
 
@@ -63,7 +63,7 @@ const DashboardCharts = ({ items, checklist, theme }) => {
                     </svg>
                     <div className="absolute flex flex-col items-center justify-center text-center">
                         <span className={`text-2xl font-black ${textColor}`}>{avanceGeneral}%</span>
-                        <span className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Real</span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Real</span>
                     </div>
                 </div>
 
@@ -84,7 +84,7 @@ const DashboardCharts = ({ items, checklist, theme }) => {
                 <div className="space-y-4 max-h-[200px] overflow-y-auto pr-2">
                     {dataChart.map((d, i) => (
                         <div key={i} className="flex items-center gap-4 text-xs">
-                            <div className={`w-[140px] truncate text-right font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`} title={d.name}>{d.name}</div>
+                            <div className={`w-[140px] truncate text-right font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`} title={d.name}>{d.name}</div>
                             <div className={`flex-1 h-6 rounded-full overflow-hidden relative border ${barBg}`}>
                                 <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-1000" style={{ width: `${d.avg}%` }}></div>
                             </div>

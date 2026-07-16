@@ -20,6 +20,8 @@ const Dashboard = ({ user, role, onLogout }) => {
     useEffect(() => {
         document.body.style.backgroundImage = 'none';
         document.body.style.backgroundColor = theme === 'dark' ? '#090d16' : '#f8fafc';
+        // Las variantes dark:* de Tailwind cuelgan de esta clase, no del SO.
+        document.documentElement.classList.toggle('dark', theme === 'dark');
     }, [theme]);
 
     const handleScrollJump = () => {

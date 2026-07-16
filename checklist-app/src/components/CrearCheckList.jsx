@@ -291,7 +291,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
         <div className={`${cardClass} border p-8 rounded-3xl mt-8 mx-auto max-w-[95%] animate-[fadeIn_0.3s_ease-out]`}>
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
                 <h2 className={`text-2xl lg:text-3xl font-extrabold text-transparent bg-clip-text ${theme === 'dark' ? 'bg-gradient-to-r from-yellow-300 to-yellow-500' : 'bg-gradient-to-r from-amber-600 to-yellow-600'}`}>{titlePrefix}</h2>
-                <button className={`${theme === 'dark' ? 'bg-white/10 hover:bg-white/20 border-white/30 text-white' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'} border text-sm font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors shadow`} onClick={onAtras}>
+                <button className={`${theme === 'dark' ? 'bg-white/10 hover:bg-white/20 border-white/30 text-white' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-900'} border text-sm font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors shadow`} onClick={onAtras}>
                     <span>&larr;</span> {"Volver al Listado"}
                 </button>
             </div>
@@ -304,7 +304,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
             <div className={`border rounded-lg overflow-hidden text-sm mb-8 ${theme === 'dark' ? 'border-slate-800 bg-slate-900/40' : 'border-slate-200 bg-white'}`}>
                 <div className={`flex flex-col md:flex-row border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                     <div className={`w-full md:w-1/3 p-4 border-r flex flex-col gap-3 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-                        <span className="font-bold text-[10px] uppercase tracking-wider text-slate-700 dark:text-slate-200">{"DESCRIPCIÓN DE EQUIPO(S) A INCORPORAR"}</span>
+                        <span className="font-bold text-[10px] uppercase tracking-wider text-slate-900 dark:text-slate-200">{"DESCRIPCIÓN DE EQUIPO(S) A INCORPORAR"}</span>
                         {metadata.equipos.map((eq, idx) => (
                             <div key={idx} className="relative group w-full flex items-center">
                                 <textarea 
@@ -331,7 +331,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                         <button onClick={addEquipo} className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-1.5 px-3 rounded self-start transition-colors border border-amber-500/20 shadow">{"Añadir otro activo"}</button>
 
                         <div className={`mt-3 pt-3 border-t ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-                            <span className="font-bold text-[10px] uppercase tracking-wider text-slate-700 dark:text-slate-200 block mb-2">{"FOTO DEL EQUIPO (MÁX. 3)"}</span>
+                            <span className="font-bold text-[10px] uppercase tracking-wider text-slate-900 dark:text-slate-200 block mb-2">{"FOTO DEL EQUIPO (MÁX. 3)"}</span>
                             <div className="flex flex-wrap gap-2 mb-2">
                                 {(metadata.imagenesEquipo || []).map((img, i) => (
                                     <div key={i} className="relative inline-block">
@@ -347,19 +347,19 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                                 ))}
                             </div>
                             {(!metadata.imagenesEquipo || metadata.imagenesEquipo.length < 3) && (
-                                <input type="file" accept="image/*" onChange={handleImageUpload} className="text-[10px] text-slate-700 dark:text-slate-200 font-bold w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-500 transition-all cursor-pointer" />
+                                <input type="file" accept="image/*" onChange={handleImageUpload} className="text-[10px] text-slate-900 dark:text-slate-200 font-bold w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-500 transition-all cursor-pointer" />
                             )}
                         </div>
                     </div>
                     <div className="w-full md:w-2/3 flex flex-col">
-                        <div className={`grid grid-cols-12 border-b font-bold text-[10px] uppercase tracking-wider text-slate-700 dark:text-slate-200 ${theme === 'dark' ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-100/80'}`}>
+                        <div className={`grid grid-cols-12 border-b font-bold text-[10px] uppercase tracking-wider text-slate-900 dark:text-slate-200 ${theme === 'dark' ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-100/80'}`}>
                             <div className={`col-span-4 p-2 border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} flex items-center`}>ROL</div>
                             <div className={`col-span-4 p-2 border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} flex items-center`}>{"Área"}</div>
                             <div className="col-span-4 p-2 flex items-center">Nombre representante</div>
                         </div>
                         {['lider', 'custodio', 'operador', 'mantenedor'].map((roleKey) => (
                             <div key={roleKey} className={`grid grid-cols-12 border-b items-stretch ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-                                <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-700'}`}>
+                                <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-900'}`}>
                                     {roleKey === 'lider' ? 'LÍDER DE PROYECTO' : roleKey}
                                 </div>
                                 <div className={`col-span-4 p-2 border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} flex items-center`}>
@@ -375,7 +375,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                         ))}
 
                         <div className={`grid grid-cols-12 border-b items-stretch ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-                            <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-700'}`}>{"Gerencia"}</div>
+                            <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-900'}`}>{"Gerencia"}</div>
                             <div className={`col-span-8 p-2 flex items-center ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                                 <select className={inputClasses + " text-xs py-1.5 px-2"} value={metadata.gerencia || ''} onChange={(e) => setMetadata(p => ({ ...p, gerencia: e.target.value }))}>
                                     <option value="">Seleccione Gerencia</option>
@@ -384,7 +384,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                             </div>
                         </div>
                         <div className={`grid grid-cols-12 border-b items-stretch ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-                            <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-700'}`}>{"Superintendencia"}</div>
+                            <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-900'}`}>{"Superintendencia"}</div>
                             <div className={`col-span-8 p-2 flex items-center ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                                 <select className={inputClasses + " text-xs py-1.5 px-2"} value={metadata.superintendencia || ''} onChange={(e) => setMetadata(p => ({ ...p, superintendencia: e.target.value }))}>
                                     <option value="">{acLoading ? "Cargando Superintendencias..." : "Seleccione Superintendencia"}</option>
@@ -393,7 +393,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                             </div>
                         </div>
                         <div className={`grid grid-cols-12 border-b items-stretch ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-                            <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-700'}`}>{"Unidad de proceso"}</div>
+                            <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-900'}`}>{"Unidad de proceso"}</div>
                             <div className={`col-span-8 p-2 flex items-center ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                                 <select className={inputClasses + " text-xs py-1.5 px-2"} value={metadata.unidadProceso || ''} onChange={(e) => setMetadata(p => ({ ...p, unidadProceso: e.target.value }))}>
                                     <option value="">{acLoading ? "Cargando Unidades de Proceso..." : "Seleccione Unidad de Proceso"}</option>
@@ -403,9 +403,9 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                         </div>
 
                         <div className={`grid grid-cols-12 items-stretch ${theme === 'dark' ? 'bg-black/20' : 'bg-slate-50'}`}>
-                            <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 text-slate-200' : 'border-slate-200 text-slate-800'}`}>TIPO DE FORMULARIO:</div>
+                            <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 text-slate-200' : 'border-slate-200 text-slate-900'}`}>TIPO DE FORMULARIO:</div>
                             <div className="col-span-8 p-2 flex items-center">
-                                <input type="text" className={`${inputClasses} bg-transparent border-none text-slate-700 dark:text-slate-200 font-bold cursor-not-allowed`} value={getTipoFormulario()} readOnly />
+                                <input type="text" className={`${inputClasses} bg-transparent border-none text-slate-900 dark:text-slate-200 font-bold cursor-not-allowed`} value={getTipoFormulario()} readOnly />
                             </div>
                         </div>
                     </div>
@@ -418,7 +418,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                     </div>
                     <div className={`flex border-b ${theme === 'dark' ? 'border-slate-800 bg-black/25' : 'border-slate-200 bg-slate-100/30'}`}>
                         <div className={`w-1/3 p-3 font-bold text-xs flex items-center border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>Fecha fin diligenciamiento</div>
-                        <div className="w-2/3 p-2"><input type="text" className={`${inputClasses} max-w-[300px] cursor-not-allowed text-slate-700 dark:text-slate-200 font-bold`} value={"Se completará al finalizar"} readOnly /></div>
+                        <div className="w-2/3 p-2"><input type="text" className={`${inputClasses} max-w-[300px] cursor-not-allowed text-slate-900 dark:text-slate-200 font-bold`} value={"Se completará al finalizar"} readOnly /></div>
                     </div>
                     <div className={`flex ${theme === 'dark' ? 'bg-black/10' : 'bg-transparent'}`}>
                         <div className={`w-1/3 p-3 font-bold text-xs flex items-center border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>Comentarios</div>
@@ -439,15 +439,15 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                     <form onSubmit={handleAddItem} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                             <div className="md:col-span-12">
-                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{"Descripción de Actividad"}</label>
+                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{"Descripción de Actividad"}</label>
                                 <textarea className={inputClasses} value={formData.actividades} onChange={(e) => setFormData({ ...formData, actividades: e.target.value })} rows="2" required></textarea>
                             </div>
                             <div className="md:col-span-4">
-                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>Responsable</label>
+                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>Responsable</label>
                                 <PeoplePicker className={inputClasses} value={formData.nombreResponsable} onChange={(val) => setFormData(prev => ({ ...prev, nombreResponsable: val }))} />
                             </div>
                             <div className="md:col-span-4">
-                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>Entregable</label>
+                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>Entregable</label>
                                 <input type="text" className={inputClasses} value={formData.entregable} onChange={(e) => setFormData({ ...formData, entregable: e.target.value })} required></input>
                             </div>
                             <div className="md:col-span-2">
@@ -468,7 +468,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
 
             <div className="mb-8">
                 {listadoOrdenado.length === 0 ? (
-                    <div className={`text-center py-8 rounded-xl border border-dashed font-bold ${theme === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-300 text-slate-700'}`}>
+                    <div className={`text-center py-8 rounded-xl border border-dashed font-bold ${theme === 'dark' ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-300 text-slate-900'}`}>
                         <p>Aún no hay ítems en este checklist.</p>
                     </div>
                 ) : (
@@ -492,7 +492,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                                         <div className="flex-1 min-w-0 flex items-start gap-3">
                                             <span className={`text-xs font-bold px-2 py-1 rounded mt-0.5 ${
                                                 isInactive 
-                                                    ? (theme === 'dark' ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600') 
+                                                    ? (theme === 'dark' ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-700') 
                                                     : 'bg-amber-600 text-white shadow'
                                             }`}>
                                                 #{idx + 1}
@@ -503,8 +503,8 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                                                 ) : (
                                                     <p className={`font-bold text-sm leading-snug break-words ${
                                                         isInactive 
-                                                            ? (theme === 'dark' ? 'text-slate-700 dark:text-slate-200 font-bold line-through decoration-slate-500/80' : 'text-slate-700 dark:text-slate-200 font-bold line-through decoration-slate-450') 
-                                                            : theme==='dark' ? 'text-yellow-400' : 'text-slate-800'
+                                                            ? (theme === 'dark' ? 'text-slate-900 dark:text-slate-200 font-bold line-through decoration-slate-500/80' : 'text-slate-900 dark:text-slate-200 font-bold line-through decoration-slate-400') 
+                                                            : theme==='dark' ? 'text-yellow-400' : 'text-slate-900'
                                                     }`}>
                                                         {it.actividades}
                                                     </p>
@@ -525,7 +525,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                                         {!isInactive && (
                                             <div className="flex flex-wrap lg:flex-nowrap items-center gap-6 text-xs min-w-fit">
                                                 <div className="w-44">
-                                                    <span className="text-slate-700 dark:text-slate-200 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Responsable</span>
+                                                    <span className="text-slate-900 dark:text-slate-200 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Responsable</span>
                                                     {isEditing ? (
                                                         <PeoplePicker className="bg-transparent text-xs outline-none" value={it.nombreResponsable} onChange={(val) => handleItemEdit(it.id, 'nombreResponsable', val)} />
                                                     ) : (
@@ -533,18 +533,18 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                                                     )}
                                                 </div>
                                                 <div className="w-36">
-                                                    <span className="text-slate-700 dark:text-slate-200 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Entregable</span>
+                                                    <span className="text-slate-900 dark:text-slate-200 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Entregable</span>
                                                     <span className="truncate block font-semibold max-w-[140px]" title={it.entregable}>{it.entregable || '-'}</span>
                                                 </div>
                                                 <div className={`p-2 rounded border w-36 ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-300'}`}>
-                                                    <span className="text-slate-700 dark:text-slate-200 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Fechas Plan</span>
+                                                    <span className="text-slate-900 dark:text-slate-200 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Fechas Plan</span>
                                                     {isEditing ? (
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-1"><span className="text-blue-500 dark:text-blue-300 font-bold">I:</span><input type="date" className="bg-transparent border-none text-[10px] w-full" value={it.fechaBaselineInicio} onChange={(e) => handleItemEdit(it.id, 'fechaBaselineInicio', e.target.value)} /></div>
                                                             <div className="flex items-center gap-1"><span className="text-blue-500 dark:text-blue-300 font-bold">F:</span><input type="date" className="bg-transparent border-none text-[10px] w-full" value={it.fechaBaselineFin} onChange={(e) => handleItemEdit(it.id, 'fechaBaselineFin', e.target.value)} /></div>
                                                         </div>
                                                     ) : (
-                                                        <div className="text-[10px] font-semibold text-slate-800 dark:text-slate-200 font-bold">
+                                                        <div className="text-[10px] font-semibold text-slate-900 dark:text-slate-200 font-bold">
                                                             <span><span className="text-blue-500 dark:text-blue-300 font-bold">I:</span> {it.fechaBaselineInicio || '-'}</span>
                                                             <span className="block mt-0.5"><span className="text-blue-500 dark:text-blue-300 font-bold">F:</span> {it.fechaBaselineFin || '-'}</span>
                                                         </div>
@@ -607,7 +607,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                         <h3 className={`text-lg font-bold mb-3 flex items-center gap-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-600'}`}>
                             {"⚠ Inactivar Tarea"}
                         </h3>
-                        <p className={`text-xs mb-4 font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                        <p className={`text-xs mb-4 font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
                             {"¿Por qué lo vas a inactivar? Por favor ingrese una justificación. Esta acción quedará registrada bajo su usuario corporativo."}
                         </p>
                         <textarea
@@ -621,7 +621,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                         <div className="flex justify-end gap-3 text-xs font-bold">
                             <button
                                 onClick={() => { setInactivatingItemId(null); setInactivateReasonText(''); }}
-                                className={`${theme === 'dark' ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'} px-4 py-2 rounded-lg transition-colors`}
+                                className={`${theme === 'dark' ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'} px-4 py-2 rounded-lg transition-colors`}
                             >
                                 {"Cancelar"}
                             </button>
