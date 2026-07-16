@@ -21,6 +21,8 @@ const itemsActivos = (items) => (items || []).filter(it => (it.Estado || it.esta
 
 export const esHistorico = (chk) => chk?.historico === true || chk?.Historico === true;
 
+export const esFinalizado = (chk) => chk?.Estado === 'Finalizado';
+
 // El avance ESPERADO se mide contra el plan, por eso se usan las fechas baseline.
 // Si una tarea no tiene baseline, se cae a las fechas reales.
 const getInicioPlan = (it) => it.FechaBaselineInicio || it.fechaBaselineInicio || it.FechaInicio || it.fechaInicio;
@@ -93,14 +95,16 @@ export const calcularEsperadoChecklist = (checklist) => {
     return calcularCumplimiento(new Date(v.inicio), new Date(v.fin));
 };
 
-// % esperado global: misma logica que un checklist pero sobre la ventana de TODAS
-// las tareas activas de TODOS los checklists, incluidos los finalizados.
+// % esperado global: misma logica que un checklist pero sobre la ventana de las
+// tareas activas de los checklists SIN finalizar. Los finalizados se excluyen a
+// proposito: sus fechas viejas estiran la ventana hacia atras y dispararian el
+// esperado hacia 100%, hundiendo el SPI. Si cuentan para el real (ver abajo).
 export const calcularEsperadoGlobal = (checklists) => {
-    const todos = checklists || [];
-    if (todos.length === 0) return 0;
+    const abiertos = (checklists || []).filter(chk => !esFinalizado(chk));
+    if (abiertos.length === 0) return 0;
 
     const todasLasTareas = [];
-    todos.forEach(chk => { todasLasTareas.push(...itemsActivos(chk.items)); });
+    abiertos.forEach(chk => { todasLasTareas.push(...itemsActivos(chk.items)); });
     if (todasLasTareas.length === 0) return 0;
 
     const v = ventanaFechas(todasLasTareas);
