@@ -21,8 +21,6 @@ const itemsActivos = (items) => (items || []).filter(it => (it.Estado || it.esta
 
 export const esHistorico = (chk) => chk?.historico === true || chk?.Historico === true;
 
-export const esFinalizado = (chk) => chk?.Estado === 'Finalizado';
-
 // El avance ESPERADO se mide contra el plan, por eso se usan las fechas baseline.
 // Si una tarea no tiene baseline, se cae a las fechas reales.
 const getInicioPlan = (it) => it.FechaBaselineInicio || it.fechaBaselineInicio || it.FechaInicio || it.fechaInicio;
@@ -96,13 +94,13 @@ export const calcularEsperadoChecklist = (checklist) => {
 };
 
 // % esperado global: misma logica que un checklist pero sobre la ventana de TODAS
-// las tareas activas de TODOS los checklists sin finalizar.
+// las tareas activas de TODOS los checklists, incluidos los finalizados.
 export const calcularEsperadoGlobal = (checklists) => {
-    const abiertos = (checklists || []).filter(chk => !esFinalizado(chk));
-    if (abiertos.length === 0) return 0;
+    const todos = checklists || [];
+    if (todos.length === 0) return 0;
 
     const todasLasTareas = [];
-    abiertos.forEach(chk => { todasLasTareas.push(...itemsActivos(chk.items)); });
+    todos.forEach(chk => { todasLasTareas.push(...itemsActivos(chk.items)); });
     if (todasLasTareas.length === 0) return 0;
 
     const v = ventanaFechas(todasLasTareas);
@@ -110,13 +108,14 @@ export const calcularEsperadoGlobal = (checklists) => {
     return calcularCumplimiento(new Date(v.inicio), new Date(v.fin));
 };
 
-// % real global: promedio de los % reales de los checklists sin finalizar.
+// % real global: promedio de los % reales de todos los checklists, incluidos los
+// finalizados (aportan su 100% y suben el promedio).
 export const calcularRealGlobal = (checklists) => {
-    const abiertos = (checklists || []).filter(chk => !esFinalizado(chk));
-    if (abiertos.length === 0) return 0;
+    const todos = checklists || [];
+    if (todos.length === 0) return 0;
     let total = 0;
-    abiertos.forEach(chk => { total += calcularRealChecklist(chk); });
-    return Math.round(total / abiertos.length);
+    todos.forEach(chk => { total += calcularRealChecklist(chk); });
+    return Math.round(total / todos.length);
 };
 
 // SPI = Real / Esperado, en %. Si todavia no se espera avance no puede haber atraso.
