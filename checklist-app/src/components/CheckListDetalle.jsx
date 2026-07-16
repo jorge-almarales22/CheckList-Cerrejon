@@ -810,7 +810,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             </div>
 
             {checklist.Metadata && (
-                <div className={`border rounded-2xl overflow-hidden text-sm mb-8 shadow-lg ${theme === 'dark' ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'}`}>
+                <div className="flex flex-col xl:flex-row gap-5 mb-8 items-stretch">
+                <div className={`flex-1 min-w-0 border rounded-2xl overflow-hidden text-sm shadow-lg ${theme === 'dark' ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'}`}>
                     {isAdmin && !isFinalizado && (
                         <div className={`px-5 py-2 border-b flex justify-between items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-amber-50'}`}>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Metadatos del Checklist</span>
@@ -926,10 +927,10 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     key={roleKey}
                                     className={`grid grid-cols-12 border-b items-stretch ${theme === 'dark' ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`}
                                 >
-                                    <div className={`col-span-3 p-3 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-900'}`}>
+                                    <div className={`col-span-3 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-900'}`}>
                                         {roleKey === 'lider' ? 'LÍDER DE PROYECTO' : roleKey}
                                     </div>
-                                    <div className={`col-span-4 p-3 border-r ${theme === 'dark' ? 'border-slate-800 text-slate-200 font-bold' : 'border-slate-200 text-slate-900 font-bold'} flex items-center text-xs`}>
+                                    <div className={`col-span-4 p-2 border-r ${theme === 'dark' ? 'border-slate-800 text-slate-200 font-bold' : 'border-slate-200 text-slate-900 font-bold'} flex items-center text-xs`}>
                                         {isEditingMetadata ? (
                                             <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.roles?.[roleKey]?.area || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, roles: { ...editMetadataForm.roles, [roleKey]: { ...editMetadataForm.roles[roleKey], area: e.target.value } } })}>
                                                 <option value="">Seleccionar...</option>
@@ -939,7 +940,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                             checklist.Metadata.roles[roleKey].area || '-'
                                         )}
                                     </div>
-                                    <div className={`col-span-5 p-3 flex items-center gap-3 ${theme === 'dark' ? 'text-slate-200 font-bold' : 'text-slate-900 font-bold'}`}>
+                                    <div className={`col-span-5 p-2 flex items-center gap-2 ${theme === 'dark' ? 'text-slate-200 font-bold' : 'text-slate-900 font-bold'}`}>
                                         {isEditingMetadata ? (
                                             <PeoplePicker
                                                 className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none"
@@ -1035,6 +1036,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                             </div>
                         </div>
                     </div>
+                </div>
+                {/* Graficas al lado de los metadatos: torta arriba, barras abajo (Ver mas en modal). */}
+                <div className="w-full xl:w-[380px] shrink-0 flex flex-col gap-4">
+                    <DashboardCharts items={checklist.items} checklist={checklist} theme={theme} layout="side" />
+                </div>
                 </div>
             )}
 
@@ -1386,8 +1392,6 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     {"Ver Gantt Detallado"}
                 </button>
             </div>
-
-            <DashboardCharts items={checklist.items} checklist={checklist} theme={theme} />
 
             <div className={`${cardClass} border p-6 rounded-3xl mt-8`}>
                 <h3 className={`text-xl font-bold mb-4 flex items-center gap-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-700'}`}>

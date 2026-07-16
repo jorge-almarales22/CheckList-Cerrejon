@@ -110,8 +110,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
                     <h2 className="text-2xl md:text-3xl font-black flex items-center gap-3 flex-wrap">
                         <svg className={`w-7 h-7 md:w-8 md:h-8 ${theme==='dark'?'text-yellow-400':'text-amber-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
-                        Listado de Checklists
-                        <span className="bg-yellow-500 text-black text-sm font-bold px-3 py-1 rounded-full">{filtrados.length}</span>
+                        Panel de Incorporaciones
                     </h2>
                     {(role === 'Administrador' || role === 'Desarrollador') && (
                         <button className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-2.5 md:py-3 px-5 md:px-6 rounded-xl transition-all shadow shadow-slate-900/10 w-full sm:w-auto" onClick={() => setShowTemplateModal(true)}>
@@ -168,7 +167,8 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                             <thead>
                                 <tr className={`${theme==='dark'?'bg-slate-950/40 text-white':'bg-slate-100 text-slate-900'} text-xs uppercase font-extrabold tracking-wider`}>
                                     <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800">Nombre del Checklist</th>
-                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800">Progreso (Plan vs Real)</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800">Plan (Esperado)</th>
+                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800">Completado (Real)</th>
                                     <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">Gerencia</th>
                                     <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden xl:table-cell">Superintendencia</th>
                                     <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Tipo de incorporación</th>
@@ -176,7 +176,6 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                     <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">Equipo(s)</th>
                                     <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Fecha inicio</th>
                                     <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Fecha fin</th>
-                                    <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800">Completado</th>
                                     <th className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-800 text-center">Acciones</th>
                                 </tr>
                             </thead>
@@ -195,10 +194,15 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                                 {chk.Name || "Sin nombre"}
                                             </td>
                                             <td className="p-3 md:p-4">
-                                                <div className="flex flex-col gap-1 text-xs text-slate-900 dark:text-slate-100 font-bold">
-                                                    <span>Plan: <span className="font-black">{promCalc}%</span></span>
-                                                    <span>Real: <span className={`font-black ${isDelayed ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>{promReal}%</span></span>
+                                                <div className="flex flex-col gap-1.5 text-xs text-slate-900 dark:text-slate-100 font-bold">
+                                                    <span>Plan: <span className="font-black text-base">{promCalc}%</span></span>
                                                     <SPIBadge real={promReal} esperado={promCalc} />
+                                                </div>
+                                            </td>
+                                            <td className="p-3 md:p-4">
+                                                <div className="flex items-center gap-2 text-xs font-bold">
+                                                    <span className={`font-black text-base ${isDelayed ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>{promReal}%</span>
+                                                    {chk.Estado === 'Finalizado' && <span className="bg-green-500/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded text-[10px] font-extrabold">COMPLETADO</span>}
                                                 </div>
                                             </td>
                                             <td className="p-3 md:p-4 text-xs text-slate-900 dark:text-slate-200 font-bold hidden lg:table-cell">{chk.Metadata?.gerencia || '-'}</td>
@@ -211,13 +215,6 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                             <td className="p-3 md:p-4 text-xs text-slate-900 dark:text-slate-200 font-bold whitespace-nowrap hidden md:table-cell">{chk.Metadata?.fechaInicioDiligenciamiento || '-'}</td>
                                             <td className="p-3 md:p-4 text-xs text-slate-900 dark:text-slate-200 font-bold whitespace-nowrap hidden md:table-cell">
                                                 {chk.Estado === 'Finalizado' ? (chk.Metadata?.fechaFinDiligenciamiento || '-') : 'En curso'}
-                                            </td>
-                                            <td className="p-3 md:p-4 text-xs">
-                                                {chk.Estado === 'Finalizado' ? (
-                                                    <span className="bg-green-500/20 text-green-600 dark:text-green-400 px-2 py-1 rounded font-bold">Completado</span>
-                                                ) : (
-                                                    <span className={`font-bold ${promReal >= 100 ? 'text-green-700 dark:text-green-400' : 'text-slate-900 dark:text-slate-200'}`}>{promReal}%</span>
-                                                )}
                                             </td>
                                             <td className="p-3 md:p-4 text-center">
                                                 {chk.Estado === 'Finalizado' ? (

@@ -21,8 +21,6 @@ const itemsActivos = (items) => (items || []).filter(it => (it.Estado || it.esta
 
 export const esHistorico = (chk) => chk?.historico === true || chk?.Historico === true;
 
-export const esFinalizado = (chk) => chk?.Estado === 'Finalizado';
-
 // El avance ESPERADO se mide contra el plan, por eso se usan las fechas baseline.
 // Si una tarea no tiene baseline, se cae a las fechas reales.
 const getInicioPlan = (it) => it.FechaBaselineInicio || it.fechaBaselineInicio || it.FechaInicio || it.fechaInicio;
@@ -85,8 +83,18 @@ export const calcularRealChecklist = (checklist) => {
 // tiempo ha transcurrido. NO es el promedio de los % de cada tarea.
 export const calcularEsperadoChecklist = (checklist) => {
     if (!checklist) return 0;
-    // Un historico ya completado al 100% se considera tambien 100% planeado.
-    if (esHistorico(checklist) && calcularRealChecklist(checklist) >= 100) return 100;
+
+    // Los historicos no tienen fechas planeadas por tarea: se usa la ventana de
+    // diligenciamiento del checklist (Inicio -> Fin) para medir el % esperado.
+    if (esHistorico(checklist)) {
+        const ini = checklist.Metadata?.fechaInicioDiligenciamiento;
+        const fin = checklist.Metadata?.fechaFinDiligenciamiento;
+        if (esFechaValida(ini) && esFechaValida(fin)) {
+            return calcularCumplimiento(ini, fin);
+        }
+        // Sin fechas de diligenciamiento: si ya esta completo, el plan tambien.
+        return calcularRealChecklist(checklist) >= 100 ? 100 : 0;
+    }
 
     const items = itemsActivos(checklist.items);
     if (items.length === 0) return 0;
@@ -95,25 +103,20 @@ export const calcularEsperadoChecklist = (checklist) => {
     return calcularCumplimiento(new Date(v.inicio), new Date(v.fin));
 };
 
-// % esperado global: misma logica que un checklist pero sobre la ventana de las
-// tareas activas de los checklists SIN finalizar. Los finalizados se excluyen a
-// proposito: sus fechas viejas estiran la ventana hacia atras y dispararian el
-// esperado hacia 100%, hundiendo el SPI. Si cuentan para el real (ver abajo).
+// % esperado global: promedio del % esperado de TODOS los checklists, incluidos
+// los finalizados y los que estan al 100% (cuentan para todo). Cada checklist
+// calcula su esperado sobre su propia ventana, asi que un finalizado antiguo
+// aporta su ~100% sin estirar ninguna ventana comun.
 export const calcularEsperadoGlobal = (checklists) => {
-    const abiertos = (checklists || []).filter(chk => !esFinalizado(chk));
-    if (abiertos.length === 0) return 0;
-
-    const todasLasTareas = [];
-    abiertos.forEach(chk => { todasLasTareas.push(...itemsActivos(chk.items)); });
-    if (todasLasTareas.length === 0) return 0;
-
-    const v = ventanaFechas(todasLasTareas);
-    if (!v) return 0;
-    return calcularCumplimiento(new Date(v.inicio), new Date(v.fin));
+    const todos = checklists || [];
+    if (todos.length === 0) return 0;
+    let total = 0;
+    todos.forEach(chk => { total += calcularEsperadoChecklist(chk); });
+    return Math.round(total / todos.length);
 };
 
 // % real global: promedio de los % reales de todos los checklists, incluidos los
-// finalizados (aportan su 100% y suben el promedio).
+// finalizados (aportan su avance y suben el promedio).
 export const calcularRealGlobal = (checklists) => {
     const todos = checklists || [];
     if (todos.length === 0) return 0;

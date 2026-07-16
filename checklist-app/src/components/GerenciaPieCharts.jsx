@@ -83,35 +83,43 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
         );
     };
 
+    // Contenedor a todo el ancho de la pantalla con el amarillo Cerrejon (#ffc000).
+    const fullBleed = { width: '100vw', marginLeft: 'calc(50% - 50vw)', background: '#ffc000' };
+
     return (
-        <div className="mb-6 animate-[fadeIn_0.5s_ease-out]">
-            <div className={`mb-3 flex items-center justify-between ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                <h2 className={`text-base md:text-lg font-black flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    <svg className={`w-5 h-5 ${isDark ? 'text-yellow-400' : 'text-amber-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-                    </svg>
-                    Avance Esperado vs Real por Gerencia
-                </h2>
-                <div className="flex items-center gap-4 text-xs md:text-sm font-extrabold">
-                    <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded-full inline-block" style={{ background: isDark ? '#94a3b8' : '#64748b' }}></span>
-                        <span className={isDark ? 'text-white' : 'text-slate-900'}>Esperado Global: {esperadoGlobal}%</span>
+        <div style={fullBleed} className="mb-6 py-6 animate-[fadeIn_0.5s_ease-out] shadow-inner">
+            <div className="max-w-[95%] mx-auto">
+                <div className="mb-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 text-slate-900">
+                    <h2 className="text-base md:text-lg font-black flex items-center gap-2 text-slate-900">
+                        <svg className="w-5 h-5 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                        </svg>
+                        Avance Esperado vs Real por Gerencia
+                    </h2>
+                    <div className="flex items-center flex-wrap gap-2 md:gap-3 text-xs md:text-sm font-extrabold bg-white/90 border border-black/10 rounded-xl px-3 py-2 shadow-sm">
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-full inline-block" style={{ background: '#64748b' }}></span>
+                            <span className="text-slate-900">Esperado Global: {esperadoGlobal}%</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-full bg-yellow-500 border border-black/20 inline-block"></span>
+                            <span className="text-slate-900">Real Global: {realGlobal}%</span>
+                        </div>
+                        <SPIBadge real={realGlobal} esperado={esperadoGlobal} />
+                        <span className="bg-slate-900 text-white px-2.5 py-1 rounded-lg text-[11px] font-black tracking-wide whitespace-nowrap">
+                            {checklists.length} checklist{checklists.length !== 1 ? 's' : ''}
+                        </span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
-                        <span className={isDark ? 'text-white' : 'text-slate-900'}>Real Global: {realGlobal}%</span>
-                    </div>
-                    <SPIBadge real={realGlobal} esperado={esperadoGlobal} />
                 </div>
-            </div>
-            <p className={`text-xs mt-1 mb-3 font-bold ${subLabelColor}`}>
-                Gris = % esperado (según tiempo transcurrido) · Amarillo = % real (avance promedio)
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                {data.map((d) => (
-                    <Pie key={d.gerencia} {...d} theme={theme} />
-                ))}
+                <p className="text-xs mt-1 mb-3 font-bold text-slate-800">
+                    Gris = % esperado (según tiempo transcurrido) · Amarillo = % real (avance promedio)
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                    {data.map((d) => (
+                        <Pie key={d.gerencia} {...d} theme={theme} />
+                    ))}
+                </div>
             </div>
         </div>
     );
