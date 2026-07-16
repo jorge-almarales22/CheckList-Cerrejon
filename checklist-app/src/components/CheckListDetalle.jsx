@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { calcularCumplimiento } from '../utils/calculations';
 import { notificarTeams } from '../utils/notifications';
-import { getRequestDigest, saveToSPList, updateSPListItem, deleteSPListItem } from '../utils/sharepointApi';
-import { fileToBase64, comprimirImagen } from '../utils/imageCompression';
-import { AREAS } from '../data/constants';
+import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, recycleFile, dataUrlToUint8Array } from '../utils/sharepointApi';
+import { comprimirImagen } from '../utils/imageCompression';
+import { AREAS, AC_HOST } from '../data/constants';
 import PeoplePicker from './PeoplePicker';
 import DashboardCharts from './DashboardCharts';
 import GanttChart from './GanttChart';
@@ -62,21 +62,36 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [isEditingMetadata, setIsEditingMetadata] = useState(false);
     const [editMetadataForm, setEditMetadataForm] = useState(null);
 
-    const fetchEvidencePresence = async () => {
+    // Indica qué tareas tienen evidencias, combinando registros legacy (base64 en la
+    // lista) con los archivos nuevos guardados en la carpeta del checklist.
+    const fetchEvidencePresence = async (checklistData) => {
+        const presenceMap = {};
+        // Legacy: registros base64 aún presentes en la lista.
         try {
             const res = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('EvidenciasChecklist')/items?$select=ID_Registro&$top=5000`, {
                 headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
             });
             const json = await res.json();
-            const results = json.d?.results || [];
-            const presenceMap = {};
-            results.forEach(r => {
+            (json.d?.results || []).forEach(r => {
                 if (r.ID_Registro) presenceMap[r.ID_Registro] = true;
             });
-            setEvidenciasPresence(presenceMap);
         } catch (err) {
-            console.error("Error consultando presencia de evidencias:", err);
+            console.error("Error consultando presencia de evidencias (lista):", err);
         }
+        // Nuevo: archivos en la carpeta de evidencias del checklist.
+        try {
+            if (checklistData?.Tipo && checklistData?.Name) {
+                const folderUrl = getEvidenciasFolderUrl(checklistData.Tipo, checklistData.Name);
+                const files = await listFolderFiles(folderUrl);
+                files.forEach(f => {
+                    const m = f.Name.match(/^Evidencia_([^_]+)_/);
+                    if (m) presenceMap[m[1]] = true;
+                });
+            }
+        } catch (err) {
+            console.error("Error consultando presencia de evidencias (carpeta):", err);
+        }
+        setEvidenciasPresence(presenceMap);
     };
 
     const editingIdRef = useRef(editingId);
@@ -112,11 +127,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 SharePointId: row.Id
                             };
                         });
-                        fetchEvidencePresence();
+                        fetchEvidencePresence(parsedData);
                     } else {
                         setChecklist({ ...parsedData, SharePointId: row.Id });
                         setGeneralComment(parsedData.ComentarioGeneral || '');
-                        fetchEvidencePresence();
+                        fetchEvidencePresence(parsedData);
                     }
                 }
             } catch (error) {
@@ -168,46 +183,91 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const cargarEvidencias = async (itemId) => {
         setCargandoEvidencias(prev => ({ ...prev, [itemId]: true }));
         try {
-            const res = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('EvidenciasChecklist')/items?$filter=ID_Registro eq '${itemId}'&$select=Id,Data,Title`, {
-                headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
-            });
-            const json = await res.json();
-            const list = json.d.results || [];
-            setEvidenciasItem(prev => ({ ...prev, [itemId]: list }));
-            setEvidenciasPresence(prev => ({ ...prev, [itemId]: list.length > 0 }));
-        } catch (error) {
-            console.error("Error cargando evidencias", error);
+            const combined = [];
+            // Legacy: evidencias en base64 dentro de la lista.
+            try {
+                const res = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('EvidenciasChecklist')/items?$filter=ID_Registro eq '${itemId}'&$select=Id,Data,Title`, {
+                    headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
+                });
+                const json = await res.json();
+                (json.d?.results || []).forEach(it => combined.push({
+                    Id: `list_${it.Id}`,
+                    source: 'list',
+                    listId: it.Id,
+                    Name: it.Title,
+                    Data: it.Data,
+                    isImage: !!(it.Data && it.Data.startsWith('data:image'))
+                }));
+            } catch (error) {
+                console.error("Error cargando evidencias legacy", error);
+            }
+            // Nuevo: archivos en la carpeta del checklist.
+            try {
+                if (checklist?.Tipo && checklist?.Name) {
+                    const folderUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
+                    const files = await listFolderFiles(folderUrl);
+                    files
+                        .filter(f => f.Name.startsWith(`Evidencia_${itemId}_`))
+                        .forEach(f => combined.push({
+                            Id: `file_${f.ServerRelativeUrl}`,
+                            source: 'file',
+                            fileRef: f.ServerRelativeUrl,
+                            Name: f.Name,
+                            Data: `${AC_HOST}${f.ServerRelativeUrl}`,
+                            isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
+                        }));
+                }
+            } catch (error) {
+                console.error("Error cargando evidencias (carpeta)", error);
+            }
+            setEvidenciasItem(prev => ({ ...prev, [itemId]: combined }));
+            setEvidenciasPresence(prev => ({ ...prev, [itemId]: combined.length > 0 }));
+        } finally {
+            setCargandoEvidencias(prev => ({ ...prev, [itemId]: false }));
         }
-        setCargandoEvidencias(prev => ({ ...prev, [itemId]: false }));
     };
 
     const handleFileUpload = async (itemId, e) => {
         const files = Array.from(e.target.files);
         if (!files.length) return;
+        if (!checklist?.Tipo || !checklist?.Name) {
+            alert('No se pudo determinar el checklist para guardar la evidencia.');
+            return;
+        }
         setIsUploading(true);
         try {
             const digest = await getRequestDigest();
+            // Carpeta destino: /Evidencias/{Checklist Tipo}/{Nombre del Checklist}/
+            const folderUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
+            await ensureFolder(folderUrl, digest);
+
             for (let file of files) {
-                let base64Data = "";
+                let body;
+                let ext;
 
                 if (file.type.startsWith('image/')) {
-                    base64Data = await comprimirImagen(file, 1024, 0.6);
+                    // Se comprime la imagen y se convierte a binario para subirla como archivo.
+                    const dataUrl = await comprimirImagen(file, 1024, 0.6);
+                    body = dataUrlToUint8Array(dataUrl);
+                    ext = 'jpg';
                 } else {
-                    const maxSize = 2 * 1024 * 1024;
+                    const maxSize = 25 * 1024 * 1024;
                     if (file.size > maxSize) {
-                        alert(`El archivo "${file.name}" supera el límite de 2MB. SharePoint no puede procesar documentos de texto tan pesados por esta vía.`);
+                        alert(`El archivo "${file.name}" supera el límite de 25MB.`);
                         continue;
                     }
-                    base64Data = await fileToBase64(file);
+                    body = await file.arrayBuffer();
+                    ext = (file.name.split('.').pop() || 'dat').replace(/[^a-z0-9]/gi, '') || 'dat';
                 }
 
-                if (base64Data) {
-                    await saveToSPList('EvidenciasChecklist', {
-                        Title: `Evidencia_${itemId}_${Date.now()}`,
-                        ID_Registro: itemId.toString(),
-                        Data: base64Data
-                    }, digest);
-                }
+                // El itemId va en el nombre para poder filtrar las evidencias por tarea.
+                const baseName = file.name
+                    .replace(/\.[^.]+$/, '')
+                    .replace(/[~"#%&*:<>?/\\{|}']/g, '_')
+                    .replace(/\s+/g, '_')
+                    .slice(0, 60) || 'archivo';
+                const fileName = `Evidencia_${itemId}_${Date.now()}_${baseName}.${ext}`;
+                await uploadFileToFolder(folderUrl, fileName, body, digest);
             }
 
             alert('Proceso de carga finalizado.');
@@ -221,11 +281,15 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         }
     };
 
-    const eliminarEvidencia = async (itemId, evidenciaId) => {
+    const eliminarEvidencia = async (itemId, ev) => {
         if (!window.confirm("¿Seguro que deseas eliminar esta evidencia?")) return;
         try {
             const digest = await getRequestDigest();
-            await deleteSPListItem('EvidenciasChecklist', evidenciaId, digest);
+            if (ev.source === 'file') {
+                await recycleFile(ev.fileRef, digest);
+            } else {
+                await deleteSPListItem('EvidenciasChecklist', ev.listId, digest);
+            }
             await cargarEvidencias(itemId);
         } catch (error) {
             console.error("Error eliminando evidencia", error);
@@ -1143,7 +1207,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                             ) : (
                                                                 evidenciasItem[it.Id].map(ev => (
                                                                     <div key={ev.Id} className="relative group border border-slate-200 dark:border-slate-800 rounded-md p-1 bg-white dark:bg-slate-900 shadow-lg">
-                                                                        {ev.Data && ev.Data.startsWith('data:image') ? (
+                                                                        {ev.isImage ? (
                                                                             <img src={ev.Data} className="h-16 w-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity" onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(evidenciasItem[it.Id].findIndex(e => e.Id === ev.Id)); }} />
                                                                         ) : (
                                                                             <div className="h-16 w-16 flex flex-col items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-200 font-bold rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-850 transition-colors text-center" onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(evidenciasItem[it.Id].findIndex(e => e.Id === ev.Id)); }}>
@@ -1151,7 +1215,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                                             </div>
                                                                         )}
                                                                         {!isFinalizado && (isAdmin || isMyTask) && (
-                                                                            <button onClick={() => eliminarEvidencia(it.Id, ev.Id)} className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-md">&times;</button>
+                                                                            <button onClick={() => eliminarEvidencia(it.Id, ev)} className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-md">&times;</button>
                                                                         )}
                                                                     </div>
                                                                 ))
@@ -1319,15 +1383,20 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                             </button>
                         )}
 
-                        {modalEvidences[activeEvidenciaIndex].Data?.startsWith('data:image') ? (
+                        {modalEvidences[activeEvidenciaIndex].isImage ? (
                             <img src={modalEvidences[activeEvidenciaIndex].Data} alt="Evidencia" className="max-h-[90vh] max-w-[90vw] object-contain drop-shadow-2xl rounded-lg" />
                         ) : (
                             <div className="flex flex-col items-center justify-center space-y-6 bg-slate-900 p-10 rounded-2xl border border-slate-800 shadow-2xl">
                                 <svg className="w-24 h-24 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                 <div className="text-white text-lg font-bold text-center">Este documento (PDF, Word, Excel, etc.) requiere abrirse en una pestaña nueva.</div>
                                 <button onClick={() => {
-                                    const data = modalEvidences[activeEvidenciaIndex].Data;
-                                    if (data) {
+                                    const ev = modalEvidences[activeEvidenciaIndex];
+                                    const data = ev.Data;
+                                    if (!data) return;
+                                    if (ev.source === 'file' || /^https?:/i.test(data)) {
+                                        // Archivo real en SharePoint: se abre directamente en una pestaña nueva.
+                                        window.open(data, '_blank');
+                                    } else {
                                         const win = window.open();
                                         win.document.write(`<iframe src="${data}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
                                     }

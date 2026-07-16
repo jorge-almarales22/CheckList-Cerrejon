@@ -1,5 +1,17 @@
 export const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist";
 
+// Sitio "ac" y biblioteca de documentos donde se guardan evidencias/PDFs como archivos reales.
+export const AC_SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/ac";
+export const AC_HOST = "https://glencore.sharepoint.com";
+export const EVIDENCIAS_BASE = "/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/Evidencias";
+
+// Mapea el Tipo del checklist a su carpeta contenedora dentro de /Evidencias.
+export const TIPO_FOLDER_MAP = {
+    "ENSAMBLE": "Checklist Ensamble",
+    "COMPRA INSTALADA": "Checklist Compra Instalada",
+    "PROYECTO": "Checklist Proyectos"
+};
+
 export const WEBHOOK_TEAMS_URL = "https://defaultc9a8e948bf0d4f8d9e9d551ac1b45a.48.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/686f52048bdf4bd29d83e8d4c6a2b610/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=qjJy4JkHjxDThnRnucNOGV0dvKxgPnEzAznBTnZkF8U";
 
 export const AREAS = [
