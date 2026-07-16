@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import logoCerrejon from '../assets/Logo.png';
+import logoCerrejon from '../assets/logoCerrejon.png';
 
 // Abre una URL en Microsoft Edge usando el protocolo microsoft-edge:
 // Si el navegador actual ya es Edge, el protocolo abre una nueva pestaña.
@@ -254,17 +254,18 @@ const Navbar = ({ role, theme }) => {
         >
             <div className="max-w-full mx-auto px-3 md:px-6">
                 <div className="flex items-center justify-between h-[60px] md:h-[75px]">
-                    {/* Logo Cerrejón (tiene fondo blanco: se oculta en tema oscuro) */}
+                    {/* Logo Cerrejón, pegado a la esquina superior izquierda.
+                        Tiene fondo blanco: se oculta en tema oscuro. */}
                     <a
                         href="incorporaciones.aspx"
-                        className="flex-shrink-0 flex items-center"
+                        className="flex-shrink-0 flex items-center self-stretch -ml-3 md:-ml-6"
                         title="Cerrejón"
                     >
                         {!t.isDark && (
                             <img
                                 src={logoCerrejon}
                                 alt="Cerrejón - Minería responsable"
-                                className="h-[40px] md:h-[55px] w-auto object-contain"
+                                className="h-full max-h-[60px] md:max-h-[75px] w-auto object-contain"
                             />
                         )}
                     </a>

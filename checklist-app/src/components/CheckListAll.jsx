@@ -176,7 +176,6 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                     <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">Gerencia</th>
                                     <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden xl:table-cell">Superintendencia</th>
                                     <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Tipo de incorporación</th>
-                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden xl:table-cell">Flota</th>
                                     <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">Equipo(s)</th>
                                     <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Fecha inicio</th>
                                     <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Fecha fin</th>
@@ -214,7 +213,6 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden lg:table-cell">{chk.Metadata?.gerencia || '-'}</td>
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden xl:table-cell">{chk.Metadata?.superintendencia || '-'}</td>
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden md:table-cell">{chk.Tipo || '-'}</td>
-                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden xl:table-cell">{chk.Flota || '-'}</td>
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold max-w-[150px] break-words hidden lg:table-cell" title={(chk.Metadata?.equipos || []).filter(Boolean).join(', ')}>
                                                 {(chk.Metadata?.equipos || []).filter(Boolean).join(', ') || '-'}
                                             </td>
