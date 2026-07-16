@@ -110,7 +110,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
                     <h2 className="text-2xl md:text-3xl font-black flex items-center gap-3 flex-wrap">
                         <svg className={`w-7 h-7 md:w-8 md:h-8 ${theme==='dark'?'text-yellow-400':'text-amber-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
-                        Panel de Incorporaciones
+                        Incorporación de Activos
                     </h2>
                     {(role === 'Administrador' || role === 'Desarrollador') && (
                         <button className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-2.5 md:py-3 px-5 md:px-6 rounded-xl transition-all shadow shadow-slate-900/10 w-full sm:w-auto" onClick={() => setShowTemplateModal(true)}>

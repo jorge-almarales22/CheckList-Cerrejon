@@ -38,6 +38,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
     const [filterResponsable, setFilterResponsable] = useState('');
     const [filterAlertaOnly, setFilterAlertaOnly] = useState(false);
+    const [filterEstadoTarea, setFilterEstadoTarea] = useState(''); // '', 'terminadas', 'faltantes'
+    const [fotoActivaIdx, setFotoActivaIdx] = useState(0); // carrusel de fotos del equipo
 
     const [showAddTaskForm, setShowAddTaskForm] = useState(false);
     const [newTaskData, setNewTaskData] = useState({
@@ -261,6 +263,88 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             setCargandoEvidencias(prev => ({ ...prev, [itemId]: false }));
         }
     };
+
+    // Carga automatica de TODAS las evidencias del checklist de forma eficiente:
+    // una sola lectura de la carpeta (archivos) + una lectura ligera de la lista
+    // legacy, cargando el base64 solo de las tareas que realmente lo tienen.
+    const cargarTodasEvidencias = async (checklistData) => {
+        if (!checklistData?.Tipo || !checklistData?.Name) return;
+        const items = (checklistData.items || []).filter(it => (it.Estado || it.estado) !== 'Inactivo');
+        if (items.length === 0) return;
+        const map = {};
+        const ordenDe = (id) => {
+            const idx = (checklistData.items || []).findIndex(i => i.Id === id);
+            return idx >= 0 ? String(idx + 1).padStart(2, '0') : null;
+        };
+
+        // 1. Archivos de la carpeta (una sola llamada) agrupados por tarea.
+        try {
+            const folderUrl = getEvidenciasFolderUrl(checklistData.Tipo, checklistData.Name);
+            const files = await listFolderFiles(folderUrl);
+            items.forEach(it => {
+                const orden = ordenDe(it.Id);
+                const evs = files
+                    .filter(f => archivoEsDeTarea(f.Name, it.Id, orden))
+                    .map(f => ({
+                        Id: `file_${f.ServerRelativeUrl}`,
+                        source: 'file',
+                        fileRef: f.ServerRelativeUrl,
+                        Name: f.Name,
+                        Data: `${AC_HOST}${f.ServerRelativeUrl}`,
+                        isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
+                    }));
+                if (evs.length) map[it.Id] = evs;
+            });
+        } catch (err) {
+            console.error("Error cargando evidencias de carpeta (todas):", err);
+        }
+
+        // 2. Presencia legacy (ligera, sin base64) para saber que tareas tienen.
+        let legacyIds = new Set();
+        try {
+            const res = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('EvidenciasChecklist')/items?$select=ID_Registro&$top=5000`, {
+                headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
+            });
+            const json = await res.json();
+            (json.d?.results || []).forEach(r => { if (r.ID_Registro) legacyIds.add(String(r.ID_Registro)); });
+        } catch (err) {
+            console.error("Error consultando presencia legacy:", err);
+        }
+
+        // 3. Solo para las tareas de ESTE checklist que tienen legacy, traer el base64.
+        for (const it of items) {
+            if (!legacyIds.has(String(it.Id))) continue;
+            try {
+                const res = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('EvidenciasChecklist')/items?$filter=ID_Registro eq '${it.Id}'&$select=Id,Data,Title`, {
+                    headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
+                });
+                const json = await res.json();
+                (json.d?.results || []).forEach(l => {
+                    (map[it.Id] = map[it.Id] || []).push({
+                        Id: `list_${l.Id}`, source: 'list', listId: l.Id, Name: l.Title,
+                        Data: l.Data, isImage: !!(l.Data && l.Data.startsWith('data:image'))
+                    });
+                });
+            } catch (err) {
+                console.error("Error cargando evidencia legacy de tarea:", err);
+            }
+        }
+
+        setEvidenciasItem(prev => ({ ...prev, ...map }));
+        const presence = {};
+        items.forEach(it => { if (map[it.Id]?.length) presence[it.Id] = true; });
+        legacyIds.forEach(id => { presence[id] = true; });
+        setEvidenciasPresence(prev => ({ ...prev, ...presence }));
+    };
+
+    // Al abrir el checklist se cargan automaticamente todas sus evidencias (una vez).
+    const evidenciasCargadasRef = useRef(null);
+    useEffect(() => {
+        if (checklist?.items && evidenciasCargadasRef.current !== checklistId) {
+            evidenciasCargadasRef.current = checklistId;
+            cargarTodasEvidencias(checklist);
+        }
+    }, [checklist, checklistId]);
 
     const handleFileUpload = async (itemId, e) => {
         const files = Array.from(e.target.files);
@@ -782,6 +866,13 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     if (filterAlertaOnly) {
         itemsFiltrados = itemsFiltrados.filter(it => it.Alerta === 'Si');
     }
+    // Una tarea esta "terminada" si esta al 100% y tiene evidencias cargadas.
+    const tareaTerminada = (it) => parseInt(it.Avance || it.avance || 0) === 100 && !!evidenciasPresence[it.Id];
+    if (filterEstadoTarea === 'terminadas') {
+        itemsFiltrados = itemsFiltrados.filter(tareaTerminada);
+    } else if (filterEstadoTarea === 'faltantes') {
+        itemsFiltrados = itemsFiltrados.filter(it => !tareaTerminada(it));
+    }
 
     return (
         <div className="max-w-[95%] mx-auto animate-[fadeIn_0.3s_ease-out]">
@@ -872,30 +963,24 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                             )}
                             <div className={`mt-3 pt-3 border-t ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                                 <span className="font-bold text-[10px] uppercase tracking-wider text-slate-900 dark:text-slate-200 block mb-2">FOTOS DEL EQUIPO</span>
-                                {(checklist.Metadata.imagenesEquipo && checklist.Metadata.imagenesEquipo.length > 0) || checklist.Metadata.imagenEquipo || isEditingMetadata ? (
+                                {isEditingMetadata ? (
                                     <div className="flex flex-wrap gap-2">
-                                        {(isEditingMetadata ? (editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo) : checklist.Metadata.imagenesEquipo) ? (
-                                            (isEditingMetadata ? (editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo) : checklist.Metadata.imagenesEquipo).map((img, idx) => (
-                                                <div key={idx} className="relative inline-block">
-                                                    <img src={img} alt="Equipo" className="max-h-24 rounded-lg border border-slate-300 dark:border-slate-700 object-cover shadow-lg" />
-                                                    {isEditingMetadata && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                const newImgs = [...(editMetadataForm.imagenesEquipo || checklist.Metadata.imagenesEquipo)].filter((_, i) => i !== idx);
-                                                                setEditMetadataForm({ ...editMetadataForm, imagenesEquipo: newImgs });
-                                                            }}
-                                                            className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-lg"
-                                                        >
-                                                            &times;
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))
-                                        ) : checklist.Metadata.imagenEquipo ? (
-                                            <img src={checklist.Metadata.imagenEquipo} alt="Equipo" className="max-h-24 rounded-lg border border-slate-300 dark:border-slate-700 object-cover shadow-lg" />
-                                        ) : null}
-                                        {isEditingMetadata && ((editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo || []).length < 3) && (
+                                        {(editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo || []).map((img, idx) => (
+                                            <div key={idx} className="relative inline-block">
+                                                <img src={img} alt="Equipo" className="max-h-24 rounded-lg border border-slate-300 dark:border-slate-700 object-cover shadow-lg" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newImgs = [...(editMetadataForm.imagenesEquipo || checklist.Metadata.imagenesEquipo)].filter((_, i) => i !== idx);
+                                                        setEditMetadataForm({ ...editMetadataForm, imagenesEquipo: newImgs });
+                                                    }}
+                                                    className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-lg"
+                                                >
+                                                    &times;
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {((editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo || []).length < 3) && (
                                             <input type="file" accept="image/*" onChange={async (e) => {
                                                 const files = Array.from(e.target.files);
                                                 const currentImages = editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo || [];
@@ -913,7 +998,37 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                             }} className="text-[10px] text-slate-900 dark:text-slate-200 font-bold w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-500 transition-all cursor-pointer" />
                                         )}
                                     </div>
-                                ) : null}
+                                ) : (() => {
+                                    // Carrusel: muestra una foto a la vez para que el contenedor no se alargue.
+                                    const fotos = (checklist.Metadata.imagenesEquipo && checklist.Metadata.imagenesEquipo.length > 0)
+                                        ? checklist.Metadata.imagenesEquipo
+                                        : (checklist.Metadata.imagenEquipo ? [checklist.Metadata.imagenEquipo] : []);
+                                    if (fotos.length === 0) {
+                                        return <span className="text-slate-500 dark:text-slate-400 text-xs italic font-semibold">Sin fotos cargadas.</span>;
+                                    }
+                                    const idx = ((fotoActivaIdx % fotos.length) + fotos.length) % fotos.length;
+                                    return (
+                                        <div className="relative w-full">
+                                            <img src={fotos[idx]} alt={`Equipo ${idx + 1}`} className="w-full h-44 rounded-lg border border-slate-300 dark:border-slate-700 object-cover shadow-lg" />
+                                            {fotos.length > 1 && (
+                                                <>
+                                                    <button onClick={() => setFotoActivaIdx(idx - 1)} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/55 hover:bg-black/80 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-colors">
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+                                                    </button>
+                                                    <button onClick={() => setFotoActivaIdx(idx + 1)} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/55 hover:bg-black/80 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-colors">
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                                                    </button>
+                                                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                                                        {fotos.map((_, i) => (
+                                                            <button key={i} onClick={() => setFotoActivaIdx(i)} className={`w-2 h-2 rounded-full transition-colors ${i === idx ? 'bg-yellow-400' : 'bg-white/60 hover:bg-white'}`} />
+                                                        ))}
+                                                    </div>
+                                                    <span className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{idx + 1}/{fotos.length}</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </div>
                         <div className="w-full md:w-2/3 flex flex-col">
@@ -1053,9 +1168,17 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                             {listadoResponsablesUnicos.map(r => <option key={r} value={r}>{r}</option>)}
                         </select>
                     </div>
+                    <div className="flex flex-col w-full md:w-1/3">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">{"Filtrar por Estado"}</span>
+                        <select className={`${inputClasses} text-xs font-semibold`} value={filterEstadoTarea} onChange={(e) => setFilterEstadoTarea(e.target.value)}>
+                            <option value="">Todas las tareas</option>
+                            <option value="terminadas">Terminadas (100% + evidencias)</option>
+                            <option value="faltantes">Faltantes (por terminar)</option>
+                        </select>
+                    </div>
                     <div className="flex items-center gap-2 mt-4 md:mt-0">
                         <input type="checkbox" id="detAlertCheckbox" checked={filterAlertaOnly} onChange={(e) => setFilterAlertaOnly(e.target.checked)} className="accent-yellow-500 cursor-pointer h-4 w-4" />
-                        <label htmlFor="detAlertCheckbox" className="text-xs font-bold text-slate-900 dark:text-slate-200 cursor-pointer">{"Mostrar solo tareas en Alerta"}</label>
+                        <label htmlFor="detAlertCheckbox" className="text-xs font-bold text-slate-900 dark:text-slate-200 cursor-pointer">{"Solo en Alerta"}</label>
                     </div>
                 </div>
                 {!isFinalizado && isAdmin && (
@@ -1213,10 +1336,26 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                             )}
                                         </div>
 
-                                        <div className="col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>Avance Esperado</span>
-                                            <span className="text-green-500 font-black text-2xl drop-shadow">{isInactive ? 0 : calcularCumplimiento(it.FechaInicio, it.FechaFin)}%</span>
-                                        </div>
+                                        {(() => {
+                                            // Esperado de la tarea segun su plan (fechas baseline) vs avance real.
+                                            const espTarea = isInactive ? 0 : calcularCumplimiento(it.FechaBaselineInicio, it.FechaBaselineFin);
+                                            const realTarea = isInactive ? 0 : (parseInt(it.Avance || it.avance || 0) || 0);
+                                            // Alerta sutil: la tarea esta por debajo de lo esperado (atrasada).
+                                            const atrasada = !isInactive && espTarea > 0 && realTarea < espTarea;
+                                            return (
+                                                <div className="col-span-1">
+                                                    <span className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-slate-900 dark:text-slate-200 flex items-center gap-1">
+                                                        Avance Esperado
+                                                        {atrasada && (
+                                                            <span title={`Atrasado: real ${realTarea}% por debajo del esperado ${espTarea}%`} className="inline-flex items-center text-red-600 dark:text-red-400">
+                                                                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.492-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                    <span className={`font-black text-2xl drop-shadow ${atrasada ? 'text-red-600 dark:text-red-400' : 'text-green-500'}`}>{espTarea}%</span>
+                                                </div>
+                                            );
+                                        })()}
 
                                         <div className="col-span-1">
                                             <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>Avance Real</span>
@@ -1236,9 +1375,14 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                 <div className="flex justify-between items-center mb-2">
                                                     <span className="text-slate-900 dark:text-slate-200 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
                                                         Evidencias Cargadas
-                                                        {evidenciasPresence[it.Id] && (
-                                                            <span className="bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 px-1.5 py-0.5 rounded text-[9px] font-black tracking-normal uppercase">
-                                                                Tiene Evidencias
+                                                        {evidenciasPresence[it.Id] ? (
+                                                            <span className="bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/40 px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-normal uppercase flex items-center gap-1">
+                                                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                                                Con Evidencias
+                                                            </span>
+                                                        ) : (
+                                                            <span className="bg-slate-400/10 text-slate-500 dark:text-slate-400 border border-slate-400/30 px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-normal uppercase">
+                                                                Sin Evidencias
                                                             </span>
                                                         )}
                                                     </span>
@@ -1248,9 +1392,6 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                                 Ver Visualizador
                                                             </button>
                                                         )}
-                                                        <button onClick={() => cargarEvidencias(it.Id)} className="text-[10px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 px-2 py-1 rounded border border-blue-500/30 transition-colors shadow font-semibold">
-                                                            &#8635; Cargar / Actualizar
-                                                        </button>
                                                     </div>
                                                 </div>
 
@@ -1260,7 +1401,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     ) : (
                                                         <div className="flex flex-wrap gap-3">
                                                             {(!evidenciasItem[it.Id] || evidenciasItem[it.Id].length === 0) ? (
-                                                                <span className="text-slate-900 dark:text-slate-200 font-bold text-xs italic">Debes hacer clic en "Actualizar" para ver las evidencias, o no se ha cargado ninguna.</span>
+                                                                <span className="text-slate-900 dark:text-slate-200 font-bold text-xs italic">Aún no se han cargado evidencias para esta tarea.</span>
                                                             ) : (
                                                                 evidenciasItem[it.Id].map(ev => (
                                                                     <div key={ev.Id} className="relative group border border-slate-200 dark:border-slate-800 rounded-md p-1 bg-white dark:bg-slate-900 shadow-lg">
