@@ -126,23 +126,13 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                 <GerenciaPieCharts checklists={aprobadosFiltrados} theme={theme} />
             )}
 
-            {/* Sección de título + descripción centrados; el botón va debajo, a la derecha */}
+            {/* Sección de título + descripción centrados */}
             <div className={`${cardClass} border p-4 md:p-8 rounded-3xl mb-6`}>
                 <div className="max-w-4xl mx-auto text-center">
                     <h2 className="text-2xl md:text-3xl font-black leading-tight">Incorporación de Activos</h2>
                     <p className="mt-3 text-sm md:text-base font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
                         {DESCRIPCION_INCORPORACION}
                     </p>
-                </div>
-                {/* Ahora cualquier usuario puede crear una incorporación (queda pendiente de aprobación). */}
-                <div className="mt-6 flex justify-end">
-                    <button
-                        onClick={() => setShowTemplateModal(true)}
-                        className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-2.5 md:py-3 px-5 rounded-xl transition-all shadow shadow-slate-900/10 w-full sm:w-auto sm:max-w-[240px] flex items-center justify-center gap-2 text-sm text-center leading-tight"
-                    >
-                        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
-                        <span>Crear Nueva Incorporación de Activos</span>
-                    </button>
                 </div>
             </div>
 
@@ -186,6 +176,15 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                         {numSolicitudes > 0 && (
                             <span className={`ml-1 min-w-[20px] text-center px-1.5 py-0.5 rounded-full text-[10px] font-black ${verSolicitudes ? 'bg-black/80 text-amber-300' : 'bg-red-600 text-white'}`}>{numSolicitudes}</span>
                         )}
+                    </button>
+                    {/* Crear nueva incorporación: cualquier usuario (queda pendiente de aprobación). */}
+                    <button
+                        onClick={() => setShowTemplateModal(true)}
+                        className="shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-extrabold bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 shadow transition-colors"
+                        title="Crear una nueva incorporación de activos"
+                    >
+                        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
+                        Crear Nueva Incorporación
                     </button>
                 </div>
             </div>

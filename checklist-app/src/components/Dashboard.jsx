@@ -51,7 +51,7 @@ const Dashboard = ({ user, userName, role, onLogout }) => {
             <main
                 ref={mainRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto p-4 md:p-8"
+                className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8"
             >
                 {view === 'home' && (
                     <div className="max-w-[95%] mx-auto flex flex-col items-center justify-center mt-8 md:mt-16 animate-[fadeIn_0.5s_ease-out]">
@@ -66,9 +66,10 @@ const Dashboard = ({ user, userName, role, onLogout }) => {
                 {view === 'checklist_all' && <CheckListAll key={refreshKey} onView={handleNavigate} role={role} currentUser={user} theme={theme} />}
                 {view === 'crear_checklist' && <CrearCheckList key={refreshKey} currentUser={user} currentUserName={userName} currentRole={role} templateType={selectedChecklistId} onAtras={() => handleNavigate('checklist_all')} theme={theme} />}
                 {view === 'checklist_detalle' && <CheckListDetalle key={refreshKey} checklistId={selectedChecklistId} role={role} currentUser={user} onAtras={() => handleNavigate('checklist_all')} theme={theme} />}
-
-                <Footer theme={theme} />
             </main>
+
+            {/* Footer pegado al pie de la pantalla (fuera del área con scroll). */}
+            <Footer theme={theme} />
 
             {/* Botón dinámico de scroll arriba/abajo */}
             <button

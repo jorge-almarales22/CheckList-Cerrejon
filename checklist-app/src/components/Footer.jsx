@@ -6,15 +6,13 @@ const Footer = ({ theme }) => {
     const isDark = theme === 'dark';
     const anio = new Date().getFullYear();
 
-    const fullBleed = {
-        width: '100vw',
-        marginLeft: 'calc(50% - 50vw)',
+    const bandStyle = {
         background: isDark ? '#141d33' : '#ffc000',
         borderTop: isDark ? '4px solid #eab308' : 'none'
     };
 
     return (
-        <footer style={fullBleed} className="mt-10 py-6 shadow-inner">
+        <footer style={bandStyle} className="w-full shrink-0 py-4 shadow-inner">
             <p className={`text-center text-xs md:text-sm font-bold px-4 ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>
                 © {anio} Cerrejón — Una empresa Glencore · Minería responsable · Todos los derechos reservados.
             </p>
