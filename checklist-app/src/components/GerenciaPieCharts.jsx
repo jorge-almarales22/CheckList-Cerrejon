@@ -36,7 +36,7 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
                 <h3 className={`text-[11px] font-extrabold uppercase tracking-wider mb-1 text-center ${subLabelColor} line-clamp-2 leading-tight`} title={gerencia}>
                     {gerencia}
                 </h3>
-                <span className={`text-[10px] font-bold mb-2 ${subLabelColor}`}>{count} procesos{count !== 1 ? 's' : ''}</span>
+                <span className={`text-[10px] font-bold mb-2 ${subLabelColor}`}>{count} proceso{count !== 1 ? 's' : ''}</span>
 
                 <div className="relative w-[90px] h-[90px] flex flex-col items-center justify-center">
                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 128 128">

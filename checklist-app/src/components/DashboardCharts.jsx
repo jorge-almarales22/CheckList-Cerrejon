@@ -100,7 +100,6 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
     if (esLateral) {
         const TOPE = 5;
         const hayMas = dataChart.length > TOPE;
-        const visibles = dataChart.slice(0, TOPE);
 
         return (
             <>
@@ -110,8 +109,9 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
                     <Leyenda />
                 </div>
 
-                <div className={`${cardBg} border p-4 rounded-2xl flex flex-col`}>
-                    <div className="flex items-center justify-between mb-3 gap-2">
+                {/* flex-1 para que la tarjeta llegue hasta abajo (al nivel de los metadatos). */}
+                <div className={`${cardBg} border p-4 rounded-2xl flex flex-col flex-1 min-h-0`}>
+                    <div className="flex items-center justify-between mb-3 gap-2 shrink-0">
                         <h3 className={`text-[11px] font-black uppercase tracking-wider ${labelColor}`}>Promedio por Responsable</h3>
                         {hayMas && (
                             <button onClick={() => setShowAllResp(true)} className="text-[10px] font-bold bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-700 dark:text-yellow-400 px-2 py-1 rounded border border-yellow-500/30 transition-colors whitespace-nowrap">
@@ -119,8 +119,9 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
                             </button>
                         )}
                     </div>
-                    <div className="space-y-2.5">
-                        {visibles.map((d, i) => <Barra key={i} d={d} />)}
+                    {/* Área que crece y hace scroll interno si no caben todos los responsables. */}
+                    <div className="space-y-2.5 flex-1 min-h-0 overflow-y-auto pr-1">
+                        {dataChart.map((d, i) => <Barra key={i} d={d} />)}
                     </div>
                 </div>
 
