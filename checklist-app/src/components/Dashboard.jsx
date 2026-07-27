@@ -66,10 +66,10 @@ const Dashboard = ({ user, userName, role, onLogout }) => {
                 {view === 'checklist_all' && <CheckListAll key={refreshKey} onView={handleNavigate} role={role} currentUser={user} theme={theme} />}
                 {view === 'crear_checklist' && <CrearCheckList key={refreshKey} currentUser={user} currentUserName={userName} currentRole={role} templateType={selectedChecklistId} onAtras={() => handleNavigate('checklist_all')} theme={theme} />}
                 {view === 'checklist_detalle' && <CheckListDetalle key={refreshKey} checklistId={selectedChecklistId} role={role} currentUser={user} onAtras={() => handleNavigate('checklist_all')} theme={theme} />}
-            </main>
 
-            {/* Footer pegado al pie de la pantalla (fuera del área con scroll). */}
-            <Footer theme={theme} />
+                {/* Footer normal: va al final del contenido y hace scroll con él. */}
+                <Footer theme={theme} />
+            </main>
 
             {/* Botón dinámico de scroll arriba/abajo */}
             <button

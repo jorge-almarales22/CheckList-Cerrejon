@@ -119,7 +119,7 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
                         </div>
                         <SPIBadge real={realGlobal} esperado={esperadoGlobal} />
                         <span className={`px-2.5 py-1 rounded-lg text-[11px] font-black tracking-wide whitespace-nowrap ${isDark ? 'bg-yellow-500 text-black' : 'bg-slate-900 text-white'}`}>
-                            {checklists.length} procesos{checklists.length !== 1 ? 's' : ''}
+                            {checklists.length} proceso{checklists.length !== 1 ? 's' : ''}
                         </span>
                     </div>
                 </div>
