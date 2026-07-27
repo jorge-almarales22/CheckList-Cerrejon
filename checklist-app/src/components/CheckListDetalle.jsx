@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { calcularCumplimiento } from '../utils/calculations';
+import { calcularCumplimiento, esPendiente, esRechazado } from '../utils/calculations';
 import { notificarTeams } from '../utils/notifications';
 import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, recycleFile, dataUrlToUint8Array } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
@@ -35,6 +35,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
     const [inactivatingItemId, setInactivatingItemId] = useState(null);
     const [inactivateReasonText, setInactivateReasonText] = useState('');
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [rejectComment, setRejectComment] = useState('');
 
     const [filterResponsable, setFilterResponsable] = useState('');
     const [filterAlertaOnly, setFilterAlertaOnly] = useState(false);
@@ -435,6 +437,36 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const handleStartEdit = (item) => {
         setEditingId(item.Id);
         setEditForm({ ...item });
+    };
+
+    // ---- Flujo de aprobacion (solo admins) ----
+    const cambiarAprobacion = async (nuevoEstado, comentario = '') => {
+        try {
+            const digest = await getRequestDigest();
+            const actualizado = { ...checklist, EstadoAprobacion: nuevoEstado, AprobacionComentario: comentario };
+            await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, { Data: JSON.stringify(actualizado) }, digest);
+            setChecklist(actualizado);
+            return true;
+        } catch (error) {
+            console.error('Error cambiando aprobacion:', error);
+            alert('No se pudo actualizar el estado de aprobación.');
+            return false;
+        }
+    };
+
+    const handleAprobar = async () => {
+        if (!window.confirm('¿Aprobar esta incorporación? Aparecerá junto con las demás y contará para las métricas.')) return;
+        if (await cambiarAprobacion('Aprobado', '')) alert('Incorporación aprobada.');
+    };
+
+    const handleRechazar = async () => {
+        const comentario = (rejectComment || '').trim();
+        if (!comentario) { alert('Escribe el motivo del rechazo.'); return; }
+        if (await cambiarAprobacion('Rechazado', comentario)) {
+            setShowRejectModal(false);
+            setRejectComment('');
+            alert('Incorporación marcada como NO aprobada. El creador verá el motivo.');
+        }
     };
 
     // Ruta SharePoint donde se guarda el PDF como registro documental al finalizar.
@@ -899,6 +931,59 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     </button>
                 </div>
             </div>
+
+            {/* Banner del flujo de aprobación (pendiente / rechazado). */}
+            {(esPendiente(checklist) || esRechazado(checklist)) && (
+                <div className={`mb-6 rounded-2xl border p-4 md:p-5 shadow-lg ${esRechazado(checklist)
+                    ? (theme === 'dark' ? 'bg-red-950/40 border-red-500/50' : 'bg-red-50 border-red-300')
+                    : (theme === 'dark' ? 'bg-amber-950/40 border-amber-500/50' : 'bg-amber-50 border-amber-300')}`}>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-start gap-3 min-w-0">
+                            <span className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${esRechazado(checklist) ? 'bg-red-600' : 'bg-amber-500'}`}>
+                                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={esRechazado(checklist) ? "M6 18L18 6M6 6l12 12" : "M12 8v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"} /></svg>
+                            </span>
+                            <div className="min-w-0">
+                                <h3 className={`font-black text-base md:text-lg ${esRechazado(checklist) ? 'text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-300'}`}>
+                                    {esRechazado(checklist) ? 'Incorporación NO aprobada' : 'Pendiente de aprobación'}
+                                </h3>
+                                <p className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                    {esRechazado(checklist)
+                                        ? 'Un administrador marcó esta incorporación con observaciones. Corrígelas para que pueda ser aprobada.'
+                                        : 'Esta incorporación no aparece en el panel ni cuenta para las métricas hasta que un administrador la apruebe.'}
+                                </p>
+                                {esRechazado(checklist) && checklist.AprobacionComentario && (
+                                    <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                                        Motivo: {checklist.AprobacionComentario}
+                                    </p>
+                                )}
+                                {checklist.CreadoPorNombre && (
+                                    <div className="mt-3 flex items-center gap-2">
+                                        <img src={`https://glencore.sharepoint.com/_layouts/15/userphoto.aspx?size=S&accountname=${encodeURIComponent(checklist.CreadoPor || '')}`} onError={(e) => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E"; }} className="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-700 object-cover bg-slate-200" alt="" />
+                                        <div className="text-xs">
+                                            <p className="font-bold text-slate-900 dark:text-slate-100">Solicitado por {checklist.CreadoPorNombre}</p>
+                                            <p className="font-semibold text-slate-500 dark:text-slate-400">{checklist.CreadoPor} {checklist.CreadoFecha ? `· ${checklist.CreadoFecha}` : ''}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        {isAdmin && (
+                            <div className="flex gap-2 shrink-0">
+                                <button onClick={handleAprobar} className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors shadow border border-green-400/30 flex items-center gap-2 whitespace-nowrap">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                                    Aprobar
+                                </button>
+                                {!esRechazado(checklist) && (
+                                    <button onClick={() => setShowRejectModal(true)} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors shadow border border-red-400/30 flex items-center gap-2 whitespace-nowrap">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                                        No aprobar
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {checklist.Metadata && (
                 <div className="flex flex-col xl:flex-row gap-5 mb-8 items-stretch">
@@ -1619,6 +1704,31 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                             </button>
                         )}
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {showRejectModal && ReactDOM.createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]" onClick={() => setShowRejectModal(false)}>
+                    <div className="bg-slate-800 border border-white/20 p-6 rounded-2xl max-w-md w-full shadow-2xl text-white" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-black text-red-400 mb-3 flex items-center gap-2">
+                            No aprobar incorporación
+                        </h3>
+                        <p className="text-xs text-white mb-3 font-bold">
+                            Escribe el motivo por el cual esta incorporación no fue aprobada. El creador lo verá para poder corregirla.
+                        </p>
+                        <textarea
+                            className="w-full bg-slate-950/80 text-white border border-slate-700 focus:border-red-400 rounded-lg px-3 py-2 outline-none text-sm"
+                            rows="4"
+                            placeholder="Ej. Faltan las fechas de plan en varias tareas, el responsable no corresponde, etc."
+                            value={rejectComment}
+                            onChange={(e) => setRejectComment(e.target.value)}
+                        />
+                        <div className="flex gap-2 justify-end mt-4">
+                            <button onClick={() => { setShowRejectModal(false); setRejectComment(''); }} className="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-white/20">Cancelar</button>
+                            <button onClick={handleRechazar} className="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-red-400/30">Confirmar rechazo</button>
+                        </div>
                     </div>
                 </div>,
                 document.body

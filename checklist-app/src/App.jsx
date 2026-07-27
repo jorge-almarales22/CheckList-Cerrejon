@@ -4,6 +4,7 @@ import { SITE_URL } from './data/constants';
 
 const App = () => {
     const [user, setUser] = useState(null);
+    const [userName, setUserName] = useState('');
     const [role, setRole] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -18,6 +19,7 @@ const App = () => {
                 const userEmail = data.d.Email || data.d.Title;
 
                 setUser(userEmail);
+                setUserName(data.d.Title || userEmail);
                 const admins = ['jorge.almarales.ext@cerrejon.com', 'samir.tenorio.ext@cerrejon.com', 'dilson.zuleta.ext@cerrejon.com', 'gary.hernandez@cerrejon.com', 'roberto.lequerica@cerrejon.com', 'jose.c.barrios@cerrejon.com'];
                 setRole(admins.includes(userEmail.toLowerCase()) ? 'Administrador' : 'Responsable');
             } catch (error) {
@@ -33,7 +35,7 @@ const App = () => {
     if (loading) return <div className="text-white text-center mt-20 font-bold text-xl">Autenticando con Microsoft 365...</div>;
     if (!user) return <div className="text-white text-center mt-20">Error de autenticaci&oacute;n con el sistema de la empresa.</div>;
 
-    return <Dashboard user={user} role={role} onLogout={() => alert("Tu sesi\u00f3n est\u00e1 vinculada a tu cuenta de Microsoft. Para cerrar sesi\u00f3n, debes salir de tu cuenta corporativa en el navegador.")} />;
+    return <Dashboard user={user} userName={userName} role={role} onLogout={() => alert("Tu sesi\u00f3n est\u00e1 vinculada a tu cuenta de Microsoft. Para cerrar sesi\u00f3n, debes salir de tu cuenta corporativa en el navegador.")} />;
 };
 
 export default App;

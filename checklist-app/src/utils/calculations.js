@@ -21,6 +21,13 @@ const itemsActivos = (items) => (items || []).filter(it => (it.Estado || it.esta
 
 export const esHistorico = (chk) => chk?.historico === true || chk?.Historico === true;
 
+// Estado del flujo de aprobacion. Los checklists antiguos (sin la llave) se tratan
+// como ya aprobados para no ocultar lo que ya estaba en produccion.
+export const getEstadoAprobacion = (chk) => chk?.EstadoAprobacion || 'Aprobado';
+export const esAprobado = (chk) => getEstadoAprobacion(chk) === 'Aprobado';
+export const esPendiente = (chk) => getEstadoAprobacion(chk) === 'Pendiente';
+export const esRechazado = (chk) => getEstadoAprobacion(chk) === 'Rechazado';
+
 // El avance ESPERADO se mide contra el plan, por eso se usan las fechas baseline.
 // Si una tarea no tiene baseline, se cae a las fechas reales.
 const getInicioPlan = (it) => it.FechaBaselineInicio || it.fechaBaselineInicio || it.FechaInicio || it.fechaInicio;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import logoCerrejon from '../assets/logoCerrejon.png';
+import logoBlanco from '../assets/logo_blanco.jpg';
+import logoNegro from '../assets/logo_negro.jpg';
 
 // Abre una URL en Microsoft Edge usando el protocolo microsoft-edge:
 // Si el navegador actual ya es Edge, el protocolo abre una nueva pestaña.
@@ -255,19 +256,18 @@ const Navbar = ({ role, theme }) => {
             <div className="max-w-full mx-auto px-3 md:px-6">
                 <div className="flex items-center justify-between h-[60px] md:h-[75px]">
                     {/* Logo Cerrejón, pegado a la esquina superior izquierda.
-                        Tiene fondo blanco: se oculta en tema oscuro. */}
+                        Se usa el logo con fondo blanco en tema claro y el de
+                        fondo negro en tema oscuro para que combine con el navbar. */}
                     <a
                         href="incorporaciones.aspx"
                         className="flex-shrink-0 flex items-center self-stretch -ml-3 md:-ml-6"
-                        title="Cerrejón"
+                        title="Cerrejón - Una empresa Glencore"
                     >
-                        {!t.isDark && (
-                            <img
-                                src={logoCerrejon}
-                                alt="Cerrejón - Minería responsable"
-                                className="h-full max-h-[60px] md:max-h-[75px] w-auto object-contain"
-                            />
-                        )}
+                        <img
+                            src={t.isDark ? logoNegro : logoBlanco}
+                            alt="Cerrejón - Una empresa Glencore"
+                            className="h-full max-h-[60px] md:max-h-[75px] w-auto object-contain"
+                        />
                     </a>
 
                     {/* Botón hamburguesa (movil) */}

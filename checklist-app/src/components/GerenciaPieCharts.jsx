@@ -36,7 +36,7 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
                 <h3 className={`text-[11px] font-extrabold uppercase tracking-wider mb-1 text-center ${subLabelColor} line-clamp-2 leading-tight`} title={gerencia}>
                     {gerencia}
                 </h3>
-                <span className={`text-[10px] font-bold mb-2 ${subLabelColor}`}>{count} checklist{count !== 1 ? 's' : ''}</span>
+                <span className={`text-[10px] font-bold mb-2 ${subLabelColor}`}>{count} procesos{count !== 1 ? 's' : ''}</span>
 
                 <div className="relative w-[90px] h-[90px] flex flex-col items-center justify-center">
                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 128 128">
@@ -111,12 +111,12 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
                         </div>
                         <SPIBadge real={realGlobal} esperado={esperadoGlobal} />
                         <span className="bg-slate-900 text-white px-2.5 py-1 rounded-lg text-[11px] font-black tracking-wide whitespace-nowrap">
-                            {checklists.length} checklist{checklists.length !== 1 ? 's' : ''}
+                            {checklists.length} procesos{checklists.length !== 1 ? 's' : ''}
                         </span>
                     </div>
                 </div>
                 <p className="text-xs mt-1 mb-3 font-bold text-slate-800">
-                    Gris = % esperado (según tiempo transcurrido) · Amarillo = % real (avance promedio)
+                    Gris = % esperado · Amarillo = % real 
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                     {data.map((d) => (

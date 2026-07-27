@@ -5,7 +5,7 @@ import { getRequestDigest, saveToSPList } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
 import PeoplePicker from './PeoplePicker';
 
-const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme }) => {
+const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, templateType, theme }) => {
     const [nombreChecklist, setNombreChecklist] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [showAddItemForm, setShowAddItemForm] = useState(false);
@@ -251,7 +251,14 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                 ComentarioGeneral: "",
                 Tipo: getTipoFormulario(),
                 Metadata: metadata,
-                items: finalItems
+                items: finalItems,
+                // Flujo de aprobacion: toda incorporacion nueva nace pendiente y no
+                // aparece con las demas ni afecta las metricas hasta que un admin la aprueba.
+                EstadoAprobacion: 'Pendiente',
+                AprobacionComentario: '',
+                CreadoPor: currentUser || '',
+                CreadoPorNombre: currentUserName || currentUser || '',
+                CreadoFecha: new Date().toISOString().split('T')[0]
             };
 
             await saveToSPList('DB_CHECKLIST_APP', {
@@ -259,7 +266,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentRole, templateType, theme
                 Data: JSON.stringify(checklistData)
             }, digest);
 
-            alert('Checklist guardado con éxito en SharePoint!');
+            alert('Tu incorporación fue enviada y quedó PENDIENTE de aprobación. Un administrador la revisará antes de que aparezca en el panel.');
             onAtras();
 
         } catch (error) {

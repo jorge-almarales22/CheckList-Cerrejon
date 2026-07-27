@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { calcularEsperadoChecklist, calcularRealChecklist } from '../utils/calculations';
+import { calcularEsperadoChecklist, calcularRealChecklist, esAprobado, esPendiente, esRechazado } from '../utils/calculations';
 import GerenciaPieCharts from './GerenciaPieCharts';
 import SPIBadge from './SPIBadge';
+
+// Descripcion institucional de la fase de Incorporación de Activos.
+const DESCRIPCION_INCORPORACION = "Durante la fase de incorporación de activos, Cerrejón desarrolla las capacidades necesarias (personas, sistemas y equipos), define las estrategias de operación y mantenimiento, y asegura la disponibilidad de información clave sobre confiabilidad, repuestos, costos del ciclo de vida, capacitación y contratos. Asimismo, valida que toda la información del activo esté completa y gestionada para soportar su operación y mantenimiento durante todo el ciclo de vida.";
+
+const USERPHOTO = (email) => `https://glencore.sharepoint.com/_layouts/15/userphoto.aspx?size=S&accountname=${encodeURIComponent(email || '')}`;
+const AVATAR_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
 
 const CheckListAll = ({ onView, role, currentUser, theme }) => {
     const [checklists, setChecklists] = useState([]);
@@ -14,6 +20,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
     const [filtroEstado, setFiltroEstado] = useState('');
     const [filtroGerencia, setFiltroGerencia] = useState('');
     const [filtroSuperintendencia, setFiltroSuperintendencia] = useState('');
+    const [verSolicitudes, setVerSolicitudes] = useState(false); // ver la bandeja de aprobaciones
 
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 50;
@@ -49,11 +56,8 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                     }
                 }
             }
-            const isResponsable = role === 'Responsable';
-            const visibleChecklists = isResponsable
-                ? combined.filter(chk => chk.items && chk.items.some(it => it.NombreResponsable === currentUser))
-                : combined;
-            setChecklists(visibleChecklists.reverse());
+            // La visibilidad ahora se resuelve al renderizar (aprobados vs solicitudes).
+            setChecklists(combined.reverse());
         } catch (error) {
             console.error("Error fetching data:", error);
         } finally {
@@ -74,58 +78,74 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
         return () => clearInterval(interval);
     }, [role, currentUser]);
 
-    useEffect(() => { setCurrentPage(1); }, [filtroNombre, filtroAlerta, filtroTipo, filtroEstado, filtroGerencia, filtroSuperintendencia]);
+    useEffect(() => { setCurrentPage(1); }, [filtroNombre, filtroAlerta, filtroTipo, filtroEstado, filtroGerencia, filtroSuperintendencia, verSolicitudes]);
 
     if (loading) return <div className="text-center text-white mt-20 font-bold">Cargando datos desde SharePoint DB...</div>;
 
-    let filtrados = checklists;
-    if (filtroNombre.trim()) {
-        filtrados = filtrados.filter(chk => chk.Name && chk.Name.toLowerCase().includes(filtroNombre.toLowerCase()));
-    }
-    if (filtroAlerta) {
-        filtrados = filtrados.filter(chk => chk.items && chk.items.some(it => it.Alerta === "Si"));
-    }
-    if (filtroTipo) {
-        filtrados = filtrados.filter(chk => chk.Tipo === filtroTipo);
-    }
-    if (filtroEstado === 'Finalizado') {
-        filtrados = filtrados.filter(chk => chk.Estado === 'Finalizado');
-    } else if (filtroEstado === 'En Progreso') {
-        filtrados = filtrados.filter(chk => !chk.Estado || chk.Estado !== 'Finalizado');
-    }
-    if (filtroGerencia) {
-        filtrados = filtrados.filter(chk => chk.Metadata?.gerencia === filtroGerencia);
-    }
-    if (filtroSuperintendencia) {
-        filtrados = filtrados.filter(chk => chk.Metadata?.superintendencia === filtroSuperintendencia);
-    }
+    const esAdminODev = role === 'Administrador' || role === 'Desarrollador';
+    const u = (currentUser || '').toLowerCase();
+    // Un usuario ve un checklist aprobado si es admin/dev, o si es responsable de una
+    // tarea, o si esta asignado en algun rol de los metadatos, o si lo creó.
+    const puedeVerAprobado = (chk) => {
+        if (esAdminODev) return true;
+        const esResp = chk.items?.some(it => (it.NombreResponsable || '').toLowerCase() === u);
+        const rolesMeta = Object.values(chk.Metadata?.roles || {}).map(r => (r?.persona || '').toLowerCase());
+        const esCreador = (chk.CreadoPor || '').toLowerCase() === u;
+        return esResp || rolesMeta.includes(u) || esCreador;
+    };
+
+    const aprobados = checklists.filter(esAprobado).filter(puedeVerAprobado);
+    // Todas las solicitudes pendientes/rechazadas son visibles para todos los usuarios.
+    const solicitudes = checklists.filter(chk => esPendiente(chk) || esRechazado(chk));
+    const numSolicitudes = solicitudes.length;
+
+    const aplicarFiltros = (lista) => {
+        let r = lista;
+        if (filtroNombre.trim()) r = r.filter(chk => chk.Name && chk.Name.toLowerCase().includes(filtroNombre.toLowerCase()));
+        if (filtroAlerta) r = r.filter(chk => chk.items && chk.items.some(it => it.Alerta === "Si"));
+        if (filtroTipo) r = r.filter(chk => chk.Tipo === filtroTipo);
+        if (filtroEstado === 'Finalizado') r = r.filter(chk => chk.Estado === 'Finalizado');
+        else if (filtroEstado === 'En Progreso') r = r.filter(chk => !chk.Estado || chk.Estado !== 'Finalizado');
+        if (filtroGerencia) r = r.filter(chk => chk.Metadata?.gerencia === filtroGerencia);
+        if (filtroSuperintendencia) r = r.filter(chk => chk.Metadata?.superintendencia === filtroSuperintendencia);
+        return r;
+    };
+
+    // Las metricas (panel amarillo) solo consideran checklists APROBADOS.
+    const aprobadosFiltrados = aplicarFiltros(aprobados);
+    // La tabla muestra la bandeja de solicitudes o los aprobados segun el filtro.
+    const filtrados = verSolicitudes ? aplicarFiltros(solicitudes) : aprobadosFiltrados;
 
     const totalPages = Math.ceil(filtrados.length / itemsPerPage);
     const currentItems = filtrados.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     return (
         <div className="max-w-[95%] mx-auto animate-[fadeIn_0.4s_ease-out]">
-            {/* Gráficas de torta por gerencia: primero, pegadas debajo del navbar */}
-            {filtrados.length > 0 && (
-                <GerenciaPieCharts checklists={filtrados} theme={theme} />
+            {/* Gráficas de torta por gerencia (solo aprobados): primero, bajo el navbar */}
+            {aprobadosFiltrados.length > 0 && (
+                <GerenciaPieCharts checklists={aprobadosFiltrados} theme={theme} />
             )}
 
-            {/* Sección de título + acción, justo encima de la tabla */}
+            {/* Sección de título + descripción + acción, justo encima de la tabla */}
             <div className={`${cardClass} border p-4 md:p-6 rounded-3xl mb-6`}>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
-                    <div className="flex items-center gap-3">
-                        <svg className={`w-7 h-7 md:w-9 md:h-9 ${theme==='dark'?'text-yellow-400':'text-amber-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
-                        <div>
+                <div className="flex flex-col lg:flex-row justify-between items-start gap-4 w-full">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <svg className={`w-7 h-7 md:w-9 md:h-9 shrink-0 mt-1 ${theme==='dark'?'text-yellow-400':'text-amber-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                        <div className="min-w-0">
                             <h2 className="text-2xl md:text-3xl font-black leading-tight">Incorporación de Activos</h2>
-                            <p className="text-xs md:text-sm font-semibold text-slate-600 dark:text-slate-400">{filtrados.length} checklist{filtrados.length !== 1 ? 's' : ''} en gestión</p>
+                            <p className="mt-2 text-xs md:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed text-justify max-w-3xl">
+                                {DESCRIPCION_INCORPORACION}
+                            </p>
                         </div>
                     </div>
-                    {(role === 'Administrador' || role === 'Desarrollador') && (
-                        <button className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-2.5 md:py-3 px-5 md:px-6 rounded-xl transition-all shadow shadow-slate-900/10 w-full sm:w-auto flex items-center justify-center gap-2" onClick={() => setShowTemplateModal(true)}>
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
-                            Crear Nuevo Checklist
-                        </button>
-                    )}
+                    {/* Ahora cualquier usuario puede crear una incorporación (queda pendiente de aprobación). */}
+                    <button
+                        onClick={() => setShowTemplateModal(true)}
+                        className="bg-blue-600 hover:bg-blue-500 border border-blue-400/30 text-white font-bold py-2.5 md:py-3 px-4 md:px-5 rounded-xl transition-all shadow shadow-slate-900/10 w-full lg:w-auto lg:max-w-[220px] shrink-0 flex items-center justify-center gap-2 text-sm text-center leading-tight"
+                    >
+                        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
+                        <span>Crear Nueva Incorporación de Activos</span>
+                    </button>
                 </div>
             </div>
 
@@ -156,13 +176,28 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                     <label className={`flex items-center gap-2 text-sm font-bold cursor-pointer border px-3 py-2 rounded-lg shrink-0 whitespace-nowrap ${theme==='dark'?'bg-slate-950/85 border-slate-800':'bg-slate-100 border-slate-300'}`}>
                         <input type="checkbox" checked={filtroAlerta} onChange={(e) => setFiltroAlerta(e.target.checked)} className="accent-yellow-500" /> Solo con Alertas
                     </label>
+                    {/* Bandeja de aprobaciones: visible para todos los usuarios. */}
+                    <button
+                        onClick={() => setVerSolicitudes(v => !v)}
+                        className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-extrabold border transition-colors ${verSolicitudes
+                            ? 'bg-amber-500 border-amber-600 text-black shadow'
+                            : (theme==='dark' ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25' : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100')}`}
+                        title="Ver las incorporaciones creadas que están pendientes de aprobación"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                        {verSolicitudes ? 'Ver Aprobados' : 'Nuevas Solicitudes'}
+                        {numSolicitudes > 0 && (
+                            <span className={`ml-1 min-w-[20px] text-center px-1.5 py-0.5 rounded-full text-[10px] font-black ${verSolicitudes ? 'bg-black/80 text-amber-300' : 'bg-red-600 text-white'}`}>{numSolicitudes}</span>
+                        )}
+                    </button>
                 </div>
             </div>
 
             {/* Tabla o mensaje */}
             {filtrados.length === 0 ? (
                 <div className={`text-center py-20 rounded-3xl border ${cardClass}`}>
-                    <h3 className="text-2xl font-bold mb-2">No hay Checklists Disponibles</h3>
+                    <h3 className="text-2xl font-bold mb-2">{verSolicitudes ? 'No hay solicitudes pendientes de aprobación' : 'No hay Incorporaciones Disponibles'}</h3>
+                    {verSolicitudes && <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Cuando alguien cree una nueva incorporación, aparecerá aquí para su aprobación.</p>}
                 </div>
             ) : (
                 <div className={`rounded-3xl border overflow-hidden ${cardClass}`}>
@@ -179,6 +214,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                     <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">Equipo(s)</th>
                                     <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Fecha inicio</th>
                                     <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Fecha fin</th>
+                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">Creado por</th>
                                     <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 text-center">Acciones</th>
                                 </tr>
                             </thead>
@@ -188,15 +224,28 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                     const promReal = calcularRealChecklist(chk);
                                     const isDelayed = promReal < promCalc;
                                     const hasAlerts = chk.items?.some(it => it.Alerta === "Si");
+                                    const pendiente = esPendiente(chk);
+                                    const rechazado = esRechazado(chk);
+                                    // Los rechazados se resaltan en rojo para que el creador vea el problema.
+                                    const rowClass = rechazado
+                                        ? 'bg-red-500/10 hover:bg-red-500/15 border-b border-red-500/30'
+                                        : pendiente
+                                            ? 'bg-amber-500/10 hover:bg-amber-500/15 border-b border-amber-500/30'
+                                            : 'border-b border-slate-200 dark:border-slate-800/50 hover:bg-slate-500/5';
 
                                     return (
-                                        <tr key={chk.ID_x002d_checklist} className="border-b border-slate-200 dark:border-slate-800/50 hover:bg-slate-500/5 transition-colors">
-                                            <td className="p-2 md:p-3 font-bold break-words min-w-[130px] max-w-[230px] align-top" title={chk.Name}>
+                                        <tr key={chk.ID_x002d_checklist} className={`transition-colors ${rowClass}`}>
+                                            <td className="p-2 md:p-3 font-bold break-words min-w-[130px] max-w-[260px] align-top" title={chk.Name}>
                                                 <div className="flex flex-wrap gap-1 mb-1">
+                                                    {rechazado && <span className="bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-black">NO APROBADO</span>}
+                                                    {pendiente && <span className="bg-amber-500 text-black px-2 py-0.5 rounded text-[10px] font-black">PENDIENTE</span>}
                                                     {chk.Estado === 'Finalizado' && <span className="bg-green-500/20 text-green-500 dark:text-green-400 px-2 py-0.5 rounded text-[10px] font-extrabold">FINALIZADO</span>}
                                                     {hasAlerts && <span className="bg-red-500/20 text-red-500 dark:text-red-400 px-2 py-0.5 rounded text-[10px] animate-pulse">ALERTA</span>}
                                                 </div>
                                                 <span className="leading-snug">{chk.Name || "Sin nombre"}</span>
+                                                {rechazado && chk.AprobacionComentario && (
+                                                    <p className="mt-1 text-[10px] font-bold text-red-600 dark:text-red-400 normal-case">Motivo: {chk.AprobacionComentario}</p>
+                                                )}
                                             </td>
                                             <td className="p-2 md:p-3">
                                                 <div className="flex flex-col gap-1.5 text-xs text-slate-900 dark:text-slate-100 font-bold">
@@ -219,6 +268,19 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold whitespace-nowrap hidden md:table-cell">{chk.Metadata?.fechaInicioDiligenciamiento || '-'}</td>
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold whitespace-nowrap hidden md:table-cell">
                                                 {chk.Estado === 'Finalizado' ? (chk.Metadata?.fechaFinDiligenciamiento || '-') : 'En curso'}
+                                            </td>
+                                            <td className="p-2 md:p-3 hidden lg:table-cell">
+                                                {chk.CreadoPor ? (
+                                                    <div className="flex items-center gap-2 max-w-[210px]">
+                                                        <img src={USERPHOTO(chk.CreadoPor)} onError={(e) => { e.target.src = AVATAR_FALLBACK; }} className="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-700 object-cover bg-slate-200 shrink-0" alt="" />
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate" title={chk.CreadoPorNombre || chk.CreadoPor}>{chk.CreadoPorNombre || chk.CreadoPor}</p>
+                                                            <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate" title={chk.CreadoPor}>{chk.CreadoPor}</p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs font-semibold text-slate-400">—</span>
+                                                )}
                                             </td>
                                             <td className="p-2 md:p-3 text-center">
                                                 {chk.Estado === 'Finalizado' ? (

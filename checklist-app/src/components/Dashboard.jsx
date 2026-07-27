@@ -3,8 +3,9 @@ import CheckListAll from './CheckListAll';
 import CrearCheckList from './CrearCheckList';
 import CheckListDetalle from './CheckListDetalle';
 import Navbar from './Navbar';
+import Footer from './Footer';
 
-const Dashboard = ({ user, role, onLogout }) => {
+const Dashboard = ({ user, userName, role, onLogout }) => {
     const [view, setView] = useState('checklist_all');
     const [selectedChecklistId, setSelectedChecklistId] = useState(null);
     const [theme, setTheme] = useState('light');
@@ -63,8 +64,10 @@ const Dashboard = ({ user, role, onLogout }) => {
                     </div>
                 )}
                 {view === 'checklist_all' && <CheckListAll key={refreshKey} onView={handleNavigate} role={role} currentUser={user} theme={theme} />}
-                {view === 'crear_checklist' && <CrearCheckList key={refreshKey} currentUser={user} currentRole={role} templateType={selectedChecklistId} onAtras={() => handleNavigate('checklist_all')} theme={theme} />}
+                {view === 'crear_checklist' && <CrearCheckList key={refreshKey} currentUser={user} currentUserName={userName} currentRole={role} templateType={selectedChecklistId} onAtras={() => handleNavigate('checklist_all')} theme={theme} />}
                 {view === 'checklist_detalle' && <CheckListDetalle key={refreshKey} checklistId={selectedChecklistId} role={role} currentUser={user} onAtras={() => handleNavigate('checklist_all')} theme={theme} />}
+
+                <Footer theme={theme} />
             </main>
 
             {/* Botón dinámico de scroll arriba/abajo */}

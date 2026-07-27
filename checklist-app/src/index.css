@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 /* El modo oscuro lo decide el boton de tema de la app (clase .dark en <html>),
@@ -7,12 +6,17 @@
    grises ilegibles sobre fondo blanco. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Fuente unica de toda la app. */
+@theme {
+    --default-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
 body,
 html {
     margin: 0;
     padding: 0;
     height: 100%;
-    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     transition: background-color 0.3s ease;
 }
 
@@ -49,7 +53,7 @@ input:-webkit-autofill:active {
 
 /* ===== Navbar SGIA ===== */
 .navbar-sgia {
-    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* En desktop (lg+), los dropdowns de primer nivel se abren con hover */
