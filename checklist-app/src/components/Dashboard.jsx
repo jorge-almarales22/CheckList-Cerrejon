@@ -56,7 +56,7 @@ const Dashboard = ({ user, userName, role, onLogout }) => {
                 {view === 'home' && (
                     <div className="max-w-[95%] mx-auto flex flex-col items-center justify-center mt-8 md:mt-16 animate-[fadeIn_0.5s_ease-out]">
                         <div className={`${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} border p-10 rounded-3xl shadow text-center max-w-2xl w-full`}>
-                            <h1 className="text-4xl font-extrabold mb-4 tracking-tight">&iexcl;Bienvenido al portal!</h1>
+                            <h1 className="text-4xl font-normal mb-4 tracking-tight">&iexcl;Bienvenido al portal!</h1>
                             <button onClick={() => handleNavigate('checklist_all')} className="bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold py-3.5 px-8 rounded-xl transition-all shadow shadow-yellow-500/20">
                                 Ir al Panel de Checklists &rarr;
                             </button>

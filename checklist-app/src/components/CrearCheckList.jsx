@@ -297,7 +297,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
     return (
         <div className={`${cardClass} border p-8 rounded-3xl mt-8 mx-auto max-w-[95%] animate-[fadeIn_0.3s_ease-out]`}>
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
-                <h2 className={`text-2xl lg:text-3xl font-extrabold text-transparent bg-clip-text ${theme === 'dark' ? 'bg-gradient-to-r from-yellow-300 to-yellow-500' : 'bg-gradient-to-r from-amber-600 to-yellow-600'}`}>{titlePrefix}</h2>
+                <h2 className={`text-2xl lg:text-3xl font-normal text-transparent bg-clip-text ${theme === 'dark' ? 'bg-gradient-to-r from-yellow-300 to-yellow-500' : 'bg-gradient-to-r from-amber-600 to-yellow-600'}`}>{titlePrefix}</h2>
                 <button className={`${theme === 'dark' ? 'bg-white/10 hover:bg-white/20 border-white/30 text-white' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-900'} border text-sm font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors shadow`} onClick={onAtras}>
                     <span>&larr;</span> {"Volver al Listado"}
                 </button>
@@ -435,7 +435,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
             </div>
 
             <div className="flex justify-between items-center mb-4 border-b border-slate-200 dark:border-slate-800 pb-2">
-                <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-700'}`}>{"Ítems de este Checklist ("}{items.length}{")"}</h3>
+                <h3 className={`text-lg font-medium ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-700'}`}>{"Ítems de este Checklist ("}{items.length}{")"}</h3>
                 <button onClick={() => setShowAddItemForm(!showAddItemForm)} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-lg border ${showAddItemForm ? 'bg-red-500/20 text-red-300 border-red-500/30 hover:bg-red-500/40' : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-400/50'}`}>
                     {showAddItemForm ? 'Cancelar Agregar' : 'Agregar Nuevo Ítem'}
                 </button>
@@ -611,7 +611,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
             {inactivatingItemId && ReactDOM.createPortal(
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
                     <div className={`${theme === 'dark' ? 'bg-gray-800 border-white/20 text-white' : 'bg-white border-slate-200 text-slate-900'} border p-6 rounded-2xl max-w-md w-full shadow-2xl`}>
-                        <h3 className={`text-lg font-bold mb-3 flex items-center gap-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-600'}`}>
+                        <h3 className={`text-lg font-medium mb-3 flex items-center gap-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-600'}`}>
                             {"⚠ Inactivar Tarea"}
                         </h3>
                         <p className={`text-xs mb-4 font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>

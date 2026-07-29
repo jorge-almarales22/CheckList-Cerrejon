@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { calcularCumplimiento, esPendiente, esRechazado } from '../utils/calculations';
+import { calcularCumplimiento, esPendiente, esRechazado, esHistorico, esHistoricoGestionado, marcarHistoricoGestionado } from '../utils/calculations';
 import { notificarTeams } from '../utils/notifications';
 import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, recycleFile, dataUrlToUint8Array } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
@@ -584,11 +584,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         try {
             const digest = await getRequestDigest();
             const hoy = new Date().toISOString().split('T')[0];
-            const updatedChecklist = {
+            const updatedChecklist = marcarHistoricoGestionado({
                 ...checklist,
                 Estado: 'Finalizado',
                 Metadata: { ...checklist.Metadata, fechaFinDiligenciamiento: hoy }
-            };
+            });
             await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                 Data: JSON.stringify(updatedChecklist)
             }, digest);
@@ -655,7 +655,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 Avance: editForm.Avance ? editForm.Avance.toString() : "0",
                 Alerta: editForm.Alerta || "No"
             } : it);
-            const updatedChecklist = { ...checklist, items: updatedItems };
+            // Si era historico, desde este guardado sus % dejan de ser los migrados.
+            const updatedChecklist = marcarHistoricoGestionado({ ...checklist, items: updatedItems });
 
             await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                 Data: JSON.stringify(updatedChecklist)
@@ -687,7 +688,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 InactivadoRazon: inactivateReasonText.trim(),
                 InactivadoFecha: new Date().toISOString()
             } : it);
-            const updatedChecklist = { ...checklist, items: updatedItems };
+            const updatedChecklist = marcarHistoricoGestionado({ ...checklist, items: updatedItems });
 
             await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                 Data: JSON.stringify(updatedChecklist)
@@ -711,7 +712,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 InactivadoRazon: '',
                 InactivadoFecha: ''
             } : it);
-            const updatedChecklist = { ...checklist, items: updatedItems };
+            const updatedChecklist = marcarHistoricoGestionado({ ...checklist, items: updatedItems });
 
             await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                 Data: JSON.stringify(updatedChecklist)
@@ -857,7 +858,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             };
 
             const updatedItems = [...checklist.items, nuevaTareaObj];
-            const updatedChecklist = { ...checklist, items: updatedItems };
+            const updatedChecklist = marcarHistoricoGestionado({ ...checklist, items: updatedItems });
 
             await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
                 Data: JSON.stringify(updatedChecklist)
@@ -910,7 +911,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         <div className="max-w-[95%] mx-auto animate-[fadeIn_0.3s_ease-out]">
             <div className={`${cardClass} border p-4 md:p-6 rounded-3xl mb-6 flex justify-between items-start gap-3`}>
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <h2 className="text-xl md:text-3xl font-extrabold mb-1 break-words min-w-0"><span className={theme==='dark' ? 'text-yellow-400' : 'text-amber-600'}>{"Checklist:"}</span> {checklist.Name}</h2>
+                    <h2 className="text-xl md:text-3xl font-normal mb-1 break-words min-w-0"><span className={theme==='dark' ? 'text-yellow-400' : 'text-amber-600'}>{"Checklist:"}</span> {checklist.Name}</h2>
                     {isFinalizado && <span className="bg-green-500/20 text-green-500 dark:text-green-400 px-3 py-1 rounded-full text-xs font-extrabold border border-green-500/30 whitespace-nowrap">FINALIZADO</span>}
                 </div>
                 <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
@@ -943,7 +944,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={esRechazado(checklist) ? "M6 18L18 6M6 6l12 12" : "M12 8v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"} /></svg>
                             </span>
                             <div className="min-w-0">
-                                <h3 className={`font-black text-base md:text-lg ${esRechazado(checklist) ? 'text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-300'}`}>
+                                <h3 className={`font-medium text-base md:text-lg ${esRechazado(checklist) ? 'text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-300'}`}>
                                     {esRechazado(checklist) ? 'Incorporación NO aprobada' : 'Pendiente de aprobación'}
                                 </h3>
                                 <p className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -981,6 +982,24 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 )}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Aviso para historicos migrados: mientras nadie los diligencie desde la app
+                muestran los % que vinieron de la base de datos anterior. */}
+            {esHistorico(checklist) && (
+                <div className={`mb-6 rounded-2xl border p-4 flex items-start gap-3 ${theme === 'dark' ? 'bg-slate-900/60 border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                    <span className="shrink-0 w-9 h-9 rounded-full bg-slate-500 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </span>
+                    <div className="min-w-0">
+                        <h3 className="text-base font-medium">Incorporación histórica</h3>
+                        <p className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            {esHistoricoGestionado(checklist)
+                                ? 'Ya se está gestionando desde la app: los % real y esperado se calculan con las tareas de este checklist, igual que cualquier incorporación creada aquí.'
+                                : 'Los % real y esperado que ves provienen de la base de datos migrada. En cuanto guardes el primer avance desde la app, pasarán a calcularse con las tareas de este checklist y las métricas generales se actualizarán con ese nuevo valor.'}
+                        </p>
                     </div>
                 </div>
             )}
@@ -1620,7 +1639,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             </div>
 
             <div className={`${cardClass} border p-6 rounded-3xl mt-8`}>
-                <h3 className={`text-xl font-bold mb-4 flex items-center gap-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-700'}`}>
+                <h3 className={`text-xl font-medium mb-4 flex items-center gap-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-700'}`}>
                     <svg className="w-6 h-6 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg> Comentario General del Checklist
                 </h3>
                 {(!isFinalizado && isAdmin) ? (
@@ -1712,7 +1731,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             {showRejectModal && ReactDOM.createPortal(
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]" onClick={() => setShowRejectModal(false)}>
                     <div className="bg-slate-800 border border-white/20 p-6 rounded-2xl max-w-md w-full shadow-2xl text-white" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="text-lg font-black text-red-400 mb-3 flex items-center gap-2">
+                        <h3 className="text-lg font-medium text-red-400 mb-3 flex items-center gap-2">
                             No aprobar incorporación
                         </h3>
                         <p className="text-xs text-white mb-3 font-bold">
@@ -1737,7 +1756,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             {inactivatingItemId && ReactDOM.createPortal(
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]">
                     <div className="bg-gray-800 border border-white/20 p-6 rounded-2xl max-w-md w-full shadow-2xl text-white">
-                        <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                        <h3 className="text-lg font-medium text-yellow-400 mb-3 flex items-center gap-2">
                             {"⚠ Inactivar Tarea"}
                         </h3>
                         <p className="text-xs text-white mb-4 font-bold">

@@ -10,9 +10,10 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
     const esperadoGlobal = useMemo(() => calcularEsperadoGlobal(checklists), [checklists]);
     const realGlobal = useMemo(() => calcularRealGlobal(checklists), [checklists]);
 
-    if (!data || data.length === 0) return null;
-
     const isDark = theme === 'dark';
+    // Sin datos (p.ej. los filtros no devolvieron nada) la banda se conserva con un
+    // mensaje: asi se ve que las metricas responden al filtro en vez de desaparecer.
+    const sinDatos = !data || data.length === 0;
     const cardBg = isDark
         ? 'bg-slate-900 border-slate-700 text-white'
         : 'bg-white border-slate-300 text-slate-900';
@@ -97,11 +98,11 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
     return (
         <div style={fullBleed} className="-mt-4 md:-mt-8 mb-6 py-6 animate-[fadeIn_0.5s_ease-out] shadow-inner">
             <div className="max-w-[95%] mx-auto">
-                <h1 className={`text-2xl md:text-3xl font-black mb-4 tracking-tight text-center ${headText}`}>
+                <h1 className={`text-2xl md:text-3xl font-normal mb-4 tracking-tight text-center ${headText}`}>
                     Panel de Incorporación
                 </h1>
                 <div className={`mb-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 ${headText}`}>
-                    <h2 className={`text-base md:text-lg font-black flex items-center gap-2 ${headText}`}>
+                    <h2 className={`text-base md:text-lg font-medium flex items-center gap-2 ${headText}`}>
                         <svg className={`w-5 h-5 ${headText}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
@@ -126,11 +127,17 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
                 <p className={`text-xs mt-1 mb-3 font-bold ${subText}`}>
                     Gris = % esperado · Amarillo = % real
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                    {data.map((d) => (
-                        <Pie key={d.gerencia} {...d} theme={theme} />
-                    ))}
-                </div>
+                {sinDatos ? (
+                    <div className={`rounded-2xl border border-dashed py-8 text-center text-sm font-semibold ${isDark ? 'border-white/25 text-slate-300' : 'border-black/25 text-slate-800'}`}>
+                        Ningún proceso coincide con los filtros aplicados.
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                        {data.map((d) => (
+                            <Pie key={d.gerencia} {...d} theme={theme} />
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

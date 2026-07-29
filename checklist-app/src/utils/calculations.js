@@ -21,6 +21,23 @@ const itemsActivos = (items) => (items || []).filter(it => (it.Estado || it.esta
 
 export const esHistorico = (chk) => chk?.historico === true || chk?.Historico === true;
 
+// Un historico "gestionado" es el que ya se empezo a diligenciar desde la app.
+// A partir de ese momento deja de usar los % quemados que vinieron de la base de
+// datos migrada y se comporta como cualquier checklist creado en la app: real y
+// esperado salen de sus propias tareas.
+export const esHistoricoGestionado = (chk) => chk?.HistoricoGestionado === true;
+
+// True solo mientras el checklist siga apoyandose en los valores migrados.
+export const usaValoresHistoricos = (chk) => esHistorico(chk) && !esHistoricoGestionado(chk);
+
+// Marca un historico como gestionado. Se usa en CheckListDetalle antes de guardar
+// cualquier cambio sobre las tareas, para que a partir de ahi las metricas del
+// checklist (y por lo tanto las globales) se recalculen solas.
+export const marcarHistoricoGestionado = (chk) => {
+    if (!chk || !esHistorico(chk) || esHistoricoGestionado(chk)) return chk;
+    return { ...chk, HistoricoGestionado: true, HistoricoGestionadoFecha: new Date().toISOString() };
+};
+
 // Estado del flujo de aprobacion. Los checklists antiguos (sin la llave) se tratan
 // como ya aprobados para no ocultar lo que ya estaba en produccion.
 export const getEstadoAprobacion = (chk) => chk?.EstadoAprobacion || 'Aprobado';
@@ -47,6 +64,16 @@ const ventanaFechas = (items) => {
     return { inicio: Math.min(...inicios), fin: Math.max(...fines) };
 };
 
+// Ventana de diligenciamiento declarada en los metadatos del checklist. Sirve de
+// respaldo cuando las tareas no traen fechas planeadas (caso tipico de los
+// historicos migrados, que no tienen baseline por tarea).
+const ventanaDiligenciamiento = (checklist) => {
+    const ini = checklist?.Metadata?.fechaInicioDiligenciamiento;
+    const fin = checklist?.Metadata?.fechaFinDiligenciamiento;
+    if (esFechaValida(ini) && esFechaValida(fin)) return { ini, fin };
+    return null;
+};
+
 export const calcularPromedioChecklist = (items) => {
     if (!items || items.length === 0) return 0;
     const activos = itemsActivos(items);
@@ -67,13 +94,14 @@ export const calcularPromedioReal = (items) => {
 };
 
 // % real general de un checklist.
-// - Si es historico (chk.historico === true):
+// - Si es historico y AUN NO se ha gestionado desde la app:
 //     * Si tiene la llave "Real" en la DB (formato "23.04%"), usa ese valor.
 //     * Si no tiene la llave "Real", se asume 100%.
-// - Si no es historico, se calcula como el promedio de avance de items activos.
+// - En cualquier otro caso (checklist normal, o historico ya gestionado desde la
+//   app), se calcula como el promedio de avance de sus items activos.
 export const calcularRealChecklist = (checklist) => {
     if (!checklist) return 0;
-    if (esHistorico(checklist)) {
+    if (usaValoresHistoricos(checklist)) {
         const realRaw = checklist.Real ?? checklist.real;
         if (realRaw === undefined || realRaw === null || realRaw === '') return 100;
         // Formato esperado: "23.04%" o "23.04" o 23.04
@@ -91,14 +119,11 @@ export const calcularRealChecklist = (checklist) => {
 export const calcularEsperadoChecklist = (checklist) => {
     if (!checklist) return 0;
 
-    // Los historicos no tienen fechas planeadas por tarea: se usa la ventana de
-    // diligenciamiento del checklist (Inicio -> Fin) para medir el % esperado.
-    if (esHistorico(checklist)) {
-        const ini = checklist.Metadata?.fechaInicioDiligenciamiento;
-        const fin = checklist.Metadata?.fechaFinDiligenciamiento;
-        if (esFechaValida(ini) && esFechaValida(fin)) {
-            return calcularCumplimiento(ini, fin);
-        }
+    // Los historicos sin gestionar no tienen fechas planeadas por tarea: se usa la
+    // ventana de diligenciamiento del checklist (Inicio -> Fin) para el % esperado.
+    if (usaValoresHistoricos(checklist)) {
+        const vd = ventanaDiligenciamiento(checklist);
+        if (vd) return calcularCumplimiento(vd.ini, vd.fin);
         // Sin fechas de diligenciamiento: si ya esta completo, el plan tambien.
         return calcularRealChecklist(checklist) >= 100 ? 100 : 0;
     }
@@ -106,7 +131,12 @@ export const calcularEsperadoChecklist = (checklist) => {
     const items = itemsActivos(checklist.items);
     if (items.length === 0) return 0;
     const v = ventanaFechas(items);
-    if (!v) return 0;
+    // Si las tareas no traen fechas (historico ya gestionado, por ejemplo) se cae
+    // a la ventana de diligenciamiento antes de rendirse con un 0%.
+    if (!v) {
+        const vd = ventanaDiligenciamiento(checklist);
+        return vd ? calcularCumplimiento(vd.ini, vd.fin) : 0;
+    }
     return calcularCumplimiento(new Date(v.inicio), new Date(v.fin));
 };
 

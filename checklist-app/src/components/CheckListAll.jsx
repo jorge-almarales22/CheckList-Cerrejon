@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { calcularEsperadoChecklist, calcularRealChecklist, esAprobado, esPendiente, esRechazado } from '../utils/calculations';
+import { calcularEsperadoChecklist, calcularRealChecklist, esAprobado, esPendiente, esRechazado, esHistorico } from '../utils/calculations';
+import { getRequestDigest, deleteSPListItem } from '../utils/sharepointApi';
 import GerenciaPieCharts from './GerenciaPieCharts';
 import SPIBadge from './SPIBadge';
+import dibujoSvg from '../assets/dibujoSvg.svg';
 
 // Descripcion institucional de la fase de Incorporación de Activos.
 const DESCRIPCION_INCORPORACION = "Durante la fase de incorporación de activos, Cerrejón desarrolla las capacidades necesarias (personas, sistemas y equipos), define las estrategias de operación y mantenimiento, y asegura la disponibilidad de información clave sobre confiabilidad, repuestos, costos del ciclo de vida, capacitación y contratos. Asimismo, valida que toda la información del activo esté completa y gestionada para soportar su operación y mantenimiento durante todo el ciclo de vida.";
@@ -22,6 +24,11 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
     const [filtroSuperintendencia, setFiltroSuperintendencia] = useState('');
     const [verSolicitudes, setVerSolicitudes] = useState(false); // ver la bandeja de aprobaciones
 
+    // Eliminación de un checklist (solo administradores).
+    const [checklistAEliminar, setChecklistAEliminar] = useState(null);
+    const [confirmNombre, setConfirmNombre] = useState('');
+    const [eliminando, setEliminando] = useState(false);
+
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 50;
 
@@ -36,6 +43,10 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
     const inputClasses = theme === 'dark'
         ? "bg-slate-950/80 text-white border border-slate-800 focus:border-yellow-400 rounded-lg px-4 py-2 outline-none text-sm"
         : "bg-slate-100 text-slate-900 border border-slate-300 focus:border-yellow-500 rounded-lg px-4 py-2 outline-none text-sm";
+
+    // Los select llevan ancho mínimo propio (según su placeholder) y espacio extra a
+    // la derecha para la flecha nativa; sin esto el texto quedaba cortado.
+    const selectClasses = `${inputClasses} w-full md:w-auto pr-9 truncate`;
 
     const fetchChecklists = async (isBackground = false) => {
         if (!isBackground) setLoading(true);
@@ -80,9 +91,31 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
 
     useEffect(() => { setCurrentPage(1); }, [filtroNombre, filtroAlerta, filtroTipo, filtroEstado, filtroGerencia, filtroSuperintendencia, verSolicitudes]);
 
+    // Borrado definitivo del registro en SharePoint. Solo lo alcanzan los admins y
+    // exige escribir el nombre exacto del checklist en el modal de confirmación.
+    const handleEliminarChecklist = async () => {
+        if (!checklistAEliminar || eliminando) return;
+        if (confirmNombre.trim() !== (checklistAEliminar.Name || '').trim()) return;
+        setEliminando(true);
+        try {
+            const digest = await getRequestDigest();
+            await deleteSPListItem('DB_CHECKLIST_APP', checklistAEliminar.SharePointId, digest);
+            setChecklists(prev => prev.filter(c => c.SharePointId !== checklistAEliminar.SharePointId));
+            setChecklistAEliminar(null);
+            setConfirmNombre('');
+        } catch (error) {
+            console.error('Error eliminando el checklist:', error);
+            alert('No se pudo eliminar el checklist. Revisa la consola.');
+        } finally {
+            setEliminando(false);
+        }
+    };
+
     if (loading) return <div className="text-center text-white mt-20 font-bold">Cargando datos desde SharePoint DB...</div>;
 
     const esAdminODev = role === 'Administrador' || role === 'Desarrollador';
+    // Eliminar un checklist es exclusivo de los administradores.
+    const puedeEliminar = role === 'Administrador';
     const u = (currentUser || '').toLowerCase();
     // Un usuario ve un checklist aprobado si es admin/dev, o si es responsable de una
     // tarea, o si esta asignado en algun rol de los metadatos, o si lo creó.
@@ -121,42 +154,47 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
 
     return (
         <div className="max-w-[95%] mx-auto animate-[fadeIn_0.4s_ease-out]">
-            {/* Gráficas de torta por gerencia (solo aprobados): primero, bajo el navbar */}
-            {aprobadosFiltrados.length > 0 && (
-                <GerenciaPieCharts checklists={aprobadosFiltrados} theme={theme} />
-            )}
+            {/* Gráficas de torta por gerencia (solo aprobados): primero, bajo el navbar.
+                Se renderiza siempre para que el panel reaccione a los filtros en vez de
+                desaparecer cuando el filtro no devuelve resultados. */}
+            <GerenciaPieCharts checklists={aprobadosFiltrados} theme={theme} />
 
-            {/* Sección de título + descripción centrados */}
+            {/* Título centrado, descripción justificada a la izquierda e ilustración a la derecha */}
             <div className={`${cardClass} border p-4 md:p-8 rounded-3xl mb-6`}>
-                <div className="max-w-4xl mx-auto text-center">
-                    <h2 className="text-2xl md:text-3xl font-black leading-tight">Incorporación de Activos</h2>
-                    <p className="mt-3 text-sm md:text-base font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+                <h2 className="text-2xl md:text-3xl font-normal leading-tight text-center">Incorporación de Activos</h2>
+                <div className="mt-5 flex flex-col-reverse md:flex-row md:items-center gap-6 md:gap-10">
+                    <p className="flex-1 min-w-0 text-sm md:text-base text-justify text-slate-700 dark:text-slate-300 leading-relaxed">
                         {DESCRIPCION_INCORPORACION}
                     </p>
+                    <img
+                        src={dibujoSvg}
+                        alt="Ilustración de incorporación de activos"
+                        className="w-44 sm:w-56 md:w-64 lg:w-72 shrink-0 self-center select-none pointer-events-none"
+                    />
                 </div>
             </div>
 
             {/* Filtros */}
             <div className={`${cardClass} border p-4 md:p-6 rounded-3xl mb-6`}>
                 <div className="flex flex-col md:flex-row md:flex-wrap gap-2 md:gap-3 w-full items-stretch md:items-center">
-                    <input type="text" placeholder="Buscar por nombre..." className={`${inputClasses} flex-1 min-w-[160px] md:max-w-[240px]`} value={filtroNombre} onChange={(e) => setFiltroNombre(e.target.value)} />
-                    <select className={`${inputClasses} lg:w-40`} value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
+                    <input type="text" placeholder="Buscar por nombre..." className={`${inputClasses} w-full md:w-auto md:flex-1 min-w-[200px] md:max-w-[260px]`} value={filtroNombre} onChange={(e) => setFiltroNombre(e.target.value)} />
+                    <select className={`${selectClasses} min-w-[190px]`} value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
                         <option value="">Todos los Tipos</option>
                         <option value="PROYECTO">Incorporación por Proyectos</option>
                         <option value="COMPRA INSTALADA">Incorporación Compra Instalada</option>
                         <option value="ENSAMBLE">Incorporación por Ensamble</option>
                         <option value="GENERAL">General</option>
                     </select>
-                    <select className={`${inputClasses} lg:w-32`} value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+                    <select className={`${selectClasses} min-w-[195px]`} value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
                         <option value="">Todos los Estados</option>
                         <option value="En Progreso">En Progreso</option>
                         <option value="Finalizado">Finalizado</option>
                     </select>
-                    <select className={`${inputClasses} lg:w-40`} value={filtroGerencia} onChange={(e) => setFiltroGerencia(e.target.value)}>
+                    <select className={`${selectClasses} min-w-[210px]`} value={filtroGerencia} onChange={(e) => setFiltroGerencia(e.target.value)}>
                         <option value="">Todas las Gerencias</option>
                         {gerenciasUnicas.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
-                    <select className={`${inputClasses} lg:w-48`} value={filtroSuperintendencia} onChange={(e) => setFiltroSuperintendencia(e.target.value)}>
+                    <select className={`${selectClasses} min-w-[265px]`} value={filtroSuperintendencia} onChange={(e) => setFiltroSuperintendencia(e.target.value)}>
                         <option value="">Todas las Superintendencias</option>
                         {superintendenciasUnicas.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
@@ -192,7 +230,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
             {/* Tabla o mensaje */}
             {filtrados.length === 0 ? (
                 <div className={`text-center py-20 rounded-3xl border ${cardClass}`}>
-                    <h3 className="text-2xl font-bold mb-2">{verSolicitudes ? 'No hay solicitudes pendientes de aprobación' : 'No hay Incorporaciones Disponibles'}</h3>
+                    <h3 className="text-2xl font-normal mb-2">{verSolicitudes ? 'No hay solicitudes pendientes de aprobación' : 'No hay Incorporaciones Disponibles'}</h3>
                     {verSolicitudes && <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Cuando alguien cree una nueva incorporación, aparecerá aquí para su aprobación.</p>}
                 </div>
             ) : (
@@ -274,20 +312,40 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                                             <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate" title={chk.CreadoPor}>{chk.CreadoPor}</p>
                                                         </div>
                                                     </div>
+                                                ) : esHistorico(chk) ? (
+                                                    // Los checklists migrados no traen creador: se marcan como históricos.
+                                                    <span
+                                                        className={`inline-block px-2 py-1 rounded-lg text-[10px] font-bold border ${theme === 'dark' ? 'bg-slate-800 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-300 text-slate-700'}`}
+                                                        title="Incorporación migrada de la base de datos anterior: no se conoce quién la creó."
+                                                    >
+                                                        Históricos
+                                                    </span>
                                                 ) : (
                                                     <span className="text-xs font-semibold text-slate-400">—</span>
                                                 )}
                                             </td>
                                             <td className="p-2 md:p-3 text-center">
-                                                {chk.Estado === 'Finalizado' ? (
-                                                    <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-300 border border-green-500/20 px-3 md:px-4 py-2 rounded-lg font-bold text-xs transition-colors shadow-sm">
-                                                        Ver
-                                                    </button>
-                                                ) : (
-                                                    <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-3 md:px-4 py-2 rounded-lg font-bold text-xs transition-colors shadow-sm">
-                                                        Ver / Gestionar
-                                                    </button>
-                                                )}
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {chk.Estado === 'Finalizado' ? (
+                                                        <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-300 border border-green-500/20 px-3 md:px-4 py-2 rounded-lg font-bold text-xs transition-colors shadow-sm">
+                                                            Ver
+                                                        </button>
+                                                    ) : (
+                                                        <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-3 md:px-4 py-2 rounded-lg font-bold text-xs transition-colors shadow-sm">
+                                                            Ver / Gestionar
+                                                        </button>
+                                                    )}
+                                                    {puedeEliminar && (
+                                                        <button
+                                                            onClick={() => { setChecklistAEliminar(chk); setConfirmNombre(''); }}
+                                                            title="Eliminar este checklist"
+                                                            aria-label={`Eliminar el checklist ${chk.Name || ''}`}
+                                                            className="bg-red-600/10 hover:bg-red-600/20 text-red-600 dark:text-red-300 border border-red-500/25 p-2 rounded-lg transition-colors shadow-sm"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -308,11 +366,64 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                 </div>
             )}
 
+            {/* Confirmación de borrado: hay que escribir el nombre exacto del checklist. */}
+            {checklistAEliminar && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
+                    <div className={`${theme === 'dark' ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'} border p-6 md:p-7 rounded-3xl shadow-2xl max-w-lg w-full`}>
+                        <div className="flex items-start gap-3 mb-4">
+                            <span className="shrink-0 w-10 h-10 rounded-full bg-red-600 flex items-center justify-center">
+                                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+                            </span>
+                            <div className="min-w-0">
+                                <h3 className="text-xl font-normal leading-tight">Eliminar checklist</h3>
+                                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mt-1">
+                                    Esta acción es permanente: se borra el registro de SharePoint junto con sus tareas y comentarios. No se puede deshacer.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className={`rounded-xl border px-4 py-3 mb-4 ${theme === 'dark' ? 'bg-slate-950/60 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Checklist a eliminar</p>
+                            <p className="text-sm font-bold break-words mt-1">{checklistAEliminar.Name || 'Sin nombre'}</p>
+                        </div>
+
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                            Para confirmar, escribe el nombre exacto del checklist:
+                        </label>
+                        <input
+                            type="text"
+                            autoFocus
+                            value={confirmNombre}
+                            onChange={(e) => setConfirmNombre(e.target.value)}
+                            placeholder={checklistAEliminar.Name || 'Sin nombre'}
+                            className={`${inputClasses} w-full mb-5`}
+                        />
+
+                        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
+                            <button
+                                onClick={() => { setChecklistAEliminar(null); setConfirmNombre(''); }}
+                                disabled={eliminando}
+                                className={`px-5 py-2.5 rounded-lg text-sm font-bold border transition-colors disabled:opacity-40 ${theme === 'dark' ? 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-white' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-900'}`}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleEliminarChecklist}
+                                disabled={eliminando || confirmNombre.trim() !== (checklistAEliminar.Name || '').trim()}
+                                className="px-5 py-2.5 rounded-lg text-sm font-bold bg-red-600 hover:bg-red-500 text-white border border-red-400/30 shadow transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                {eliminando ? 'Eliminando...' : 'Eliminar definitivamente'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showTemplateModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
                     <div className={`${theme === 'dark' ? 'bg-slate-800 border-white/20 text-white' : 'bg-white border-slate-200 text-slate-900'} border p-6 md:p-8 rounded-3xl shadow-2xl max-w-5xl w-full`}>
                         <div className={`flex justify-between items-center mb-6 border-b pb-4 ${theme === 'dark' ? 'border-white/10' : 'border-slate-200'}`}>
-                            <h3 className={`text-2xl font-bold ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-600'}`}>Selecciona el Tipo de Checklist</h3>
+                            <h3 className={`text-2xl font-normal ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-600'}`}>Selecciona el Tipo de Checklist</h3>
                             <button onClick={() => setShowTemplateModal(false)} className={`${theme === 'dark' ? 'text-white hover:text-yellow-400' : 'text-slate-900 hover:text-amber-600'} text-2xl font-bold transition-colors`}>&times;</button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
@@ -323,7 +434,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                 <div className="mb-4 group-hover:scale-110 transition-transform transform origin-left">
                                     <svg className={`w-10 h-10 ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
                                 </div>
-                                <h4 className={`text-base lg:text-lg font-bold mb-3 leading-snug h-auto ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Incorporación de activos a traves de proyectos</h4>
+                                <h4 className={`text-base lg:text-lg font-medium mb-3 leading-snug h-auto ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Incorporación de activos a traves de proyectos</h4>
                                 <p className={`text-sm mt-auto pt-4 border-t font-bold ${theme === 'dark' ? 'text-white border-white/20' : 'text-slate-900 border-slate-300'}`}>Utiliza la plantilla con 49 items predefinidos.</p>
                             </div>
                             <div
@@ -333,7 +444,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                 <div className="mb-4 group-hover:scale-110 transition-transform transform origin-left">
                                     <svg className={`w-10 h-10 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                 </div>
-                                <h4 className={`text-base lg:text-lg font-bold mb-3 leading-snug h-auto ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Incorporación de activos nuevos o usados por compra instalada</h4>
+                                <h4 className={`text-base lg:text-lg font-medium mb-3 leading-snug h-auto ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Incorporación de activos nuevos o usados por compra instalada</h4>
                                 <p className={`text-sm mt-auto pt-4 border-t font-bold ${theme === 'dark' ? 'text-white border-white/20' : 'text-slate-900 border-slate-300'}`}>Utiliza la plantilla con 61 items predefinidos.</p>
                             </div>
                             <div
@@ -343,7 +454,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                 <div className="mb-4 group-hover:scale-110 transition-transform transform origin-left">
                                     <svg className={`w-10 h-10 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
                                 </div>
-                                <h4 className={`text-base lg:text-lg font-bold mb-3 leading-snug h-auto ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Incorporación de equipos mineros nuevos o usados por ensamble</h4>
+                                <h4 className={`text-base lg:text-lg font-medium mb-3 leading-snug h-auto ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Incorporación de equipos mineros nuevos o usados por ensamble</h4>
                                 <p className={`text-sm mt-auto pt-4 border-t font-bold ${theme === 'dark' ? 'text-white border-white/20' : 'text-slate-900 border-slate-300'}`}>Utiliza la plantilla con 67 items predefinidos.</p>
                             </div>
                         </div>

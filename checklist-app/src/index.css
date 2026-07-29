@@ -6,7 +6,7 @@
    grises ilegibles sobre fondo blanco. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Fuente unica de toda la app. */
+/* Fuente unica de toda la app: la misma de los titulos de las graficas de torta. */
 @theme {
     --default-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -18,6 +18,16 @@ html {
     height: 100%;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     transition: background-color 0.3s ease;
+}
+
+/* Nada dentro de la app puede caer en otra familia: los controles de formulario y
+   los encabezados no heredan font-family por defecto en todos los navegadores, y
+   al montarse dentro de SharePoint los estilos del portal intentan imponer la suya. */
+body,
+body *,
+body *::before,
+body *::after {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 ::-webkit-scrollbar {
