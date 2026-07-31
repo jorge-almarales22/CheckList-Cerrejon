@@ -1,4 +1,4 @@
-import { SITE_URL, AC_SITE_URL, EVIDENCIAS_BASE, TIPO_FOLDER_MAP } from '../data/constants';
+import { SITE_URL, AC_SITE_URL, SGIA_SITE_URL, JERARQUIA_LIST, EVIDENCIAS_BASE, TIPO_FOLDER_MAP } from '../data/constants';
 
 export const getRequestDigest = async () => {
     const res = await fetch(`${SITE_URL}/_api/contextinfo`, {
@@ -140,6 +140,81 @@ export const recycleFile = async (fileRef, digest) => {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status} eliminando archivo`);
 };
+
+// ---------------------------------------------------------------------------
+// Lista JerarquiaL (sitio raiz SGIA): fuente oficial de Gerencia, Gerencia
+// abreviada y Superintendencia para los selects de metadatos del checklist.
+// ---------------------------------------------------------------------------
+
+// Titulos visibles de las columnas que necesitamos de JerarquiaL.
+const JERARQUIA_COLS = {
+    gerencia: 'GERENCIA',
+    abreviada: 'G_ABREVIADA',
+    superintendencia: 'SUPERINTENDENCIA'
+};
+
+// SharePoint no usa el titulo visible en la API REST: codifica los caracteres
+// especiales (p.ej. "G_ABREVIADA" -> "G_x005f_ABREVIADA"). Por eso resolvemos
+// el nombre real de cada columna contra /fields antes de pedir los items.
+const getFieldNames = async (siteUrl, listName, titles) => {
+    const url = `${siteUrl}/_api/web/lists/getbytitle('${listName}')/fields?$select=Title,EntityPropertyName,InternalName&$filter=Hidden eq false&$top=500`;
+    const res = await fetch(url, { headers: { "Accept": "application/json;odata=verbose" }, credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status} leyendo columnas de ${listName}`);
+    const json = await res.json();
+    const fields = json.d?.results || [];
+    const norm = (s) => (s || '').trim().toUpperCase();
+
+    const map = {};
+    titles.forEach(title => {
+        const f = fields.find(x => norm(x.Title) === norm(title))
+            || fields.find(x => norm(x.InternalName) === norm(title))
+            || fields.find(x => norm(x.Title).startsWith(norm(title)));
+        // Si no aparece, usamos el titulo tal cual: el $select fallara de forma
+        // visible en consola en vez de devolver datos silenciosamente vacios.
+        map[title] = f ? f.EntityPropertyName : title;
+    });
+    return map;
+};
+
+// Trae todos los items de una lista siguiendo la paginacion de SharePoint
+// (el tope duro por peticion es 5000 filas).
+const getAllListItems = async (siteUrl, listName, selectCols) => {
+    let url = `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items?$select=${selectCols.join(',')}&$top=5000`;
+    const all = [];
+    let guard = 0;
+    while (url && guard++ < 20) {
+        const res = await fetch(url, { headers: { "Accept": "application/json;odata=verbose" }, credentials: 'same-origin' });
+        if (!res.ok) throw new Error(`HTTP ${res.status} leyendo ${listName}`);
+        const json = await res.json();
+        all.push(...(json.d?.results || []));
+        url = json.d?.__next || null;
+    }
+    return all;
+};
+
+// Valores unicos, sin vacios y ordenados alfabeticamente.
+const distinctSorted = (rows, key) =>
+    [...new Set(rows.map(r => (r[key] || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+
+// Opciones de los selects de metadatos. Devuelve listas ya deduplicadas porque
+// en JerarquiaL cada fila es una division, asi que gerencias y superintendencias
+// se repiten muchas veces.
+export const fetchJerarquiaOpciones = async () => {
+    const titles = Object.values(JERARQUIA_COLS);
+    const fieldMap = await getFieldNames(SGIA_SITE_URL, JERARQUIA_LIST, titles);
+    const rows = await getAllListItems(SGIA_SITE_URL, JERARQUIA_LIST, titles.map(t => fieldMap[t]));
+
+    return {
+        gerencias: distinctSorted(rows, fieldMap[JERARQUIA_COLS.gerencia]),
+        gerenciasAbreviadas: distinctSorted(rows, fieldMap[JERARQUIA_COLS.abreviada]),
+        superintendencias: distinctSorted(rows, fieldMap[JERARQUIA_COLS.superintendencia])
+    };
+};
+
+// Un checklist guardado puede tener un valor que ya no existe en JerarquiaL.
+// Lo anteponemos a las opciones para no perderlo al editar los metadatos.
+export const conValorActual = (opciones, valor) =>
+    valor && !opciones.includes(valor) ? [valor, ...opciones] : opciones;
 
 // Convierte un dataURL (base64, p.ej. imagen comprimida) a Uint8Array para subirlo como binario.
 export const dataUrlToUint8Array = (dataUrl) => {

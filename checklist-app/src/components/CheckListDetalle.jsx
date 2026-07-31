@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { calcularCumplimiento, esPendiente, esRechazado, esHistorico, esHistoricoGestionado, marcarHistoricoGestionado } from '../utils/calculations';
 import { notificarTeams } from '../utils/notifications';
-import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, recycleFile, dataUrlToUint8Array } from '../utils/sharepointApi';
+import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, recycleFile, dataUrlToUint8Array, fetchJerarquiaOpciones, conValorActual } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
-import { AREAS, AC_HOST } from '../data/constants';
+import { AC_HOST, TIPOS_CHECKLIST, getTipoChecklist } from '../data/constants';
 import PeoplePicker from './PeoplePicker';
 import DashboardCharts from './DashboardCharts';
 import GanttChart from './GanttChart';
@@ -58,10 +58,18 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [showGanttModal, setShowGanttModal] = useState(false);
     const [evidenciasPresence, setEvidenciasPresence] = useState({});
 
-    const [acData, setAcData] = useState({ gerencias: [], superintendencias: [], unidades: [] });
+    // Unidades de proceso: siguen saliendo de la lista EquiposAC.
+    const [acData, setAcData] = useState({ unidades: [] });
     const [acLoading, setAcLoading] = useState(true);
+    // Area (por rol), Gerencia y Superintendencia salen de la lista JerarquiaL.
+    const [jerarquia, setJerarquia] = useState({ gerencias: [], gerenciasAbreviadas: [], superintendencias: [] });
+    const [jerarquiaLoading, setJerarquiaLoading] = useState(true);
 
     const isAdmin = role === 'Administrador';
+
+    // Correccion del tipo de checklist (solo admin). Ver handleConfirmCambioTipo.
+    const [tipoObjetivo, setTipoObjetivo] = useState(null);
+    const [cambiandoTipo, setCambiandoTipo] = useState(false);
 
     const [isEditingMetadata, setIsEditingMetadata] = useState(false);
     const [editMetadataForm, setEditMetadataForm] = useState(null);
@@ -186,16 +194,14 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         const fetchAcList = async () => {
             try {
                 const AC_SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/ac";
-                const res = await fetch(`${AC_SITE_URL}/_api/web/lists/getbytitle('EquiposAC')/items?$select=BranchGerencia,SiteSuperintendencia,UnidadProceso&$top=5000`, {
+                const res = await fetch(`${AC_SITE_URL}/_api/web/lists/getbytitle('EquiposAC')/items?$select=UnidadProceso&$top=5000`, {
                     headers: { "Accept": "application/json;odata=verbose" },
                     credentials: 'same-origin'
                 });
                 const json = await res.json();
                 const results = json.d?.results || [];
-                const uniqueGerencias = [...new Set(results.map(r => r.BranchGerencia).filter(Boolean))].sort();
-                const uniqueSuperintendencias = [...new Set(results.map(r => r.SiteSuperintendencia).filter(Boolean))].sort();
                 const uniqueUnidades = [...new Set(results.map(r => r.UnidadProceso).filter(Boolean))].sort();
-                setAcData({ gerencias: uniqueGerencias, superintendencias: uniqueSuperintendencias, unidades: uniqueUnidades });
+                setAcData({ unidades: uniqueUnidades });
             } catch (err) {
                 console.error("Error fetching AC list:", err);
             } finally {
@@ -203,6 +209,19 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             }
         };
         fetchAcList();
+    }, []);
+
+    useEffect(() => {
+        const cargarJerarquia = async () => {
+            try {
+                setJerarquia(await fetchJerarquiaOpciones());
+            } catch (err) {
+                console.error("Error cargando JerarquiaL:", err);
+            } finally {
+                setJerarquiaLoading(false);
+            }
+        };
+        cargarJerarquia();
     }, []);
 
     // Numero de orden de la tarea dentro del checklist (posicion estable en el
@@ -492,7 +511,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         meta.textContent = `Tipo: ${tipo} | Finalizado: ${fechaFin} | Tareas: ${activas.length}`;
         container.appendChild(meta);
 
-        activas.forEach((it, i) => {
+        // El numero impreso es la posicion original de la tarea en el checklist,
+        // para que coincida con la pantalla y con las evidencias.
+        activas.forEach((it) => {
             const card = document.createElement('div');
             card.style.cssText = 'border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px;background:#f8fafc;';
 
@@ -500,7 +521,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             header.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;';
             const num = document.createElement('span');
             num.style.cssText = 'background:#eab308;color:#fff;font-weight:800;font-size:11px;padding:3px 10px;border-radius:6px;flex-shrink:0;';
-            num.textContent = `#${i + 1}`;
+            num.textContent = `#${data.items.findIndex(x => x.Id === it.Id) + 1}`;
             const desc = document.createElement('span');
             desc.style.cssText = 'font-size:14px;font-weight:700;color:#1e293b;margin-left:10px;flex:1;line-height:1.4;';
             desc.textContent = it.Descripcion || '';
@@ -828,6 +849,95 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         } catch (error) { console.error(error); }
     };
 
+    // ---------------------------------------------------------------------
+    // Correccion del tipo de checklist (solo Administrador).
+    // Varios historicos se migraron con el Tipo equivocado, asi que arrastran las
+    // actividades de otra plantilla. Cambiar el tipo desde aqui reemplaza TODA la
+    // lista de tareas por la plantilla correcta. Los avances anteriores se pierden
+    // a proposito: no eran los reales de este checklist.
+    // ---------------------------------------------------------------------
+
+    const esFechaTexto = (f) => !!f && !isNaN(new Date(f).getTime());
+
+    // Construye las tareas de la nueva plantilla con el mismo shape que usan la
+    // creacion y el resto de handlers, para que todas las metricas (real, esperado,
+    // SPI, Gantt) sigan calculando igual que en cualquier otro checklist.
+    const construirItemsDesdePlantilla = (plantilla) => {
+        const hoy = new Date().toISOString().split('T')[0];
+        const iniMeta = checklist.Metadata?.fechaInicioDiligenciamiento;
+        const finMeta = checklist.Metadata?.fechaFinDiligenciamiento;
+        // La fecha fin puede venir como el texto "Se completará al finalizar".
+        const inicio = esFechaTexto(iniMeta) ? iniMeta : hoy;
+        const fin = esFechaTexto(finMeta) ? finMeta : '';
+
+        return plantilla.map((act, idx) => ({
+            Id: `TASK-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 5)}`,
+            Descripcion: act.tarea || act,
+            NombreResponsable: '',
+            Entregable: act.entregable || '',
+            Avance: "0",
+            FechaBaselineInicio: inicio,
+            FechaBaselineFin: fin,
+            FechaInicio: inicio,
+            FechaFin: fin,
+            Alerta: "No",
+            HistorialComentarios: [],
+            Estado: "Activo",
+            InactivadoPor: '',
+            InactivadoRazon: '',
+            InactivadoFecha: ''
+        }));
+    };
+
+    const handleConfirmCambioTipo = async () => {
+        const destino = getTipoChecklist(tipoObjetivo);
+        if (!destino) return;
+
+        setCambiandoTipo(true);
+        try {
+            const digest = await getRequestDigest();
+            const nuevosItems = construirItemsDesdePlantilla(destino.items);
+
+            // NO se marca como historico gestionado: los % migrados de los historicos
+            // se mantienen tal cual, asi las metricas globales no se mueven por una
+            // correccion de tipo. Empiezan a recalcularse cuando alguien diligencie
+            // una tarea, igual que hoy.
+            const updatedChecklist = {
+                ...checklist,
+                Tipo: destino.tipo,
+                items: nuevosItems,
+                TipoCorregido: {
+                    anterior: checklist.Tipo || '',
+                    nuevo: destino.tipo,
+                    por: currentUser || '',
+                    fecha: new Date().toISOString()
+                }
+            };
+
+            await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, {
+                Data: JSON.stringify(updatedChecklist)
+            }, digest);
+
+            // Las tareas viejas ya no existen: se limpia todo lo que apunta a sus Ids.
+            setChecklist(updatedChecklist);
+            setEditingId(null);
+            setEditForm({});
+            setEvidenciasItem({});
+            setNuevosComentarios({});
+            setFilterResponsable('');
+            setEvidenciasPresence({});
+            fetchEvidencePresence(updatedChecklist);
+
+            setTipoObjetivo(null);
+            alert(`Listo. Este checklist ahora es "${destino.label}" y se cargaron sus ${nuevosItems.length} actividades.`);
+        } catch (error) {
+            console.error("Error cambiando el tipo de checklist:", error);
+            alert("Error cambiando el tipo de checklist. Revisa la consola.");
+        } finally {
+            setCambiandoTipo(false);
+        }
+    };
+
     const handleSaveNewTask = async (e) => {
         e.preventDefault();
         if (!newTaskData.actividades.trim()) {
@@ -888,6 +998,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const activas = checklist.items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
     const inactivas = checklist.items.filter(it => (it.Estado || it.estado) === 'Inactivo');
     const listadoOrdenado = [...activas, ...inactivas];
+
+    // El numero de la tarea es su posicion en el checklist (la misma que usa
+    // getOrdenTarea para nombrar las evidencias), no su posicion en pantalla:
+    // al inactivar o filtrar tareas los numeros no se recalculan.
+    const numeroTarea = (it) => checklist.items.findIndex(i => i.Id === it.Id) + 1;
     const allTasksComplete = activas.length > 0 && activas.every(it => parseInt(it.Avance || it.avance || 0) === 100);
 
     const listadoResponsablesUnicos = [...new Set(checklist.items.map(it => it.NombreResponsable).filter(Boolean))].sort();
@@ -1000,6 +1115,56 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 ? 'Ya se está gestionando desde la app: los % real y esperado se calculan con las tareas de este checklist, igual que cualquier incorporación creada aquí.'
                                 : 'Los % real y esperado que ves provienen de la base de datos migrada. En cuanto guardes el primer avance desde la app, pasarán a calcularse con las tareas de este checklist y las métricas generales se actualizarán con ese nuevo valor.'}
                         </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Correccion del tipo de checklist: solo Administrador. Sirve para los
+                historicos que se migraron con el tipo (y por lo tanto las actividades)
+                equivocados. */}
+            {isAdmin && (
+                <div className={`mb-6 rounded-2xl border p-4 md:p-5 shadow-lg ${theme === 'dark' ? 'bg-slate-900/60 border-slate-700' : 'bg-white border-slate-200'}`}>
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                            <span className="shrink-0 w-9 h-9 rounded-full bg-amber-500 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            </span>
+                            <div className="min-w-0">
+                                <h3 className="text-base font-medium">¿Te equivocaste de tipo de checklist?</h3>
+                                <p className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                    Elige el tipo correcto y se reemplazarán TODAS las actividades por las de esa plantilla.
+                                    Los avances, responsables y comentarios actuales se pierden.
+                                </p>
+                                <p className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400">
+                                    Tipo actual: <span className="text-amber-600 dark:text-amber-400">{checklist.Tipo || 'Sin tipo'}</span>
+                                    {' · '}{activas.length} {activas.length === 1 ? 'actividad activa' : 'actividades activas'}
+                                    {checklist.TipoCorregido && (
+                                        <> {' · '}corregido desde &quot;{checklist.TipoCorregido.anterior || 'Sin tipo'}&quot; el {new Date(checklist.TipoCorregido.fecha).toLocaleDateString()}</>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 shrink-0 lg:justify-end">
+                            {TIPOS_CHECKLIST.map(t => {
+                                const esActual = (checklist.Tipo || '').trim().toUpperCase() === t.tipo;
+                                return (
+                                    <button
+                                        key={t.tipo}
+                                        onClick={() => setTipoObjetivo(t.tipo)}
+                                        disabled={esActual || cambiandoTipo}
+                                        title={esActual ? 'Este ya es el tipo actual del checklist' : `Cambiar a ${t.label} (${t.items.length} actividades)`}
+                                        className={`px-4 py-2 rounded-lg text-xs font-extrabold border transition-colors whitespace-nowrap ${esActual
+                                            ? 'bg-amber-500 border-amber-600 text-black cursor-default'
+                                            : (theme === 'dark'
+                                                ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25'
+                                                : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100')} ${cambiandoTipo && !esActual ? 'opacity-50 cursor-wait' : ''}`}
+                                    >
+                                        {t.label}
+                                        <span className="block font-bold opacity-70">{esActual ? 'tipo actual' : `${t.items.length} actividades`}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             )}
@@ -1152,8 +1317,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     <div className={`col-span-4 p-2 border-r ${theme === 'dark' ? 'border-slate-800 text-slate-200 font-bold' : 'border-slate-200 text-slate-900 font-bold'} flex items-center text-xs`}>
                                         {isEditingMetadata ? (
                                             <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.roles?.[roleKey]?.area || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, roles: { ...editMetadataForm.roles, [roleKey]: { ...editMetadataForm.roles[roleKey], area: e.target.value } } })}>
-                                                <option value="">Seleccionar...</option>
-                                                {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                                                <option value="">{jerarquiaLoading ? "Cargando..." : "Seleccionar..."}</option>
+                                                {conValorActual(jerarquia.gerencias, editMetadataForm?.roles?.[roleKey]?.area).map(a => <option key={a} value={a}>{a}</option>)}
                                             </select>
                                         ) : (
                                             checklist.Metadata.roles[roleKey].area || '-'
@@ -1187,8 +1352,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 <div className="col-span-9 p-3 flex items-center text-xs font-semibold">
                                     {isEditingMetadata ? (
                                         <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.gerencia || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, gerencia: e.target.value })}>
-                                            <option value="">{acLoading ? "Cargando..." : "Seleccione Gerencia"}</option>
-                                            {acData.gerencias.map(g => <option key={g} value={g}>{g}</option>)}
+                                            <option value="">{jerarquiaLoading ? "Cargando..." : "Seleccione Gerencia"}</option>
+                                            {conValorActual(jerarquia.gerenciasAbreviadas, editMetadataForm?.gerencia).map(g => <option key={g} value={g}>{g}</option>)}
                                         </select>
                                     ) : (checklist.Metadata?.gerencia || '-')}
                                 </div>
@@ -1198,8 +1363,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 <div className="col-span-9 p-3 flex items-center text-xs font-semibold">
                                     {isEditingMetadata ? (
                                         <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.superintendencia || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, superintendencia: e.target.value })}>
-                                            <option value="">{acLoading ? "Cargando..." : "Seleccione Superintendencia"}</option>
-                                            {acData.superintendencias.map(s => <option key={s} value={s}>{s}</option>)}
+                                            <option value="">{jerarquiaLoading ? "Cargando..." : "Seleccione Superintendencia"}</option>
+                                            {conValorActual(jerarquia.superintendencias, editMetadataForm?.superintendencia).map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
                                     ) : (checklist.Metadata?.superintendencia || '-')}
                                 </div>
@@ -1210,7 +1375,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     {isEditingMetadata ? (
                                         <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.unidadProceso || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, unidadProceso: e.target.value })}>
                                             <option value="">{acLoading ? "Cargando..." : "Seleccione Unidad"}</option>
-                                            {acData.unidades.map(u => <option key={u} value={u}>{u}</option>)}
+                                            {conValorActual(acData.unidades, editMetadataForm?.unidadProceso).map(u => <option key={u} value={u}>{u}</option>)}
                                         </select>
                                     ) : (checklist.Metadata?.unidadProceso || '-')}
                                 </div>
@@ -1325,7 +1490,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             )}
 
             <div className="space-y-4 mb-8">
-                {itemsFiltrados.map((it, idx) => {
+                {itemsFiltrados.map((it) => {
                     const isEditing = editingId === it.Id;
                     const currentItem = isEditing ? editForm : it;
                     const isMyTask = currentUser === it.NombreResponsable;
@@ -1352,7 +1517,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                 : showAlert ? 'bg-red-500 text-white' 
                                                 : 'bg-amber-600 text-white shadow'
                                         }`}>
-                                            #{idx + 1}
+                                            #{numeroTarea(it)}
                                         </span>
                                         {isEditing && isAdmin ? (
                                             <textarea className={`${inputClasses} text-sm font-semibold`} rows="2" value={currentItem.Descripcion} onChange={e => setEditForm({ ...editForm, Descripcion: e.target.value })} />
@@ -1782,6 +1947,41 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg transition-colors shadow-lg"
                             >
                                 Inactivar
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {tipoObjetivo && ReactDOM.createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]" onClick={() => !cambiandoTipo && setTipoObjetivo(null)}>
+                    <div className="bg-slate-800 border border-white/20 p-6 rounded-2xl max-w-md w-full shadow-2xl text-white" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-medium text-amber-400 mb-3">Cambiar el tipo de checklist</h3>
+                        <p className="text-xs text-white mb-3 font-bold">
+                            Este checklist pasará de <span className="text-amber-300">{checklist.Tipo || 'Sin tipo'}</span> a{' '}
+                            <span className="text-amber-300">{getTipoChecklist(tipoObjetivo)?.label}</span>.
+                        </p>
+                        <ul className="text-xs text-slate-200 font-semibold list-disc pl-5 space-y-1 mb-4">
+                            <li>Se eliminan las {checklist.items.length} actividades actuales y se cargan las {getTipoChecklist(tipoObjetivo)?.items.length} de la plantilla correcta.</li>
+                            <li>Se pierden avances, responsables, alertas y comentarios de cada tarea.</li>
+                            <li>Las evidencias ya subidas quedan en la carpeta del tipo anterior y dejan de verse aquí.</li>
+                            <li>El comentario general, los metadatos y el % histórico del checklist se conservan.</li>
+                        </ul>
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={() => setTipoObjetivo(null)}
+                                disabled={cambiandoTipo}
+                                className="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-white/20 disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleConfirmCambioTipo}
+                                disabled={cambiandoTipo}
+                                className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-amber-400/30 disabled:opacity-50 disabled:cursor-wait"
+                            >
+                                {cambiandoTipo ? 'Cambiando...' : 'Sí, cambiar el tipo'}
                             </button>
                         </div>
                     </div>

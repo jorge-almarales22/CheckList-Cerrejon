@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { AREAS, CHECKLIST_PROYECTOS_ITEMS, CHECKLIST_COMPRA_INSTALADA, CHECKLIST_EQUIPOS_NUEVOS_USADOS_ENSAMBLE, PREDEFINED_ITEMS } from '../data/constants';
-import { getRequestDigest, saveToSPList } from '../utils/sharepointApi';
+import { CHECKLIST_PROYECTOS_ITEMS, CHECKLIST_COMPRA_INSTALADA, CHECKLIST_EQUIPOS_NUEVOS_USADOS_ENSAMBLE, PREDEFINED_ITEMS } from '../data/constants';
+import { getRequestDigest, saveToSPList, fetchJerarquiaOpciones } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
 import PeoplePicker from './PeoplePicker';
 
@@ -14,21 +14,12 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
     const [inactivateReasonText, setInactivateReasonText] = useState('');
     const [backupItem, setBackupItem] = useState(null);
 
-    // Lista oficial de gerencias (alineada con las tortas del dashboard GerenciaPieCharts).
-    const GERENCIAS_OFICIALES = [
-        'SERV CORPORATIVOS',
-        'MATERIALES',
-        'PRODUCCION',
-        'MTTO DRUGAS',
-        'MTTO LLANTAS',
-        'GMIC',
-        'MDC',
-        'GGAE',
-        'GTI',
-        'SALUD & SEGURIDAD'
-    ];
-    const [acData, setAcData] = useState({ superintendencias: [], unidades: [] });
+    // Unidades de proceso: siguen saliendo de la lista EquiposAC.
+    const [acData, setAcData] = useState({ unidades: [] });
     const [acLoading, setAcLoading] = useState(true);
+    // Area (por rol), Gerencia y Superintendencia salen de la lista JerarquiaL.
+    const [jerarquia, setJerarquia] = useState({ gerencias: [], gerenciasAbreviadas: [], superintendencias: [] });
+    const [jerarquiaLoading, setJerarquiaLoading] = useState(true);
 
     const openInactivateModal = (id) => {
         setInactivatingItemId(id);
@@ -89,20 +80,16 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
         const fetchAcList = async () => {
             try {
                 const AC_SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/ac";
-                const res = await fetch(`${AC_SITE_URL}/_api/web/lists/getbytitle('EquiposAC')/items?$select=BranchGerencia,SiteSuperintendencia,UnidadProceso&$top=5000`, {
+                const res = await fetch(`${AC_SITE_URL}/_api/web/lists/getbytitle('EquiposAC')/items?$select=UnidadProceso&$top=5000`, {
                     headers: { "Accept": "application/json;odata=verbose" },
                     credentials: 'same-origin'
                 });
                 const json = await res.json();
                 const results = json.d?.results || [];
 
-                const uniqueSuperintendencias = [...new Set(results.map(r => r.SiteSuperintendencia).filter(Boolean))].sort();
                 const uniqueUnidades = [...new Set(results.map(r => r.UnidadProceso).filter(Boolean))].sort();
 
-                setAcData({
-                    superintendencias: uniqueSuperintendencias,
-                    unidades: uniqueUnidades
-                });
+                setAcData({ unidades: uniqueUnidades });
             } catch (err) {
                 console.error("Error fetching AC list:", err);
             } finally {
@@ -110,6 +97,19 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
             }
         };
         fetchAcList();
+    }, []);
+
+    useEffect(() => {
+        const cargarJerarquia = async () => {
+            try {
+                setJerarquia(await fetchJerarquiaOpciones());
+            } catch (err) {
+                console.error("Error cargando JerarquiaL:", err);
+            } finally {
+                setJerarquiaLoading(false);
+            }
+        };
+        cargarJerarquia();
     }, []);
 
     const [formData, setFormData] = useState({
@@ -294,6 +294,11 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
     const inactivas = items.filter(it => it.estado === 'Inactivo');
     const listadoOrdenado = [...activas, ...inactivas];
 
+    // El numero de la tarea es su posicion en el checklist, no su posicion en
+    // pantalla: al inactivar una tarea esta baja al final pero conserva su
+    // numero, y las demas no se renumeran.
+    const numeroTarea = (it) => items.findIndex(i => i.id === it.id) + 1;
+
     return (
         <div className={`${cardClass} border p-8 rounded-3xl mt-8 mx-auto max-w-[95%] animate-[fadeIn_0.3s_ease-out]`}>
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
@@ -371,8 +376,8 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                                 </div>
                                 <div className={`col-span-4 p-2 border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} flex items-center`}>
                                     <select className={inputClasses + " text-xs py-1.5 px-2"} value={metadata.roles[roleKey].area} onChange={(e) => handleMetadataRoleChange(roleKey, 'area', e.target.value)}>
-                                        <option value="">Seleccione</option>
-                                        {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                                        <option value="">{jerarquiaLoading ? "Cargando..." : "Seleccione"}</option>
+                                        {jerarquia.gerencias.map(a => <option key={a} value={a}>{a}</option>)}
                                     </select>
                                 </div>
                                 <div className="col-span-4 p-2 flex items-center">
@@ -385,8 +390,8 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                             <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-900'}`}>{"Gerencia"}</div>
                             <div className={`col-span-8 p-2 flex items-center ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                                 <select className={inputClasses + " text-xs py-1.5 px-2"} value={metadata.gerencia || ''} onChange={(e) => setMetadata(p => ({ ...p, gerencia: e.target.value }))}>
-                                    <option value="">Seleccione Gerencia</option>
-                                    {GERENCIAS_OFICIALES.map(g => <option key={g} value={g}>{g}</option>)}
+                                    <option value="">{jerarquiaLoading ? "Cargando Gerencias..." : "Seleccione Gerencia"}</option>
+                                    {jerarquia.gerenciasAbreviadas.map(g => <option key={g} value={g}>{g}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -394,8 +399,8 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                             <div className={`col-span-4 p-2 border-r font-bold text-[10px] uppercase flex items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/20 text-yellow-100' : 'border-slate-200 bg-slate-100/50 text-slate-900'}`}>{"Superintendencia"}</div>
                             <div className={`col-span-8 p-2 flex items-center ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                                 <select className={inputClasses + " text-xs py-1.5 px-2"} value={metadata.superintendencia || ''} onChange={(e) => setMetadata(p => ({ ...p, superintendencia: e.target.value }))}>
-                                    <option value="">{acLoading ? "Cargando Superintendencias..." : "Seleccione Superintendencia"}</option>
-                                    {acData.superintendencias.map(s => <option key={s} value={s}>{s}</option>)}
+                                    <option value="">{jerarquiaLoading ? "Cargando Superintendencias..." : "Seleccione Superintendencia"}</option>
+                                    {jerarquia.superintendencias.map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -480,7 +485,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {listadoOrdenado.map((it, idx) => {
+                        {listadoOrdenado.map((it) => {
                             const isInactive = it.estado === 'Inactivo';
                             const isEditing = editingId === it.id;
 
@@ -502,7 +507,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                                                     ? (theme === 'dark' ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-700') 
                                                     : 'bg-amber-600 text-white shadow'
                                             }`}>
-                                                #{idx + 1}
+                                                #{numeroTarea(it)}
                                             </span>
                                             <div className="flex-1 min-w-0">
                                                 {isEditing ? (

@@ -2,6 +2,11 @@ export const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/check
 
 // Sitio "ac" y biblioteca de documentos donde se guardan evidencias/PDFs como archivos reales.
 export const AC_SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/ac";
+
+// Sitio raiz de SGIA, donde vive la lista JerarquiaL (Gerencia / G_ABREVIADA /
+// Superintendencia) que alimenta los selects de metadatos del checklist.
+export const SGIA_SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia";
+export const JERARQUIA_LIST = "JerarquiaL";
 export const AC_HOST = "https://glencore.sharepoint.com";
 export const EVIDENCIAS_BASE = "/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/Evidencias";
 
@@ -13,18 +18,6 @@ export const TIPO_FOLDER_MAP = {
 };
 
 export const WEBHOOK_TEAMS_URL = "https://defaultc9a8e948bf0d4f8d9e9d551ac1b45a.48.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/686f52048bdf4bd29d83e8d4c6a2b610/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=qjJy4JkHjxDThnRnucNOGV0dvKxgPnEzAznBTnZkF8U";
-
-export const AREAS = [
-    "ASUNTOS SOCIALES", "ASUNTOS Y DIALOGO SOCIAL", "CIERRE DE MINA TECNICO Y OPERA",
-    "CONTROL INTERNO", "ESTANDARES Y ESTRAT RESP CORP", "EXC OPERACIONAL Y TECNOLOGIA",
-    "FINANCIERA Y CONTABILIDAD", "GESTION ACTIVOS ELECTRICOS", "GESTION AMBIENTAL",
-    "GESTION DE ACTIVOS", "MANEJO DE CARBON", "MANTENIM EQUIPOS SOBRE LLANTAS",
-    "MANTENIM PALAS Y EQUIPOS ORUGA", "MANTENIMIENTO INSTAL & ENERGIA", "MATERIALES Y SERVICIOS",
-    "PRODUCCION CENTRAL", "PRODUCCION NORTE", "PROTECCION", "PROYECTO DIALOGO SOCIAL",
-    "PROYECTO NUEVO TURNO Y SO", "PROYECTOS DE PRODUCCION", "PROYECTOS SIB",
-    "RECURSOS HUMANOS", "RELACIONES CON EL GOBIERNO", "SALUD Y SEGURIDAD",
-    "SERVICIOS TECNICOS", "SERVICIOS TECNOLOGICOS", "SOPORTE A PRODUCCION"
-];
 
 export const PERMISOS = {
     "Administrador": ["control_total", "ver_checklist_productivos", "gestionar_items_productivos", "ver_avances", "ver_checklist_desarrollo", "gestionar_checklist_desarrollo"],
@@ -261,3 +254,34 @@ export const CHECKLIST_EQUIPOS_NUEVOS_USADOS_ENSAMBLE = [
     { tarea: "Formalizar dentro del contrato de soporte de Vendor, que este equipo se suma a la flota sobre la que est\u00e1 el acuerdo comercial.", entregable: "Correo de formalizaci\u00f3n a contratista o vendor" },
     { tarea: "Validar que se hizo revision de los puntos del Checklist para el cumplimiento de la norma NFPA 1901 (aplica para equipos de respuesta a emergencias)", entregable: "Checklist de validacion de cumplimiento de norma" }
 ];
+
+// Registro unico de los tipos de incorporacion y su plantilla de actividades.
+// Lo usan tanto la creacion (por templateType) como la correccion de tipo desde el
+// detalle del checklist (por Tipo), para que ambos lados no se desincronicen.
+export const TIPOS_CHECKLIST = [
+    {
+        tipo: "PROYECTO",
+        templateType: "proyectos",
+        label: "Incorporación por Proyectos",
+        items: CHECKLIST_PROYECTOS_ITEMS
+    },
+    {
+        tipo: "COMPRA INSTALADA",
+        templateType: "compra_instalada",
+        label: "Incorporación Compra Instalada",
+        items: CHECKLIST_COMPRA_INSTALADA
+    },
+    {
+        tipo: "ENSAMBLE",
+        templateType: "ensamble",
+        label: "Incorporación por Ensamble",
+        items: CHECKLIST_EQUIPOS_NUEVOS_USADOS_ENSAMBLE
+    }
+];
+
+export const getTipoChecklist = (tipo) =>
+    TIPOS_CHECKLIST.find(t => t.tipo === (tipo || '').trim().toUpperCase()) || null;
+
+// Plantilla de actividades de un tipo. Si el tipo no se reconoce (p. ej. "GENERAL")
+// se cae a la lista predefinida, igual que hace la pantalla de creacion.
+export const getPlantillaPorTipo = (tipo) => getTipoChecklist(tipo)?.items || PREDEFINED_ITEMS;
