@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { calcularResumenPorGerencia, calcularEsperadoGlobal, calcularRealGlobal } from '../utils/calculations';
+import { fetchJerarquiaOpciones } from '../utils/sharepointApi';
 import SPIBadge from './SPIBadge';
 
 // Torta (donut) SVG que muestra el % esperado (gris) y el % real (amarillo).
@@ -9,6 +10,18 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
     const data = useMemo(() => calcularResumenPorGerencia(checklists), [checklists]);
     const esperadoGlobal = useMemo(() => calcularEsperadoGlobal(checklists), [checklists]);
     const realGlobal = useMemo(() => calcularRealGlobal(checklists), [checklists]);
+
+    // En las tortas la gerencia se guarda abreviada (GASOC, GCMTO...). Traemos el
+    // nombre completo de JerarquiaL para mostrarlo en el tooltip: hay clientes que
+    // no conocen las siglas. Si la lista falla, se sigue viendo solo la sigla.
+    const [nombrePorAbreviada, setNombrePorAbreviada] = useState({});
+    useEffect(() => {
+        let cancelado = false;
+        fetchJerarquiaOpciones()
+            .then(j => { if (!cancelado) setNombrePorAbreviada(j.nombrePorAbreviada || {}); })
+            .catch(err => console.error('No se pudo cargar JerarquiaL para los tooltips:', err));
+        return () => { cancelado = true; };
+    }, []);
 
     const isDark = theme === 'dark';
     // Sin datos (p.ej. los filtros no devolvieron nada) la banda se conserva con un
@@ -31,12 +44,25 @@ const GerenciaPieCharts = ({ checklists, theme }) => {
         const offsetEsp = circum - (esperado / 100) * circum;
         // El real (amarillo) se dibuja encima, hasta su porcentaje.
         const offsetReal = circum - (real / 100) * circum;
+        // Nombre completo de la gerencia; solo hay tooltip si aporta algo mas que la sigla.
+        const nombreCompleto = nombrePorAbreviada[gerencia];
+        const hayTooltip = !!nombreCompleto && nombreCompleto !== gerencia;
 
         return (
             <div className={`${cardBg} border p-3 md:p-4 rounded-2xl flex flex-col items-center justify-center transition-all hover:scale-[1.02]`}>
-                <h3 className={`text-[11px] font-extrabold uppercase tracking-wider mb-1 text-center ${subLabelColor} line-clamp-2 leading-tight`} title={gerencia}>
-                    {gerencia}
-                </h3>
+                <div className="relative group w-full flex justify-center">
+                    <h3 className={`text-[11px] font-extrabold uppercase tracking-wider mb-1 text-center ${subLabelColor} line-clamp-2 leading-tight ${hayTooltip ? 'cursor-help' : ''}`}>
+                        {gerencia}
+                    </h3>
+                    {hayTooltip && (
+                        <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-30 hidden group-hover:block">
+                            <div className="bg-slate-900 text-white text-[11px] font-semibold leading-snug rounded-lg px-2.5 py-1.5 shadow-xl border border-white/15 w-max max-w-[220px] text-center whitespace-normal">
+                                {nombreCompleto}
+                            </div>
+                            <div className="w-2 h-2 bg-slate-900 border-r border-b border-white/15 rotate-45 mx-auto -mt-1" />
+                        </div>
+                    )}
+                </div>
                 <span className={`text-[10px] font-bold mb-2 ${subLabelColor}`}>{count} proceso{count !== 1 ? 's' : ''}</span>
 
                 <div className="relative w-[90px] h-[90px] flex flex-col items-center justify-center">

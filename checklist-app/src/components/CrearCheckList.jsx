@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { CHECKLIST_PROYECTOS_ITEMS, CHECKLIST_COMPRA_INSTALADA, CHECKLIST_EQUIPOS_NUEVOS_USADOS_ENSAMBLE, PREDEFINED_ITEMS } from '../data/constants';
-import { getRequestDigest, saveToSPList, fetchJerarquiaOpciones } from '../utils/sharepointApi';
+import { getRequestDigest, saveToSPList, fetchJerarquiaOpciones, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
 import PeoplePicker from './PeoplePicker';
 
@@ -18,7 +18,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
     const [acData, setAcData] = useState({ unidades: [] });
     const [acLoading, setAcLoading] = useState(true);
     // Area (por rol), Gerencia y Superintendencia salen de la lista JerarquiaL.
-    const [jerarquia, setJerarquia] = useState({ gerencias: [], gerenciasAbreviadas: [], superintendencias: [] });
+    const [jerarquia, setJerarquia] = useState(JERARQUIA_VACIA);
     const [jerarquiaLoading, setJerarquiaLoading] = useState(true);
 
     const openInactivateModal = (id) => {
@@ -391,7 +391,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                             <div className={`col-span-8 p-2 flex items-center ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                                 <select className={inputClasses + " text-xs py-1.5 px-2"} value={metadata.gerencia || ''} onChange={(e) => setMetadata(p => ({ ...p, gerencia: e.target.value }))}>
                                     <option value="">{jerarquiaLoading ? "Cargando Gerencias..." : "Seleccione Gerencia"}</option>
-                                    {jerarquia.gerenciasAbreviadas.map(g => <option key={g} value={g}>{g}</option>)}
+                                    {jerarquia.gerenciasAbreviadas.map(g => <option key={g} value={g}>{etiquetaGerencia(g, jerarquia.nombrePorAbreviada)}</option>)}
                                 </select>
                             </div>
                         </div>

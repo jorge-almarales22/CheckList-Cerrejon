@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { calcularCumplimiento, esPendiente, esRechazado, esHistorico, esHistoricoGestionado, marcarHistoricoGestionado } from '../utils/calculations';
 import { notificarTeams } from '../utils/notifications';
-import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, recycleFile, dataUrlToUint8Array, fetchJerarquiaOpciones, conValorActual } from '../utils/sharepointApi';
+import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, recycleFile, dataUrlToUint8Array, fetchJerarquiaOpciones, conValorActual, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
 import { AC_HOST, TIPOS_CHECKLIST, getTipoChecklist } from '../data/constants';
 import PeoplePicker from './PeoplePicker';
@@ -42,6 +42,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [filterAlertaOnly, setFilterAlertaOnly] = useState(false);
     const [filterEstadoTarea, setFilterEstadoTarea] = useState(''); // '', 'terminadas', 'faltantes'
     const [fotoActivaIdx, setFotoActivaIdx] = useState(0); // carrusel de fotos del equipo
+    // Visor de fotos a pantalla completa: { fotos: [...], idx } o null si esta cerrado.
+    // Guarda la lista y no solo el indice porque tambien se abre desde el modo
+    // edicion, donde las fotos son las del formulario y no las ya guardadas.
+    const [fotoModal, setFotoModal] = useState(null);
+    const abrirVisorFotos = (fotos, idx) => setFotoModal({ fotos, idx });
 
     const [showAddTaskForm, setShowAddTaskForm] = useState(false);
     const [newTaskData, setNewTaskData] = useState({
@@ -62,7 +67,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [acData, setAcData] = useState({ unidades: [] });
     const [acLoading, setAcLoading] = useState(true);
     // Area (por rol), Gerencia y Superintendencia salen de la lista JerarquiaL.
-    const [jerarquia, setJerarquia] = useState({ gerencias: [], gerenciasAbreviadas: [], superintendencias: [] });
+    const [jerarquia, setJerarquia] = useState(JERARQUIA_VACIA);
     const [jerarquiaLoading, setJerarquiaLoading] = useState(true);
 
     const isAdmin = role === 'Administrador';
@@ -131,6 +136,25 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [modalEvidences]);
+
+    // Fotos de los equipos que se estan incorporando. Se admite el formato viejo
+    // (una sola foto en "imagenEquipo") para no perder los checklist antiguos.
+    const fotosEquipo = (checklist?.Metadata?.imagenesEquipo?.length > 0)
+        ? checklist.Metadata.imagenesEquipo
+        : (checklist?.Metadata?.imagenEquipo ? [checklist.Metadata.imagenEquipo] : []);
+
+    // Visor de fotos del equipo: Esc cierra y las flechas navegan.
+    useEffect(() => {
+        if (!fotoModal) return;
+        const total = fotoModal.fotos.length;
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') setFotoModal(null);
+            if (total > 1 && e.key === 'ArrowRight') setFotoModal(p => ({ ...p, idx: (p.idx + 1) % total }));
+            if (total > 1 && e.key === 'ArrowLeft') setFotoModal(p => ({ ...p, idx: (p.idx - 1 + total) % total }));
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [fotoModal]);
 
     useEffect(() => {
         const fetchDetails = async (isBackgroundPoll = false) => {
@@ -1236,7 +1260,13 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     <div className="flex flex-wrap gap-2">
                                         {(editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo || []).map((img, idx) => (
                                             <div key={idx} className="relative inline-block">
-                                                <img src={img} alt="Equipo" className="max-h-24 rounded-lg border border-slate-300 dark:border-slate-700 object-cover shadow-lg" />
+                                                <img
+                                                    src={img}
+                                                    alt="Equipo"
+                                                    title="Clic para ampliar"
+                                                    onClick={() => abrirVisorFotos(editMetadataForm?.imagenesEquipo || checklist.Metadata.imagenesEquipo || [], idx)}
+                                                    className="max-h-24 rounded-lg border border-slate-300 dark:border-slate-700 object-cover shadow-lg cursor-zoom-in"
+                                                />
                                                 <button
                                                     type="button"
                                                     onClick={() => {
@@ -1269,16 +1299,30 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     </div>
                                 ) : (() => {
                                     // Carrusel: muestra una foto a la vez para que el contenedor no se alargue.
-                                    const fotos = (checklist.Metadata.imagenesEquipo && checklist.Metadata.imagenesEquipo.length > 0)
-                                        ? checklist.Metadata.imagenesEquipo
-                                        : (checklist.Metadata.imagenEquipo ? [checklist.Metadata.imagenEquipo] : []);
+                                    const fotos = fotosEquipo;
                                     if (fotos.length === 0) {
                                         return <span className="text-slate-500 dark:text-slate-400 text-xs italic font-semibold">Sin fotos cargadas.</span>;
                                     }
                                     const idx = ((fotoActivaIdx % fotos.length) + fotos.length) % fotos.length;
                                     return (
-                                        <div className="relative w-full">
-                                            <img src={fotos[idx]} alt={`Equipo ${idx + 1}`} className="w-full h-44 rounded-lg border border-slate-300 dark:border-slate-700 object-cover shadow-lg" />
+                                        <div className="relative w-full group">
+                                            {/* La miniatura esta recortada (object-cover): al hacer clic se abre el
+                                                visor a pantalla completa con la foto completa. */}
+                                            <img
+                                                src={fotos[idx]}
+                                                alt={`Equipo ${idx + 1}`}
+                                                onClick={() => abrirVisorFotos(fotos, idx)}
+                                                title="Clic para ampliar"
+                                                className="w-full h-44 rounded-lg border border-slate-300 dark:border-slate-700 object-cover shadow-lg cursor-zoom-in"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => abrirVisorFotos(fotos, idx)}
+                                                className="absolute top-2 left-2 flex items-center gap-1 bg-black/60 hover:bg-black/85 text-white text-[10px] font-bold px-2 py-1 rounded-full transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                            >
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-4.35-4.35M11 8v6M8 11h6M19 11a8 8 0 11-16 0 8 8 0 0116 0z" /></svg>
+                                                Ampliar
+                                            </button>
                                             {fotos.length > 1 && (
                                                 <>
                                                     <button onClick={() => setFotoActivaIdx(idx - 1)} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/55 hover:bg-black/80 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-colors">
@@ -1353,7 +1397,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     {isEditingMetadata ? (
                                         <select className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={editMetadataForm?.gerencia || ''} onChange={e => setEditMetadataForm({ ...editMetadataForm, gerencia: e.target.value })}>
                                             <option value="">{jerarquiaLoading ? "Cargando..." : "Seleccione Gerencia"}</option>
-                                            {conValorActual(jerarquia.gerenciasAbreviadas, editMetadataForm?.gerencia).map(g => <option key={g} value={g}>{g}</option>)}
+                                            {conValorActual(jerarquia.gerenciasAbreviadas, editMetadataForm?.gerencia).map(g => <option key={g} value={g}>{etiquetaGerencia(g, jerarquia.nombrePorAbreviada)}</option>)}
                                         </select>
                                     ) : (checklist.Metadata?.gerencia || '-')}
                                 </div>
@@ -1889,6 +1933,62 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                             </button>
                         )}
                     </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Visor a pantalla completa de las fotos de los equipos a incorporar.
+                En la tarjeta las fotos van recortadas (object-cover); aqui se ven
+                completas, con flechas y Esc para cerrar. */}
+            {fotoModal && fotoModal.fotos.length > 0 && ReactDOM.createPortal(
+                <div
+                    className="fixed inset-0 z-[10000] flex flex-col bg-black/95 backdrop-blur-md animate-[fadeIn_0.2s_ease-out]"
+                    onClick={() => setFotoModal(null)}
+                >
+                    <div className="flex justify-between items-center p-4 text-white border-b border-slate-800" onClick={(e) => e.stopPropagation()}>
+                        <div className="font-bold tracking-widest text-sm text-yellow-400 uppercase">
+                            Fotos del equipo ({fotoModal.idx + 1} de {fotoModal.fotos.length})
+                        </div>
+                        <button onClick={() => setFotoModal(null)} title="Cerrar (Esc)" className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded-xl border border-red-400/40 shadow-lg transition-colors">
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                            Cerrar
+                        </button>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
+                        {fotoModal.fotos.length > 1 && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setFotoModal(p => ({ ...p, idx: (p.idx - 1 + p.fotos.length) % p.fotos.length })); }}
+                                className="absolute left-4 p-4 bg-black/60 hover:bg-black/90 text-white rounded-full transition-colors z-10 border border-slate-800"
+                            >
+                                <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                            </button>
+                        )}
+
+                        <img
+                            src={fotoModal.fotos[fotoModal.idx]}
+                            alt={`Equipo ${fotoModal.idx + 1}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="max-h-[85vh] max-w-[90vw] object-contain drop-shadow-2xl rounded-lg"
+                        />
+
+                        {fotoModal.fotos.length > 1 && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setFotoModal(p => ({ ...p, idx: (p.idx + 1) % p.fotos.length })); }}
+                                className="absolute right-4 p-4 bg-black/60 hover:bg-black/90 text-white rounded-full transition-colors z-10 border border-slate-800"
+                            >
+                                <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            </button>
+                        )}
+                    </div>
+                    {fotoModal.fotos.length > 1 && (
+                        <div className="flex justify-center gap-2 pb-5" onClick={(e) => e.stopPropagation()}>
+                            {fotoModal.fotos.map((f, i) => (
+                                <button key={i} onClick={() => setFotoModal(p => ({ ...p, idx: i }))} className={`rounded-lg overflow-hidden border-2 transition-all ${i === fotoModal.idx ? 'border-yellow-400 scale-105' : 'border-white/25 opacity-60 hover:opacity-100'}`}>
+                                    <img src={f} alt={`Miniatura ${i + 1}`} className="h-14 w-20 object-cover" />
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>,
                 document.body
             )}

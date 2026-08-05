@@ -196,6 +196,20 @@ const getAllListItems = async (siteUrl, listName, selectCols) => {
 const distinctSorted = (rows, key) =>
     [...new Set(rows.map(r => (r[key] || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
 
+// Diccionario abreviatura -> nombre completo de la gerencia. Los clientes no
+// conocen las siglas (GASOC, GCMTO...), asi que en los selects y en las tortas
+// del dashboard mostramos tambien el nombre. Se queda con la primera coincidencia
+// no vacia porque en JerarquiaL la misma gerencia se repite en muchas filas.
+const mapaAbreviadaANombre = (rows, keyAbrev, keyNombre) => {
+    const map = {};
+    rows.forEach(r => {
+        const abrev = (r[keyAbrev] || '').trim();
+        const nombre = (r[keyNombre] || '').trim();
+        if (abrev && nombre && !map[abrev]) map[abrev] = nombre;
+    });
+    return map;
+};
+
 // Opciones de los selects de metadatos. Devuelve listas ya deduplicadas porque
 // en JerarquiaL cada fila es una division, asi que gerencias y superintendencias
 // se repiten muchas veces.
@@ -207,8 +221,25 @@ export const fetchJerarquiaOpciones = async () => {
     return {
         gerencias: distinctSorted(rows, fieldMap[JERARQUIA_COLS.gerencia]),
         gerenciasAbreviadas: distinctSorted(rows, fieldMap[JERARQUIA_COLS.abreviada]),
-        superintendencias: distinctSorted(rows, fieldMap[JERARQUIA_COLS.superintendencia])
+        superintendencias: distinctSorted(rows, fieldMap[JERARQUIA_COLS.superintendencia]),
+        nombrePorAbreviada: mapaAbreviadaANombre(
+            rows,
+            fieldMap[JERARQUIA_COLS.abreviada],
+            fieldMap[JERARQUIA_COLS.gerencia]
+        )
     };
+};
+
+// Estado inicial compartido por los componentes que consumen JerarquiaL, para
+// que ninguno olvide inicializar alguna de las llaves.
+export const JERARQUIA_VACIA = { gerencias: [], gerenciasAbreviadas: [], superintendencias: [], nombrePorAbreviada: {} };
+
+// Etiqueta visible de una gerencia: "GASOC - Gerencia de Asociados". Si no hay
+// nombre completo (valor viejo, lista incompleta) se muestra solo la sigla.
+export const etiquetaGerencia = (abreviada, nombrePorAbreviada) => {
+    if (!abreviada) return '';
+    const nombre = nombrePorAbreviada?.[abreviada];
+    return nombre && nombre !== abreviada ? `${abreviada} - ${nombre}` : abreviada;
 };
 
 // Un checklist guardado puede tener un valor que ya no existe en JerarquiaL.
