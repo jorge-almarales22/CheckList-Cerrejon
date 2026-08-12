@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { SITE_URL } from '../data/constants';
 import { getRequestDigest } from '../utils/sharepointApi';
 
-const PeoplePicker = ({ value, onChange, placeholder, className, readOnly }) => {
+// `required` es opcional: por defecto el campo es obligatorio (salvo en solo
+// lectura), pero los campos opcionales -como el corresponsable- pasan required={false}
+// para no bloquear el envío del formulario.
+const PeoplePicker = ({ value, onChange, placeholder, className, readOnly, required }) => {
     const [query, setQuery] = useState(value || '');
     const [results, setResults] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
@@ -88,7 +91,7 @@ const PeoplePicker = ({ value, onChange, placeholder, className, readOnly }) => 
                 }}
                 onFocus={() => { if (results.length > 0 && !readOnly) setIsOpen(true); }}
                 readOnly={readOnly}
-                required={!readOnly}
+                required={required !== undefined ? required : !readOnly}
             />
             {loading && <div className="absolute right-3 top-3 w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>}
             {isOpen && results.length > 0 && (

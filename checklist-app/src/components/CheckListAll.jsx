@@ -113,21 +113,14 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
 
     if (loading) return <div className="text-center text-white mt-20 font-bold">Cargando datos desde SharePoint DB...</div>;
 
-    const esAdminODev = role === 'Administrador' || role === 'Desarrollador';
     // Eliminar un checklist es exclusivo de los administradores.
     const puedeEliminar = role === 'Administrador';
-    const u = (currentUser || '').toLowerCase();
-    // Un usuario ve un checklist aprobado si es admin/dev, o si es responsable de una
-    // tarea, o si esta asignado en algun rol de los metadatos, o si lo creó.
-    const puedeVerAprobado = (chk) => {
-        if (esAdminODev) return true;
-        const esResp = chk.items?.some(it => (it.NombreResponsable || '').toLowerCase() === u);
-        const rolesMeta = Object.values(chk.Metadata?.roles || {}).map(r => (r?.persona || '').toLowerCase());
-        const esCreador = (chk.CreadoPor || '').toLowerCase() === u;
-        return esResp || rolesMeta.includes(u) || esCreador;
-    };
 
-    const aprobados = checklists.filter(esAprobado).filter(puedeVerAprobado);
+    // Todas las incorporaciones aprobadas son visibles para toda la empresa: ya no
+    // se filtra por responsable, rol en los metadatos ni creador. Quien puede
+    // GESTIONAR cada tarea se sigue resolviendo dentro del detalle (responsable,
+    // corresponsable o administrador).
+    const aprobados = checklists.filter(esAprobado);
     // Todas las solicitudes pendientes/rechazadas son visibles para todos los usuarios.
     const solicitudes = checklists.filter(chk => esPendiente(chk) || esRechazado(chk));
     const numSolicitudes = solicitudes.length;

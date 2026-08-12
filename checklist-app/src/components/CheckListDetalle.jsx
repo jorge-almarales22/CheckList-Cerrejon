@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { calcularCumplimiento, esPendiente, esRechazado, esHistorico, esHistoricoGestionado, marcarHistoricoGestionado } from '../utils/calculations';
+import { esPendiente, esRechazado, esHistorico, esHistoricoGestionado, marcarHistoricoGestionado, getEstadoTarea, getCorresponsable, puedeGestionarTarea, puedeAsignarCorresponsable, mismoUsuario } from '../utils/calculations';
 import { notificarTeams } from '../utils/notifications';
 import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, recycleFile, dataUrlToUint8Array, fetchJerarquiaOpciones, conValorActual, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
@@ -10,6 +10,10 @@ import DashboardCharts from './DashboardCharts';
 import GanttChart from './GanttChart';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+
+// Valor centinela del filtro de responsable: no es un correo, asi que no choca
+// con ningun responsable real de la lista.
+const MIS_TAREAS = '__mis_tareas__';
 
 const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) => {
     const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist";
@@ -53,9 +57,15 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         actividades: '',
         entregable: '',
         nombreResponsable: '',
+        corresponsable: '',
         fechaBaselineInicio: new Date().toISOString().split('T')[0],
         fechaBaselineFin: ''
     });
+
+    // Id de la tarea donde el usuario intentó pasar del 90% sin evidencias. Sirve
+    // para explicarle en pantalla por qué el número se le devuelve a 90: antes el
+    // tope se aplicaba en silencio y nadie entendía qué estaba pasando.
+    const [avisoTope, setAvisoTope] = useState(null);
 
     const [modalEvidences, setModalEvidences] = useState(null);
     const [activeEvidenciaIndex, setActiveEvidenciaIndex] = useState(0);
@@ -477,9 +487,21 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         }
     };
 
+    // Una tarea puede llegar al 100% solo si ya tiene evidencias, vengan de la carga
+    // de esta sesión (evidenciasItem) o de una anterior (evidenciasPresence).
+    const tieneEvidencias = (itemId) =>
+        (evidenciasItem[itemId] && evidenciasItem[itemId].length > 0) || !!evidenciasPresence[itemId];
+
     const handleStartEdit = (item) => {
         setEditingId(item.Id);
         setEditForm({ ...item });
+        setAvisoTope(null);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingId(null);
+        setEditForm({});
+        setAvisoTope(null);
     };
 
     // ---- Flujo de aprobacion (solo admins) ----
@@ -680,9 +702,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             alert("No se puede editar un checklist finalizado.");
             return;
         }
-        const tieneEvidenciasCargadas = (evidenciasItem[editForm.Id] && evidenciasItem[editForm.Id].length > 0) || evidenciasPresence[editForm.Id];
-        if (parseInt(editForm.Avance) > 90 && !tieneEvidenciasCargadas) {
-            alert("Error: No puedes guardar un avance superior al 90% sin antes haber cargado al menos una evidencia.");
+        if (parseInt(editForm.Avance) > 90 && !tieneEvidencias(editForm.Id)) {
+            setAvisoTope(editForm.Id);
+            alert("No puedes dejar esta tarea por encima del 90% todavía.\n\nPara marcarla al 100% primero debes cargar al menos una evidencia en la sección \"Evidencias Cargadas\" de esta misma tarea. Cuando la subas, el avance se desbloquea.");
             return;
         }
 
@@ -692,6 +714,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 ...it,
                 Descripcion: editForm.Descripcion,
                 NombreResponsable: editForm.NombreResponsable,
+                Corresponsable: editForm.Corresponsable || '',
                 Entregable: editForm.Entregable,
                 FechaBaselineInicio: editForm.FechaBaselineInicio,
                 FechaBaselineFin: editForm.FechaBaselineFin,
@@ -708,6 +731,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             }, digest);
             setChecklist(updatedChecklist);
             setEditingId(null);
+            setAvisoTope(null);
         } catch (error) {
             alert("Error guardando cambios. Revisa la consola.");
             console.error(error);
@@ -769,6 +793,17 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         }
     };
 
+    // Avisa por Teams a quienes gestionan la tarea (responsable y corresponsable),
+    // saltando al propio autor de la acción para que nadie se notifique a sí mismo.
+    const notificarInvolucrados = (tipoAlerta, item, mensaje) => {
+        const destinatarios = [item?.NombreResponsable, getCorresponsable(item)]
+            .filter(Boolean)
+            .filter(email => !mismoUsuario(email, currentUser));
+        [...new Set(destinatarios.map(e => e.trim()))].forEach(email => {
+            notificarTeams(tipoAlerta, email, mensaje, checklist.Name);
+        });
+    };
+
     const handleAgregarComentario = async (itemId) => {
         const text = nuevosComentarios[itemId];
         if (!text || !text.trim()) return;
@@ -798,12 +833,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             setChecklist(updatedChecklist);
             setNuevosComentarios({ ...nuevosComentarios, [itemId]: '' });
 
-            if (targetItem && targetItem.NombreResponsable && targetItem.NombreResponsable.toLowerCase() !== currentUser.toLowerCase()) {
-                notificarTeams(
+            if (targetItem) {
+                notificarInvolucrados(
                     "Nuevo Comentario",
-                    targetItem.NombreResponsable,
-                    `El usuario ${currentUser} ha comentado en tu tarea "${targetItem.Descripcion}": ${text}`,
-                    checklist.Name
+                    targetItem,
+                    `El usuario ${currentUser} ha comentado en tu tarea "${targetItem.Descripcion}": ${text}`
                 );
             }
 
@@ -862,12 +896,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             }, digest);
             setChecklist(updatedChecklist);
 
-            if (newAlerta === "Si" && item.NombreResponsable && item.NombreResponsable.toLowerCase() !== currentUser.toLowerCase()) {
-                notificarTeams(
+            if (newAlerta === "Si") {
+                notificarInvolucrados(
                     "Alerta Activada",
-                    item.NombreResponsable,
-                    `El usuario ${currentUser} ha marcado una alerta en tu tarea: "${item.Descripcion}".`,
-                    checklist.Name
+                    item,
+                    `El usuario ${currentUser} ha marcado una alerta en tu tarea: "${item.Descripcion}".`
                 );
             }
         } catch (error) { console.error(error); }
@@ -898,6 +931,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             Id: `TASK-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 5)}`,
             Descripcion: act.tarea || act,
             NombreResponsable: '',
+            Corresponsable: '',
             Entregable: act.entregable || '',
             Avance: "0",
             FechaBaselineInicio: inicio,
@@ -977,6 +1011,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 Id: nuevaTareaId,
                 Descripcion: newTaskData.actividades,
                 NombreResponsable: newTaskData.nombreResponsable,
+                Corresponsable: newTaskData.corresponsable || '',
                 Entregable: newTaskData.entregable,
                 Avance: "0",
                 FechaBaselineInicio: newTaskData.fechaBaselineInicio,
@@ -1004,6 +1039,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 actividades: '',
                 entregable: '',
                 nombreResponsable: '',
+                corresponsable: '',
                 fechaBaselineInicio: new Date().toISOString().split('T')[0],
                 fechaBaselineFin: ''
             });
@@ -1032,7 +1068,12 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const listadoResponsablesUnicos = [...new Set(checklist.items.map(it => it.NombreResponsable).filter(Boolean))].sort();
 
     let itemsFiltrados = listadoOrdenado;
-    if (filterResponsable) {
+    if (filterResponsable === MIS_TAREAS) {
+        // Atajo para quien gestiona: sus tareas como responsable y las que le
+        // delegaron como corresponsable. Se pasa esAdmin=false a proposito, si no
+        // un administrador veria todas.
+        itemsFiltrados = itemsFiltrados.filter(it => puedeGestionarTarea(it, currentUser, false));
+    } else if (filterResponsable) {
         itemsFiltrados = itemsFiltrados.filter(it => it.NombreResponsable === filterResponsable);
     }
     if (filterAlertaOnly) {
@@ -1044,7 +1085,13 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         itemsFiltrados = itemsFiltrados.filter(tareaTerminada);
     } else if (filterEstadoTarea === 'faltantes') {
         itemsFiltrados = itemsFiltrados.filter(it => !tareaTerminada(it));
+    } else if (filterEstadoTarea === 'en_rojo') {
+        // Mismo criterio que el semaforo de la tarjeta: atrasadas respecto al plan
+        // o sin plan (esperado y real en 0 por falta de fechas de entrega).
+        itemsFiltrados = itemsFiltrados.filter(it => getEstadoTarea(it).enRojo);
     }
+
+    const totalEnRojo = activas.filter(it => getEstadoTarea(it).enRojo).length;
 
     return (
         <div className="max-w-[95%] mx-auto animate-[fadeIn_0.3s_ease-out]">
@@ -1478,6 +1525,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">{"Filtrar por Responsable"}</span>
                         <select className={`${inputClasses} text-xs font-semibold`} value={filterResponsable} onChange={(e) => setFilterResponsable(e.target.value)}>
                             <option value="">{"Todos los Responsables"}</option>
+                            <option value={MIS_TAREAS}>Mis tareas (responsable o corresponsable)</option>
                             {listadoResponsablesUnicos.map(r => <option key={r} value={r}>{r}</option>)}
                         </select>
                     </div>
@@ -1487,7 +1535,13 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                             <option value="">Todas las tareas</option>
                             <option value="terminadas">Terminadas (100% + evidencias)</option>
                             <option value="faltantes">Faltantes (por terminar)</option>
+                            <option value="en_rojo">En rojo: atrasadas o sin fecha de entrega ({totalEnRojo})</option>
                         </select>
+                        {filterEstadoTarea === 'en_rojo' && (
+                            <span className="text-[10px] font-bold text-red-600 dark:text-red-400 mt-1">
+                                Mostrando las tareas por debajo del avance esperado y las que están en 0% sin fechas de entrega.
+                            </span>
+                        )}
                     </div>
                     <div className="flex items-center gap-2 mt-4 md:mt-0">
                         <input type="checkbox" id="detAlertCheckbox" checked={filterAlertaOnly} onChange={(e) => setFilterAlertaOnly(e.target.checked)} className="accent-yellow-500 cursor-pointer h-4 w-4" />
@@ -1514,14 +1568,20 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 <PeoplePicker className={inputClasses + " text-xs"} value={newTaskData.nombreResponsable} onChange={(val) => setNewTaskData(prev => ({ ...prev, nombreResponsable: val }))} />
                             </div>
                             <div className="md:col-span-4">
+                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>
+                                    Corresponsable <span className="font-semibold text-slate-500 dark:text-slate-400">(opcional)</span>
+                                </label>
+                                <PeoplePicker className={inputClasses + " text-xs"} placeholder="Quién gestiona por el responsable..." required={false} value={newTaskData.corresponsable} onChange={(val) => setNewTaskData(prev => ({ ...prev, corresponsable: val }))} />
+                            </div>
+                            <div className="md:col-span-4">
                                 <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>Entregable</label>
                                 <input type="text" className={inputClasses + " text-xs"} value={newTaskData.entregable} onChange={(e) => setNewTaskData({ ...newTaskData, entregable: e.target.value })} required></input>
                             </div>
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-3">
                                 <label className="block text-xs font-bold text-blue-500 dark:text-blue-300 mb-1">Plan Inicio (Baseline)</label>
                                 <input type="date" className={inputClasses + " text-xs"} value={newTaskData.fechaBaselineInicio} onChange={(e) => setNewTaskData({ ...newTaskData, fechaBaselineInicio: e.target.value })} required></input>
                             </div>
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-3">
                                 <label className="block text-xs font-bold text-blue-500 dark:text-blue-300 mb-1">Plan Fin (Baseline)</label>
                                 <input type="date" className={inputClasses + " text-xs"} value={newTaskData.fechaBaselineFin} onChange={(e) => setNewTaskData({ ...newTaskData, fechaBaselineFin: e.target.value })} required></input>
                             </div>
@@ -1537,9 +1597,15 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 {itemsFiltrados.map((it) => {
                     const isEditing = editingId === it.Id;
                     const currentItem = isEditing ? editForm : it;
-                    const isMyTask = currentUser === it.NombreResponsable;
+                    // Responsable y corresponsable diligencian la tarea por igual; nombrar
+                    // al corresponsable queda reservado al responsable y al administrador.
+                    const puedeGestionar = puedeGestionarTarea(it, currentUser, isAdmin);
+                    const puedeCambiarCorresponsable = puedeAsignarCorresponsable(it, currentUser, isAdmin);
+                    const corresponsable = getCorresponsable(it);
                     const isInactive = (it.Estado || it.estado) === 'Inactivo';
                     const showAlert = it.Alerta === "Si";
+                    const estadoTarea = getEstadoTarea(it);
+                    const evidenciasOk = tieneEvidencias(it.Id);
 
                     return (
                         <div 
@@ -1608,6 +1674,52 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     <span className={`font-semibold text-xs break-all ${isInactive ? (theme === 'dark' ? 'text-slate-300' : 'text-slate-700') : ''}`}>{it.NombreResponsable}</span>
                                                 </div>
                                             )}
+
+                                            {/* Corresponsable: apoya al responsable diligenciando la tarea. No
+                                                sustituye al responsable en las gráficas ni en los reportes. */}
+                                            <div className="mt-3 pt-2 border-t border-dashed border-slate-300 dark:border-slate-700">
+                                                <span className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-slate-900 dark:text-slate-200">
+                                                    Corresponsable
+                                                </span>
+                                                {isEditing && puedeCambiarCorresponsable ? (
+                                                    <>
+                                                        <PeoplePicker
+                                                            className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none"
+                                                            placeholder="Sin corresponsable"
+                                                            required={false}
+                                                            value={currentItem.Corresponsable || ''}
+                                                            onChange={val => setEditForm({ ...editForm, Corresponsable: val })}
+                                                        />
+                                                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 mt-1">
+                                                            Podrá diligenciar esta tarea igual que tú. El avance se sigue contando al responsable.
+                                                        </p>
+                                                        {currentItem.Corresponsable && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEditForm({ ...editForm, Corresponsable: '' })}
+                                                                className="mt-1 text-[10px] font-bold text-red-600 dark:text-red-400 hover:underline"
+                                                            >
+                                                                Quitar corresponsable
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                ) : corresponsable ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <img
+                                                            src={`https://glencore.sharepoint.com/_layouts/15/userphoto.aspx?size=S&accountname=${corresponsable}`}
+                                                            className="w-6 h-6 rounded-full border border-slate-300 dark:border-slate-700 object-cover bg-gray-700"
+                                                            onError={(e) => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E"; }}
+                                                        />
+                                                        <span className="font-semibold text-xs break-all text-slate-600 dark:text-slate-300" title={`${corresponsable} gestiona esta tarea en apoyo al responsable`}>
+                                                            {corresponsable}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs font-semibold italic text-slate-500 dark:text-slate-400">
+                                                        Sin asignar
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
 
                                         <div className="col-span-1">
@@ -1650,36 +1762,81 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         </div>
 
                                         {(() => {
-                                            // Esperado de la tarea segun su plan (fechas baseline) vs avance real.
-                                            const espTarea = isInactive ? 0 : calcularCumplimiento(it.FechaBaselineInicio, it.FechaBaselineFin);
-                                            const realTarea = isInactive ? 0 : (parseInt(it.Avance || it.avance || 0) || 0);
-                                            // Alerta sutil: la tarea esta por debajo de lo esperado (atrasada).
-                                            const atrasada = !isInactive && espTarea > 0 && realTarea < espTarea;
+                                            // Semaforo compartido con el filtro "En rojo": atrasada respecto al
+                                            // plan, o sin plan (0% esperado y 0% real por falta de fechas).
+                                            const { esperado: espTarea, real: realTarea, atrasada, sinPlan, sinFechaEntrega } = estadoTarea;
+                                            const tituloAlerta = atrasada
+                                                ? `Atrasado: real ${realTarea}% por debajo del esperado ${espTarea}%`
+                                                : sinFechaEntrega
+                                                    ? 'Esta tarea no tiene fecha de entrega, por eso su avance esperado es 0%.'
+                                                    : 'Sin avance esperado ni real: el plan de esta tarea todavía no arranca.';
                                             return (
                                                 <div className="col-span-1">
                                                     <span className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-slate-900 dark:text-slate-200 flex items-center gap-1">
                                                         Avance Esperado
-                                                        {atrasada && (
-                                                            <span title={`Atrasado: real ${realTarea}% por debajo del esperado ${espTarea}%`} className="inline-flex items-center text-red-600 dark:text-red-400">
+                                                        {(atrasada || sinPlan) && (
+                                                            <span title={tituloAlerta} className="inline-flex items-center text-red-600 dark:text-red-400">
                                                                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.492-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
                                                             </span>
                                                         )}
                                                     </span>
-                                                    <span className={`font-black text-2xl drop-shadow ${atrasada ? 'text-red-600 dark:text-red-400' : 'text-green-500'}`}>{espTarea}%</span>
+                                                    <span className={`font-black text-2xl drop-shadow ${(atrasada || sinPlan) ? 'text-red-600 dark:text-red-400' : 'text-green-500'}`}>{espTarea}%</span>
+                                                    {sinPlan && (
+                                                        <span className="block text-[10px] font-bold text-red-600 dark:text-red-400 mt-1 leading-tight">
+                                                            {sinFechaEntrega ? 'Sin fecha de entrega' : 'Plan sin iniciar'}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             );
                                         })()}
 
                                         <div className="col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>Avance Real</span>
+                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 text-slate-900 dark:text-slate-200 flex items-center gap-1`}>
+                                                Avance Real
+                                                {estadoTarea.sinPlan && (
+                                                    <span title={estadoTarea.sinFechaEntrega
+                                                        ? 'Avance real en 0% y sin fecha de entrega definida.'
+                                                        : 'Avance real en 0% y plan todavía sin iniciar.'} className="inline-flex items-center text-red-600 dark:text-red-400">
+                                                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.492-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                                                    </span>
+                                                )}
+                                            </span>
                                             {isEditing ? (
-                                                <input type="number" className="w-20 bg-transparent border-b border-slate-300 focus:border-yellow-500 text-lg font-bold mt-1 outline-none" value={currentItem.Avance || 0} onChange={e => {
-                                                    let val = parseInt(e.target.value) || 0;
-                                                    if (val > 90 && (!evidenciasItem[it.Id] || evidenciasItem[it.Id].length === 0) && !evidenciasPresence[it.Id]) val = 90;
-                                                    setEditForm({ ...editForm, Avance: val });
-                                                }} />
+                                                <>
+                                                    <div className="flex items-center gap-1">
+                                                        <input type="number" min="0" max="100" className="w-20 bg-transparent border-b border-slate-300 focus:border-yellow-500 text-lg font-bold mt-1 outline-none" value={currentItem.Avance || 0} onChange={e => {
+                                                            let val = parseInt(e.target.value) || 0;
+                                                            if (val > 100) val = 100;
+                                                            // Tope del 90% mientras la tarea no tenga evidencias: antes se
+                                                            // recortaba en silencio, ahora se avisa por qué.
+                                                            if (val > 90 && !evidenciasOk) {
+                                                                val = 90;
+                                                                setAvisoTope(it.Id);
+                                                            } else if (avisoTope === it.Id) {
+                                                                setAvisoTope(null);
+                                                            }
+                                                            setEditForm({ ...editForm, Avance: val });
+                                                        }} />
+                                                        <span className="text-lg font-bold mt-1">%</span>
+                                                    </div>
+
+                                                    {!evidenciasOk && (
+                                                        <div className={`mt-2 rounded-lg border px-2.5 py-2 text-[11px] font-bold leading-snug ${avisoTope === it.Id
+                                                            ? 'bg-red-500/15 border-red-500/50 text-red-700 dark:text-red-300'
+                                                            : (theme === 'dark' ? 'bg-amber-500/10 border-amber-500/40 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-800')}`}>
+                                                            <span className="flex items-start gap-1.5">
+                                                                <svg className="w-4 h-4 shrink-0 mt-[1px]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.492-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                                                                <span>
+                                                                    {avisoTope === it.Id
+                                                                        ? 'No puedes marcar esta tarea al 100% todavía: primero carga una evidencia. Por eso el avance se quedó en 90%.'
+                                                                        : 'Máximo 90% mientras la tarea no tenga evidencias. Sube al menos una en "Evidencias Cargadas" para poder llegar al 100%.'}
+                                                                </span>
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </>
                                             ) : (
-                                                <span className="text-yellow-600 dark:text-yellow-400 font-black text-2xl drop-shadow">{isInactive ? 0 : (it.Avance || 0)}%</span>
+                                                <span className={`font-black text-2xl drop-shadow ${estadoTarea.sinPlan ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}`}>{isInactive ? 0 : (it.Avance || 0)}%</span>
                                             )}
                                         </div>
 
@@ -1725,7 +1882,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                                                 DOC
                                                                             </div>
                                                                         )}
-                                                                        {!isFinalizado && (isAdmin || isMyTask) && (
+                                                                        {!isFinalizado && puedeGestionar && (
                                                                             <button onClick={() => eliminarEvidencia(it.Id, ev)} className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-md">&times;</button>
                                                                         )}
                                                                     </div>
@@ -1734,7 +1891,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                         </div>
                                                     )}
 
-                                                    {!isFinalizado && (isMyTask || isAdmin) && (
+                                                    {!isFinalizado && puedeGestionar && (
                                                         <div className={`pt-2 border-t ${theme==='dark'?'border-slate-800':'border-slate-200'}`}>
                                                             <input type="file" multiple className="text-[10px] text-slate-900 dark:text-slate-200 font-bold w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 transition-all cursor-pointer block" onChange={(e) => handleFileUpload(it.Id, e)} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" disabled={isUploading} />
                                                             {isUploading && <span className="text-yellow-500 text-xs mt-1 block font-semibold">Procesando y subiendo archivo(s)... no cierres la pestaña.</span>}
@@ -1772,7 +1929,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                 )}
                                             </div>
 
-                                            {!isFinalizado && (isAdmin || isMyTask) && (
+                                            {!isFinalizado && puedeGestionar && (
                                                 <div className="flex gap-2">
                                                     <textarea
                                                         className={`${inputClasses} text-xs`}
@@ -1814,10 +1971,10 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     ) : isEditing ? (
                                         <>
                                             <button onClick={handleSaveEdit} className="bg-green-500/20 hover:bg-green-500/40 text-green-600 dark:text-green-300 border border-green-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Listo</button>
-                                            <button onClick={() => { setEditingId(null); setEditForm({}); }} className="bg-gray-500/20 hover:bg-gray-500/40 text-gray-600 dark:text-gray-300 border border-gray-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Cancelar</button>
+                                            <button onClick={handleCancelEdit} className="bg-gray-500/20 hover:bg-gray-500/40 text-gray-600 dark:text-gray-300 border border-gray-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Cancelar</button>
                                         </>
                                     ) : (
-                                        (isAdmin || isMyTask) && <button onClick={() => handleStartEdit(it)} className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Editar</button>
+                                        puedeGestionar && <button onClick={() => handleStartEdit(it)} className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Editar</button>
                                     )}
                                     {!isInactive && !isFinalizado && isAdmin && (
                                         <button

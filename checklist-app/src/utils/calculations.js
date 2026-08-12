@@ -17,6 +17,31 @@ export const calcularCumplimiento = (fechaInicio, fechaFin) => {
 
 const esFechaValida = (f) => !!f && !isNaN(new Date(f).getTime());
 
+// Los correos de SharePoint llegan con mayusculas/minusculas distintas segun de
+// donde vengan (people picker, currentuser, datos migrados), asi que cualquier
+// comparacion entre usuarios pasa por aqui.
+export const mismoUsuario = (a, b) =>
+    !!a && !!b && String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+
+export const getResponsable = (it) => it?.NombreResponsable || it?.nombreResponsable || '';
+
+// El CORRESPONSABLE gestiona la tarea en nombre del responsable cuando este no
+// puede (reuniones, viajes...). Diligencia exactamente igual que el responsable,
+// pero todo lo que registra se sigue atribuyendo al responsable: por eso nunca se
+// usa para agrupar en graficas, filtros de responsable ni reportes.
+export const getCorresponsable = (it) => it?.Corresponsable || it?.corresponsable || '';
+
+export const esResponsableTarea = (it, user) => mismoUsuario(getResponsable(it), user);
+export const esCorresponsableTarea = (it, user) => mismoUsuario(getCorresponsable(it), user);
+
+// Quien puede diligenciar/gestionar una tarea: el admin, su responsable o su corresponsable.
+export const puedeGestionarTarea = (it, user, esAdmin) =>
+    !!esAdmin || esResponsableTarea(it, user) || esCorresponsableTarea(it, user);
+
+// Solo el admin y el propio responsable pueden nombrar (o quitar) al corresponsable.
+export const puedeAsignarCorresponsable = (it, user, esAdmin) =>
+    !!esAdmin || esResponsableTarea(it, user);
+
 const itemsActivos = (items) => (items || []).filter(it => (it.Estado || it.estado) !== 'Inactivo');
 
 export const esHistorico = (chk) => chk?.historico === true || chk?.Historico === true;
@@ -173,6 +198,28 @@ export const getSPIStatus = (spi) => {
     if (spi < 90) return { nivel: 'malo', icono: '✕', texto: 'Atrasado' };
     if (spi < 95) return { nivel: 'advertencia', icono: '!', texto: 'En riesgo' };
     return { nivel: 'ok', icono: '✓', texto: 'En tiempo' };
+};
+
+// Semaforo de una TAREA suelta. Lo comparten la tarjeta del detalle y el filtro,
+// para que "lo que se ve en rojo" y "lo que devuelve el filtro" no se separen.
+// Una tarea esta en rojo por dos motivos:
+//   - atrasada: su avance real va por debajo de lo que su plan ya deberia haber cubierto.
+//   - sinPlan: esperado y real en 0, tipicamente porque nunca se le puso fecha de entrega.
+export const getEstadoTarea = (it) => {
+    const inactiva = (it?.Estado || it?.estado) === 'Inactivo';
+    const finPlan = it?.FechaBaselineFin || it?.fechaBaselineFin;
+    const esperado = inactiva ? 0 : calcularCumplimiento(
+        it?.FechaBaselineInicio || it?.fechaBaselineInicio,
+        finPlan
+    );
+    const real = inactiva ? 0 : (parseInt(it?.Avance || it?.avance || 0) || 0);
+    const atrasada = !inactiva && esperado > 0 && real < esperado;
+    const sinPlan = !inactiva && esperado === 0 && real === 0;
+    // El esperado tambien da 0% cuando el plan aun no arranca (fecha de inicio
+    // futura). Se distingue del caso real -no hay fecha de entrega- para no
+    // acusar de "sin fecha" a una tarea que si la tiene.
+    const sinFechaEntrega = sinPlan && !esFechaValida(finPlan);
+    return { inactiva, esperado, real, atrasada, sinPlan, sinFechaEntrega, enRojo: atrasada || sinPlan };
 };
 
 // Agrupa checklists por gerencia y calcula el promedio esperado y real de cada una.

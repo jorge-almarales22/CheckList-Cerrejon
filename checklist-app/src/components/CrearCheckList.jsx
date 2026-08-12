@@ -63,6 +63,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
             actividades: act.tarea || act,
             entregable: act.entregable || '',
             nombreResponsable: '',
+            corresponsable: '',
             avance: '0',
             fechaBaselineInicio: hoy,
             fechaBaselineFin: '',
@@ -113,7 +114,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
     }, []);
 
     const [formData, setFormData] = useState({
-        actividades: '', entregable: '', nombreResponsable: '', avance: '0',
+        actividades: '', entregable: '', nombreResponsable: '', corresponsable: '', avance: '0',
         fechaBaselineInicio: new Date().toISOString().split('T')[0], fechaBaselineFin: '',
         fechaInicio: new Date().toISOString().split('T')[0], fechaFin: '',
     });
@@ -153,7 +154,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
         };
         setItems([...items, newItem]);
         setFormData({
-            actividades: '', entregable: '', nombreResponsable: '', avance: '0',
+            actividades: '', entregable: '', nombreResponsable: '', corresponsable: '', avance: '0',
             fechaBaselineInicio: new Date().toISOString().split('T')[0], fechaBaselineFin: '',
             fechaInicio: new Date().toISOString().split('T')[0], fechaFin: ''
         });
@@ -231,6 +232,9 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                 Id: it.id.toString(),
                 Descripcion: it.actividades,
                 NombreResponsable: it.nombreResponsable,
+                // El corresponsable gestiona la tarea junto al responsable, pero no
+                // reemplaza su autoría: las métricas siguen contando al responsable.
+                Corresponsable: it.corresponsable || '',
                 Entregable: it.entregable,
                 Avance: it.avance ? it.avance.toString() : "0",
                 FechaBaselineInicio: it.fechaBaselineInicio,
@@ -459,14 +463,21 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                                 <PeoplePicker className={inputClasses} value={formData.nombreResponsable} onChange={(val) => setFormData(prev => ({ ...prev, nombreResponsable: val }))} />
                             </div>
                             <div className="md:col-span-4">
+                                <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>
+                                    Corresponsable <span className="font-semibold text-slate-500 dark:text-slate-400">(opcional)</span>
+                                </label>
+                                <PeoplePicker className={inputClasses} placeholder="Quién gestiona por el responsable..." value={formData.corresponsable} onChange={(val) => setFormData(prev => ({ ...prev, corresponsable: val }))} required={false} />
+                                <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 mt-1">Diligencia la tarea igual que el responsable. El avance se sigue contando al responsable.</p>
+                            </div>
+                            <div className="md:col-span-4">
                                 <label className={`block text-xs font-bold mb-1 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>Entregable</label>
                                 <input type="text" className={inputClasses} value={formData.entregable} onChange={(e) => setFormData({ ...formData, entregable: e.target.value })} required></input>
                             </div>
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-3">
                                 <label className="block text-xs font-bold text-blue-500 dark:text-blue-300 mb-1">Plan Inicio (Baseline)</label>
                                 <input type="date" className={inputClasses} value={formData.fechaBaselineInicio} onChange={(e) => setFormData({ ...formData, fechaBaselineInicio: e.target.value })} required></input>
                             </div>
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-3">
                                 <label className="block text-xs font-bold text-blue-500 dark:text-blue-300 mb-1">Plan Fin (Baseline)</label>
                                 <input type="date" className={inputClasses} value={formData.fechaBaselineFin} onChange={(e) => setFormData({ ...formData, fechaBaselineFin: e.target.value })} required></input>
                             </div>
@@ -542,6 +553,14 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                                                         <PeoplePicker className="bg-transparent text-xs outline-none" value={it.nombreResponsable} onChange={(val) => handleItemEdit(it.id, 'nombreResponsable', val)} />
                                                     ) : (
                                                         <span className="truncate block font-semibold max-w-[170px]" title={it.nombreResponsable}>{it.nombreResponsable || '-'}</span>
+                                                    )}
+                                                </div>
+                                                <div className="w-44">
+                                                    <span className="text-slate-900 dark:text-slate-200 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Corresponsable</span>
+                                                    {isEditing ? (
+                                                        <PeoplePicker className="bg-transparent text-xs outline-none" placeholder="Opcional..." required={false} value={it.corresponsable || ''} onChange={(val) => handleItemEdit(it.id, 'corresponsable', val)} />
+                                                    ) : (
+                                                        <span className="truncate block font-semibold max-w-[170px] text-slate-600 dark:text-slate-300" title={it.corresponsable}>{it.corresponsable || '-'}</span>
                                                     )}
                                                 </div>
                                                 <div className="w-36">
