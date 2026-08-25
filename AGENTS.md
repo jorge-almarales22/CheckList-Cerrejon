@@ -1,21 +1,108 @@
-# Agent Instructions and Repo Quirks
+# Agent Instructions and Project Context
 
-This file contains high-signal, local context to prevent future agents from making incorrect architectural assumptions.
+This document is the working map for the current Cerrejon asset-incorporation checklist application. The modern application is under `checklist-app/`; the root files `index.html` and `tipos.js` belong to an older implementation and should not be treated as the source of truth.
 
-## CRITICAL: Stack and Architecture Quirks
-- **Single-File SPA**: The entire application is built as a single file: `index.html`.
-- **No Build Tools**: There is no Node.js/npm environment, Vite, Webpack, or TypeScript. Do NOT run `npm install`, `npm start`, or create separate component/JS/CSS files.
-- **Babel and Tailwind CDN**: React 18, Tailwind CSS, and Babel Standalone are loaded via CDN and compiled runtime in-browser. All JSX code resides inside `<script type="text/babel" data-presets="react">` in `index.html`.
-- **Global Scope**: Do NOT use ES modules (`import`/`export`). Access React APIs globally (e.g., `React.useState`).
+## Purpose and Published Portal
 
-## Development and Testing
-- **How to Run**: Since there is no dev server, open `index.html` directly in the browser or run a simple local server:
-  - Python: `python -m http.server`
-  - Node: `npx serve .`
-- **SharePoint API Mocking**: 
-  - The login mechanism relies on querying a live SharePoint site REST API (`glencore.sharepoint.com`).
-  - Running locally will trigger CORS/network errors. If you need to test the app locally, mock/bypass the `fetch` in the `Login` component to simulate a successful login.
+The application manages the readiness and handover of new, purchased, assembled, used, or project-delivered assets. It provides templates of technical and operational tasks, responsible users, corresponsibles, planned and actual dates, progress, evidence, comments, alerts, approvals, dashboards, Gantt views, SPI indicators, equipment photos, and PDF records.
 
-## Data and Permissions
-- **Checklist Storage**: Although auth uses SharePoint, all checklist data is saved/read from the browser's `localStorage` under the key `'checklists_data'`.
-- **Roles**: System roles are `Administrador`, `Responsable`, and `Desarrollador`. Permissions are mapped globally in `PERMISOS` at the top of the script.
+Production portal:
+
+`https://glencore.sharepoint.com/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/index.aspx`
+
+The generated SharePoint deployment artifact is `checklist-app/export/index.aspx`. The older URL under the `checklist` site is not the canonical current portal.
+
+## Technology and Structure
+
+- React 19, ReactDOM 19, Vite 8, Tailwind CSS 4, and JavaScript ES modules.
+- `checklist-app/src/main.jsx` is the browser entry point.
+- `checklist-app/src/App.jsx` authenticates the current SharePoint user and renders the application.
+- `checklist-app/src/components/` contains the dashboard, checklist list, creation and detail workflows, charts, Gantt, people picker, navigation, footer, and SPI badge.
+- `checklist-app/src/utils/sharepointApi.js` owns SharePoint REST calls, list CRUD, folders, evidence files, and hierarchy lookups.
+- `checklist-app/src/utils/calculations.js` owns permission helpers, historical records, progress, task status, SPI, and dashboard metrics.
+- `checklist-app/src/data/constants.js` owns SharePoint URLs, list names, permissions, templates, and task libraries.
+- `checklist-app/public/` contains public icons and branding assets.
+- `checklist-app/dist/` is Vite output; `checklist-app/export/` is the SharePoint-ready output.
+
+There is no backend service or separate application database. The browser communicates directly with SharePoint REST APIs and a Power Automate/Teams webhook.
+
+## Authentication, Roles, and Permissions
+
+Authentication uses the Microsoft 365/SharePoint browser session through `/_api/web/currentuser`; there is no local login form or token server. The current user is assigned `Administrador` when their email is in the administrator allowlist in `src/App.jsx`; other authenticated users currently default to `Responsable`. `Desarrollador` is defined in the permission map but is not automatically assigned by the current bootstrap code.
+
+The permission map is in `src/data/constants.js`. Task editing is allowed to administrators, the assigned responsible user, or the optional corresponsible. Only administrators or the assigned responsible user can assign a corresponsible. Client-side checks guide the UI, while SharePoint permissions remain the actual security boundary.
+
+## Data Storage and Retrieval
+
+Checklist records are stored in the SharePoint list `DB_CHECKLIST_APP` at the checklist site:
+
+`https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist`
+
+The lists for this subsite can be administered from [Contenido del sitio](https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist/_layouts/15/viewlsts.aspx?view=14). The subsite stores checklist records and legacy compatibility data; the published application and current evidence/PDF libraries are under the `ac` site.
+
+Each list item stores the checklist object as JSON in the `Data` field. The object includes metadata, type, approval status, creator, general comments, and task records. Tasks contain responsible users, optional corresponsible, baseline and actual dates, progress, evidence references, alerts, status, and comments.
+
+Evidence is stored primarily as binary files in the `ac` site, under:
+
+`/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/Evidencias/{tipo}/{nombre-del-checklist}/`
+
+The type folders are `Checklist Ensamble`, `Checklist Compra Instalada`, and `Checklist Proyectos`. Images are compressed in the browser before upload. The application also reads legacy base64 evidence from the `EvidenciasChecklist` list for migrated records.
+
+Equipment photos are compressed data URLs inside checklist `Metadata`. Finalized PDFs are generated in the browser with `html2canvas` and `jsPDF`, then uploaded to:
+
+`/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/PDFs`
+
+Other SharePoint data sources:
+
+- `JerarquiaL` on the SGIA root site supplies gerencia, abbreviated gerencia, and superintendencia options.
+- `EquiposAC` on the `ac` site supplies process/unit options.
+- `EvidenciasChecklist` is the legacy evidence compatibility source.
+
+The application uses `/_api/contextinfo` for request digests and list item CRUD under `/_api/web/lists/getbytitle(...)/items`. PeoplePicker uses the SharePoint people search endpoint. File operations use folder creation, binary upload, listing, and recycle-bin endpoints.
+
+## Functional Areas
+
+- Checklist list: loads records, approval inbox, filters, pagination, metrics, deletion, and template selection.
+- Checklist creation: selects a template, edits tasks, assigns users, captures metadata/photos, and creates a pending record.
+- Checklist detail: edits tasks, dates, progress, comments, alerts, evidence, metadata, approval, finalization, type correction, PDF generation, and Gantt visualization.
+- Dashboards: expected versus real progress, progress by responsible, gerencia charts, SPI status, and task risk indicators.
+- Notifications: sends comments and alerts through the configured Power Automate/Teams webhook.
+
+Templates are defined in `src/data/constants.js`: `PROYECTO`, `COMPRA INSTALADA`, and `ENSAMBLE`, with a generic fallback list. The root `tipos.js` and root `index.html` contain duplicated legacy definitions.
+
+## Metric Rules
+
+- Task expected progress is elapsed baseline time, clamped to 0-100.
+- Task real progress is its numeric `Avance` value.
+- Inactive tasks are excluded from averages.
+- Checklist expected progress uses the earliest active baseline start and latest active baseline finish.
+- Checklist real progress is the average of active task progress.
+- Historical migrated records use stored values until they are edited, then recalculate from tasks.
+- SPI is real progress divided by expected progress, expressed as a percentage.
+- SPI below 90 is `Atrasado`; 90-94 is `En riesgo`; 95 or higher is `En tiempo`.
+- Progress above 90 requires evidence, and a task is complete only at 100 with evidence.
+
+## Commands and Deployment
+
+Run commands from `checklist-app/`:
+
+```bash
+npm ci
+npm run dev
+npm run lint
+npm run build
+npm run preview
+```
+
+`npm run build` runs Vite and then `scripts/export-build.mjs`. That script recreates `export/`, converts asset paths to relative SharePoint paths, renames the generated HTML to `index.aspx`, and copies JavaScript/CSS bundles. Deploy the resulting `checklist-app/export/` contents to the `Incorporaciones` SharePoint location. Do not manually edit generated files in `dist/` or `export/`; change `src/` and rebuild.
+
+Local development can load the UI, but authentication and data calls require a valid SharePoint session and same-origin deployment. There are currently no automated tests; validation is lint plus production build and, when available, a browser smoke test against SharePoint.
+
+## Agent Rules for This Repository
+
+- Preserve the modern source under `checklist-app/src/` unless the task explicitly targets the legacy root app.
+- Do not introduce `localStorage` as the source of truth for checklist data.
+- Keep SharePoint list names, field names, folder paths, and legacy fallbacks compatible with existing data.
+- Never expose or rotate the Teams/Power Automate webhook in documentation or logs.
+- Avoid editing generated `dist/` and `export/` output directly; regenerate it with `npm run build`.
+- Keep documentation synchronized when architecture, storage, deployment URLs, or permissions change.
