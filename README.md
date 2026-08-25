@@ -95,6 +95,8 @@ El usuario puede crear checklists, diligenciar tareas, adjuntar evidencias, regi
 
 La tabla de incorporaciones incluye filtros multi-seleccion por columna en `NOM. CHK.`, `PLAN (ESP.)`, `COMPL. (REAL)`, `GER.`, `SUPT.`, `TIPO INCORP.` y `CREAD. POR`. Cada filtro ofrece busqueda, checkboxes, `Todos`, `Ninguno`, `Limpiar` y `Aplicar`. Las selecciones se aplican al pulsar `Aplicar` o al hacer clic fuera del menu; `Limpiar` elimina la seleccion y cierra el menu. Los encabezados usan abreviaciones compactas para mantenerse en una sola fila.
 
+La pantalla inicial mantiene una cabecera compacta de introduccion de activos: la ilustracion se muestra reducida y el texto queda alineado hacia arriba para liberar espacio vertical para la tabla de incorporaciones.
+
 ## Indicadores
 
 El avance real de un checklist es el promedio de sus tareas activas. El avance esperado se calcula sobre la ventana de fechas baseline de esas tareas. El SPI es `real / esperado * 100`:

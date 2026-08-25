@@ -296,16 +296,16 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
             <GerenciaPieCharts checklists={aprobadosFiltrados} theme={theme} />
 
             {/* Título centrado, descripción justificada a la izquierda e ilustración a la derecha */}
-            <div className={`${cardClass} border p-4 md:p-8 rounded-3xl mb-6`}>
+            <div className={`${cardClass} border p-4 md:p-6 rounded-3xl mb-5`}>
                 <h2 className="text-2xl md:text-3xl font-normal leading-tight text-center">Incorporación de Activos</h2>
-                <div className="mt-5 flex flex-col-reverse md:flex-row md:items-center gap-6 md:gap-10">
+                <div className="mt-3 flex flex-col-reverse md:flex-row md:items-start gap-4 md:gap-8">
                     <p className="flex-1 min-w-0 text-sm md:text-base text-justify text-slate-700 dark:text-slate-300 leading-relaxed">
                         {DESCRIPCION_INCORPORACION}
                     </p>
                     <img
                         src={dibujoSvg}
                         alt="Ilustración de incorporación de activos"
-                        className="w-44 sm:w-56 md:w-64 lg:w-72 shrink-0 self-center select-none pointer-events-none"
+                        className="w-36 sm:w-44 md:w-48 lg:w-56 shrink-0 self-center select-none pointer-events-none"
                     />
                 </div>
             </div>
