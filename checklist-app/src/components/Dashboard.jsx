@@ -6,17 +6,40 @@ import Navbar from './Navbar';
 import Footer from './Footer';
 
 const Dashboard = ({ user, userName, role, onLogout }) => {
-    const [view, setView] = useState('checklist_all');
-    const [selectedChecklistId, setSelectedChecklistId] = useState(null);
+    const getChecklistIdFromUrl = () => {
+        const id = new URLSearchParams(window.location.search).get('id');
+        return id && /^[A-Za-z0-9._-]{1,100}$/.test(id) ? id : null;
+    };
+
+    const initialChecklistId = getChecklistIdFromUrl();
+    const [view, setView] = useState(initialChecklistId ? 'checklist_detalle' : 'checklist_all');
+    const [selectedChecklistId, setSelectedChecklistId] = useState(initialChecklistId);
     const [theme, setTheme] = useState('light');
     const [refreshKey, setRefreshKey] = useState(0);
     const [atBottom, setAtBottom] = useState(false);
     const mainRef = useRef(null);
 
     const handleNavigate = (newView, id = null) => {
+        const url = new URL(window.location.href);
+        if (newView === 'checklist_detalle' && id && /^[A-Za-z0-9._-]{1,100}$/.test(id)) {
+            url.searchParams.set('id', id);
+        } else {
+            url.searchParams.delete('id');
+        }
+        window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
         setView(newView);
-        setSelectedChecklistId(id);
+        setSelectedChecklistId(newView === 'checklist_detalle' ? id : null);
     };
+
+    useEffect(() => {
+        const handleHistoryNavigation = () => {
+            const id = getChecklistIdFromUrl();
+            setView(id ? 'checklist_detalle' : 'checklist_all');
+            setSelectedChecklistId(id);
+        };
+        window.addEventListener('popstate', handleHistoryNavigation);
+        return () => window.removeEventListener('popstate', handleHistoryNavigation);
+    }, []);
 
     useEffect(() => {
         document.body.style.backgroundImage = 'none';

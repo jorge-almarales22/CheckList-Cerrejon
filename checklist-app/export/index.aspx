@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="img/fabiconCerrejon.png" type="image/png">
+    <link rel="shortcut icon" href="img/fabiconCerrejon.png" type="image/png">
+    <link rel="apple-touch-icon" href="img/fabiconCerrejon.png">
+    <title>Incorporaci&oacute;n de Activos</title>
+  <script type="module" crossorigin src="assets/index-QG3DudCw.js"></script>
+  <link rel="stylesheet" crossorigin href="assets/index-RL5H8CtD.css">
+</head>
+<body>
+    <div id="root"></div>
+        <!-- SOURCE - solo para desarrollo. Para produccion usa dist/index.html -->
+</body>
+</html>

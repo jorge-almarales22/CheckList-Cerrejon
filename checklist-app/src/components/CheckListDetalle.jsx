@@ -28,6 +28,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
     const [checklist, setChecklist] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState({});
     const [backupItem, setBackupItem] = useState(null);
@@ -168,10 +169,17 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
     useEffect(() => {
         const fetchDetails = async (isBackgroundPoll = false) => {
+            if (!/^[A-Za-z0-9._-]{1,100}$/.test(String(checklistId || ''))) {
+                setLoadError('El enlace de la incorporación no es válido.');
+                setLoading(false);
+                return;
+            }
             try {
-                const listRes = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('DB_CHECKLIST_APP')/items?$filter=Title eq '${checklistId}'`, {
+                const safeChecklistId = String(checklistId).replace(/'/g, "''");
+                const listRes = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('DB_CHECKLIST_APP')/items?$filter=Title eq '${safeChecklistId}'`, {
                     headers: { "Accept": "application/json;odata=verbose" }, credentials: "same-origin"
                 });
+                if (!listRes.ok) throw new Error(`HTTP ${listRes.status} cargando el checklist`);
                 const listJson = await listRes.json();
 
                 if (listJson.d.results.length > 0) {
@@ -200,9 +208,12 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         setGeneralComment(parsedData.ComentarioGeneral || '');
                         fetchEvidencePresence(parsedData);
                     }
+                } else if (!isBackgroundPoll) {
+                    setLoadError('No se encontró la incorporación solicitada o no está disponible.');
                 }
             } catch (error) {
                 console.error("Error loading details:", error);
+                if (!isBackgroundPoll) setLoadError('No fue posible cargar la incorporación. Verifica el enlace o tu acceso a SharePoint.');
             } finally {
                 if (!isBackgroundPoll) {
                     setLoading(false);
@@ -1051,6 +1062,13 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     };
 
     if (loading) return <div className="text-center text-white mt-20">Cargando detalles desde SharePoint...</div>;
+    if (loadError) return (
+        <div className={`${cardClass} border p-8 rounded-3xl mt-8 mx-auto max-w-3xl text-center`}>
+            <h2 className="text-2xl font-normal mb-3">Incorporación no disponible</h2>
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-6">{loadError}</p>
+            <button onClick={onAtras} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-lg transition-colors">Volver al listado</button>
+        </div>
+    );
     if (!checklist) return <div className="text-center text-white mt-20">Checklist no encontrado.</div>;
 
     const checklistEstado = checklist.Estado || '';
