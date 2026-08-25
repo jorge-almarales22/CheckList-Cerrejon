@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="img/fabiconCerrejon.png" type="image/png">
-    <link rel="shortcut icon" href="img/fabiconCerrejon.png" type="image/png">
-    <link rel="apple-touch-icon" href="img/fabiconCerrejon.png">
+    <link rel="icon" href="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/img/fabiconCerrejon.png" type="image/png">
+    <link rel="shortcut icon" href="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/img/fabiconCerrejon.png" type="image/png">
+    <link rel="apple-touch-icon" href="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/img/fabiconCerrejon.png">
     <title>Incorporaci&oacute;n de Activos</title>
-  <script type="module" crossorigin src="assets/index-QG3DudCw.js"></script>
-  <link rel="stylesheet" crossorigin href="assets/index-RL5H8CtD.css">
+  <script type="module" crossorigin src="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/assets/index-ecMQadjA.js"></script>
+  <link rel="stylesheet" crossorigin href="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/assets/index-t4Q2Qmd_.css">
 </head>
 <body>
     <div id="root"></div>

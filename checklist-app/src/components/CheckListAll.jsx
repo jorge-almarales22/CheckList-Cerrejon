@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { calcularEsperadoChecklist, calcularRealChecklist, esAprobado, esPendiente, esRechazado, esHistorico } from '../utils/calculations';
 import { getRequestDigest, deleteSPListItem } from '../utils/sharepointApi';
 import GerenciaPieCharts from './GerenciaPieCharts';
@@ -11,17 +12,144 @@ const DESCRIPCION_INCORPORACION = "Durante la fase de incorporación de activos,
 const USERPHOTO = (email) => `https://glencore.sharepoint.com/_layouts/15/userphoto.aspx?size=S&accountname=${encodeURIComponent(email || '')}`;
 const AVATAR_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
 
+const COLUMN_FILTERS = [
+    { key: 'nombre', label: 'NOM. CHK.' },
+    { key: 'esperado', label: 'PLAN (ESP.)' },
+    { key: 'real', label: 'COMPL. (REAL)' },
+    { key: 'gerencia', label: 'GER.' },
+    { key: 'superintendencia', label: 'SUPT.' },
+    { key: 'tipo', label: 'TIPO INCORP.' },
+    { key: 'creadoPor', label: 'CREAD. POR' }
+];
+
+const getColumnFilterValue = (checklist, key) => {
+    if (key === 'nombre') return checklist.Name || 'Sin nombre';
+    if (key === 'esperado') return `${calcularEsperadoChecklist(checklist)}%`;
+    if (key === 'real') return `${calcularRealChecklist(checklist)}%`;
+    if (key === 'gerencia') return checklist.Metadata?.gerencia || '-';
+    if (key === 'superintendencia') return checklist.Metadata?.superintendencia || '-';
+    if (key === 'tipo') return checklist.Tipo || '-';
+    if (key === 'creadoPor') return checklist.CreadoPorNombre || checklist.CreadoPor || (esHistorico(checklist) ? 'Históricos' : '-');
+    return '-';
+};
+
+const ColumnFilterPopover = ({ column, values, selectedValues, theme, onApply, style }) => {
+    const [search, setSearch] = useState('');
+    const [selected, setSelected] = useState(() => new Set(selectedValues));
+    const searchRef = useRef(null);
+    const visibleValues = values.filter(value => value.toLowerCase().includes(search.trim().toLowerCase()));
+
+    useEffect(() => {
+        searchRef.current?.focus();
+        const applyAndClose = () => onApply(selected);
+        const handleKeyDown = (event) => { if (event.key === 'Escape') applyAndClose(); };
+        const handleOutsideClick = (event) => {
+            if (!event.target.closest('.column-filter-popover')) applyAndClose();
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('mousedown', handleOutsideClick);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('mousedown', handleOutsideClick);
+        };
+    }, [onApply, selected]);
+
+    const toggleValue = (value) => {
+        setSelected(previous => {
+            const next = new Set(previous);
+            if (next.has(value)) next.delete(value); else next.add(value);
+            return next;
+        });
+    };
+
+    const selectVisible = (shouldSelect) => {
+        setSelected(previous => {
+            const next = new Set(previous);
+            visibleValues.forEach(value => shouldSelect ? next.add(value) : next.delete(value));
+            return next;
+        });
+    };
+
+    return createPortal(
+        <div style={style} className={`column-filter-popover ${theme === 'dark' ? 'column-filter-popover-dark' : ''}`} role="dialog" aria-label={`Filtrar ${column.label}`} onClick={event => event.stopPropagation()}>
+            <div className={`column-filter-search-wrap ${theme === 'dark' ? 'column-filter-search-wrap-dark' : ''}`}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" /></svg>
+                <input ref={searchRef} value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar valor..." autoComplete="off" />
+            </div>
+            <div className="column-filter-quick-actions">
+                <button type="button" onClick={() => selectVisible(true)}>Todos</button>
+                <button type="button" onClick={() => selectVisible(false)}>Ninguno</button>
+            </div>
+            <div className="column-filter-list" role="listbox" aria-label={`Valores de ${column.label}`}>
+                {visibleValues.length === 0 ? <p className="column-filter-empty">Sin resultados</p> : visibleValues.map(value => (
+                    <label key={value} className="column-filter-option">
+                        <input type="checkbox" checked={selected.has(value)} onChange={() => toggleValue(value)} />
+                        <span title={value}>{value}</span>
+                    </label>
+                ))}
+            </div>
+            <div className={`column-filter-footer ${theme === 'dark' ? 'column-filter-footer-dark' : ''}`}>
+                <span>{selected.size} de {values.length} seleccionados</span>
+                <button type="button" className="column-filter-clear" onClick={() => onApply(new Set())}>Limpiar</button>
+                <button type="button" className="column-filter-apply" onClick={() => onApply(selected)}>Aplicar</button>
+            </div>
+        </div>,
+        document.body
+    );
+};
+
+const FilterableHeader = ({ column, active, theme, onOpen, isOpen, values, selectedValues, onApply, visibilityClass = '' }) => {
+    const buttonRef = useRef(null);
+    const [popoverStyle, setPopoverStyle] = useState({});
+
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        const updatePosition = () => {
+            const rect = buttonRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const width = Math.min(336, window.innerWidth - 24);
+            const gap = 6;
+            const below = window.innerHeight - rect.bottom - gap;
+            const above = rect.top - gap;
+            const opensAbove = below < 300 && above > below;
+            const availableHeight = Math.max(220, (opensAbove ? above : below) - 12);
+            const left = Math.min(Math.max(12, rect.left), window.innerWidth - width - 12);
+            setPopoverStyle({
+                left: `${left}px`,
+                width: `${width}px`,
+                ...(opensAbove ? { bottom: `${window.innerHeight - rect.top + gap}px` } : { top: `${rect.bottom + gap}px` }),
+                maxHeight: `${availableHeight}px`
+            });
+        };
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+        return () => {
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        };
+    }, [isOpen]);
+
+    return (
+        <th className={`filterable-table-header ${visibilityClass}`}>
+            <button ref={buttonRef} type="button" className={`filterable-header-button ${theme === 'dark' ? 'filterable-header-button-dark' : ''} ${active ? 'filterable-header-button-active' : ''}`} onClick={onOpen} aria-haspopup="dialog" aria-expanded={isOpen} title={`Filtrar ${column.label}`}>
+                <span>{column.label}</span>
+                {active > 0 && <span className="filterable-header-badge">{active}</span>}
+                <svg className="filterable-header-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7L4 5Z" /></svg>
+            </button>
+            {isOpen && <ColumnFilterPopover column={column} values={values} selectedValues={selectedValues} theme={theme} onApply={onApply} style={popoverStyle} />}
+        </th>
+    );
+};
+
 const CheckListAll = ({ onView, role, currentUser, theme }) => {
     const [checklists, setChecklists] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showTemplateModal, setShowTemplateModal] = useState(false);
 
-    const [filtroNombre, setFiltroNombre] = useState('');
     const [filtroAlerta, setFiltroAlerta] = useState(false);
-    const [filtroTipo, setFiltroTipo] = useState('');
-    const [filtroEstado, setFiltroEstado] = useState('');
-    const [filtroGerencia, setFiltroGerencia] = useState('');
-    const [filtroSuperintendencia, setFiltroSuperintendencia] = useState('');
+    const [columnFilters, setColumnFilters] = useState({});
+    const [openColumn, setOpenColumn] = useState(null);
     const [verSolicitudes, setVerSolicitudes] = useState(false); // ver la bandeja de aprobaciones
 
     // Eliminación de un checklist (solo administradores).
@@ -31,10 +159,6 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
 
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 50;
-
-    // Listas únicas para los filtros de Gerencia y Superintendencia
-    const gerenciasUnicas = [...new Set(checklists.map(chk => chk.Metadata?.gerencia).filter(Boolean))].sort();
-    const superintendenciasUnicas = [...new Set(checklists.map(chk => chk.Metadata?.superintendencia).filter(Boolean))].sort();
 
     const cardClass = theme === 'dark' 
         ? 'bg-slate-900 border-slate-800 text-slate-100 shadow-[0_0_20px_rgba(0,0,0,0.5)]' 
@@ -46,8 +170,6 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
 
     // Los select llevan ancho mínimo propio (según su placeholder) y espacio extra a
     // la derecha para la flecha nativa; sin esto el texto quedaba cortado.
-    const selectClasses = `${inputClasses} w-full md:w-auto pr-9 truncate`;
-
     const fetchChecklists = async (isBackground = false) => {
         if (!isBackground) setLoading(true);
         try {
@@ -89,7 +211,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
         return () => clearInterval(interval);
     }, [role, currentUser]);
 
-    useEffect(() => { setCurrentPage(1); }, [filtroNombre, filtroAlerta, filtroTipo, filtroEstado, filtroGerencia, filtroSuperintendencia, verSolicitudes]);
+    useEffect(() => { setCurrentPage(1); }, [filtroAlerta, columnFilters, verSolicitudes]);
 
     // Borrado definitivo del registro en SharePoint. Solo lo alcanzan los admins y
     // exige escribir el nombre exacto del checklist en el modal de confirmación.
@@ -125,17 +247,38 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
     const solicitudes = checklists.filter(chk => esPendiente(chk) || esRechazado(chk));
     const numSolicitudes = solicitudes.length;
 
+    const filtrarPorColumnas = (lista, ignorar = null) => lista.filter(chk =>
+        Object.entries(columnFilters).every(([key, selected]) => {
+            if (key === ignorar || !selected?.size) return true;
+            return selected.has(getColumnFilterValue(chk, key));
+        })
+    );
+
+    const getColumnValues = (columnKey, lista) => [...new Set(
+        filtrarPorColumnas(lista, columnKey).map(chk => getColumnFilterValue(chk, columnKey))
+    )].sort((a, b) => a.localeCompare(b, 'es'));
+
     const aplicarFiltros = (lista) => {
-        let r = lista;
-        if (filtroNombre.trim()) r = r.filter(chk => chk.Name && chk.Name.toLowerCase().includes(filtroNombre.toLowerCase()));
+        let r = filtrarPorColumnas(lista);
         if (filtroAlerta) r = r.filter(chk => chk.items && chk.items.some(it => it.Alerta === "Si"));
-        if (filtroTipo) r = r.filter(chk => chk.Tipo === filtroTipo);
-        if (filtroEstado === 'Finalizado') r = r.filter(chk => chk.Estado === 'Finalizado');
-        else if (filtroEstado === 'En Progreso') r = r.filter(chk => !chk.Estado || chk.Estado !== 'Finalizado');
-        if (filtroGerencia) r = r.filter(chk => chk.Metadata?.gerencia === filtroGerencia);
-        if (filtroSuperintendencia) r = r.filter(chk => chk.Metadata?.superintendencia === filtroSuperintendencia);
         return r;
     };
+
+    const listaBaseFiltros = verSolicitudes ? solicitudes : aprobados;
+    const propsFiltroColumna = (column) => ({
+        column,
+        theme,
+        active: columnFilters[column.key]?.size || 0,
+        isOpen: openColumn === column.key,
+        values: getColumnValues(column.key, listaBaseFiltros),
+        selectedValues: columnFilters[column.key] || new Set(),
+        onOpen: () => setOpenColumn(openColumn === column.key ? null : column.key),
+        onClose: () => setOpenColumn(null),
+        onApply: (selected) => {
+            setColumnFilters(previous => ({ ...previous, [column.key]: new Set(selected) }));
+            setOpenColumn(null);
+        }
+    });
 
     // Las metricas (panel amarillo) solo consideran checklists APROBADOS.
     const aprobadosFiltrados = aplicarFiltros(aprobados);
@@ -170,30 +313,15 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
             {/* Filtros */}
             <div className={`${cardClass} border p-4 md:p-6 rounded-3xl mb-6`}>
                 <div className="flex flex-col md:flex-row md:flex-wrap gap-2 md:gap-3 w-full items-stretch md:items-center">
-                    <input type="text" placeholder="Buscar por nombre..." className={`${inputClasses} w-full md:w-auto md:flex-1 min-w-[200px] md:max-w-[260px]`} value={filtroNombre} onChange={(e) => setFiltroNombre(e.target.value)} />
-                    <select className={`${selectClasses} min-w-[190px]`} value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
-                        <option value="">Todos los Tipos</option>
-                        <option value="PROYECTO">Incorporación por Proyectos</option>
-                        <option value="COMPRA INSTALADA">Incorporación Compra Instalada</option>
-                        <option value="ENSAMBLE">Incorporación por Ensamble</option>
-                        <option value="GENERAL">General</option>
-                    </select>
-                    <select className={`${selectClasses} min-w-[195px]`} value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
-                        <option value="">Todos los Estados</option>
-                        <option value="En Progreso">En Progreso</option>
-                        <option value="Finalizado">Finalizado</option>
-                    </select>
-                    <select className={`${selectClasses} min-w-[210px]`} value={filtroGerencia} onChange={(e) => setFiltroGerencia(e.target.value)}>
-                        <option value="">Todas las Gerencias</option>
-                        {gerenciasUnicas.map(g => <option key={g} value={g}>{g}</option>)}
-                    </select>
-                    <select className={`${selectClasses} min-w-[265px]`} value={filtroSuperintendencia} onChange={(e) => setFiltroSuperintendencia(e.target.value)}>
-                        <option value="">Todas las Superintendencias</option>
-                        {superintendenciasUnicas.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    <label className={`flex items-center gap-2 text-sm font-bold cursor-pointer border px-3 py-2 rounded-lg shrink-0 whitespace-nowrap ${theme==='dark'?'bg-slate-950/85 border-slate-800':'bg-slate-100 border-slate-300'}`}>
-                        <input type="checkbox" checked={filtroAlerta} onChange={(e) => setFiltroAlerta(e.target.checked)} className="accent-yellow-500" /> Solo con Alertas
-                    </label>
+                    {/* Crear nueva incorporación: cualquier usuario (queda pendiente de aprobación). */}
+                    <button
+                        onClick={() => setShowTemplateModal(true)}
+                        className="shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-extrabold bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 shadow transition-colors"
+                        title="Crear una nueva incorporación de activos"
+                    >
+                        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
+                        Crear Nueva Incorporación
+                    </button>
                     {/* Bandeja de aprobaciones: visible para todos los usuarios. */}
                     <button
                         onClick={() => setVerSolicitudes(v => !v)}
@@ -208,15 +336,9 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                             <span className={`ml-1 min-w-[20px] text-center px-1.5 py-0.5 rounded-full text-[10px] font-black ${verSolicitudes ? 'bg-black/80 text-amber-300' : 'bg-red-600 text-white'}`}>{numSolicitudes}</span>
                         )}
                     </button>
-                    {/* Crear nueva incorporación: cualquier usuario (queda pendiente de aprobación). */}
-                    <button
-                        onClick={() => setShowTemplateModal(true)}
-                        className="shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-extrabold bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 shadow transition-colors"
-                        title="Crear una nueva incorporación de activos"
-                    >
-                        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
-                        Crear Nueva Incorporación
-                    </button>
+                    <label className={`flex items-center gap-2 text-sm font-bold cursor-pointer border px-3 py-2 rounded-lg shrink-0 whitespace-nowrap ${theme==='dark'?'bg-slate-950/85 border-slate-800':'bg-slate-100 border-slate-300'}`}>
+                        <input type="checkbox" checked={filtroAlerta} onChange={(e) => setFiltroAlerta(e.target.checked)} className="accent-yellow-500" /> Solo con Alertas
+                    </label>
                 </div>
             </div>
 
@@ -232,17 +354,17 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className={`${theme==='dark'?'bg-slate-950/40 text-white':'bg-slate-100 text-slate-900'} text-xs uppercase font-extrabold tracking-wider`}>
-                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800">Nombre del Checklist</th>
-                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800">Plan (Esperado)</th>
-                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800">Completado (Real)</th>
-                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">Gerencia</th>
-                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden xl:table-cell">Superintendencia</th>
-                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Tipo de incorporación</th>
-                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">Equipo(s)</th>
-                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Fecha inicio</th>
-                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">Fecha fin</th>
-                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">Creado por</th>
-                                    <th className="p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 text-center">Acciones</th>
+                                    <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[0])} />
+                                    <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[1])} />
+                                    <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[2])} />
+                                    <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[3])} visibilityClass="hidden lg:table-cell" />
+                                    <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[4])} visibilityClass="hidden xl:table-cell" />
+                                    <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[5])} visibilityClass="hidden md:table-cell" />
+                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">EQ(S).</th>
+                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">FEC. INICIO</th>
+                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">FEC. FIN</th>
+                                    <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[6])} visibilityClass="hidden lg:table-cell" />
+                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 text-center">ACC.</th>
                                 </tr>
                             </thead>
                             <tbody className="text-[11px] md:text-sm">

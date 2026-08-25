@@ -93,6 +93,8 @@ Las plantillas actuales estan en `checklist-app/src/data/constants.js`:
 
 El usuario puede crear checklists, diligenciar tareas, adjuntar evidencias, registrar comentarios y alertas, aprobar/rechazar, finalizar, consultar dashboards, ver Gantt, filtrar por responsables/gerencias y descargar PDFs.
 
+La tabla de incorporaciones incluye filtros multi-seleccion por columna en `NOM. CHK.`, `PLAN (ESP.)`, `COMPL. (REAL)`, `GER.`, `SUPT.`, `TIPO INCORP.` y `CREAD. POR`. Cada filtro ofrece busqueda, checkboxes, `Todos`, `Ninguno`, `Limpiar` y `Aplicar`. Las selecciones se aplican al pulsar `Aplicar` o al hacer clic fuera del menu; `Limpiar` elimina la seleccion y cierra el menu. Los encabezados usan abreviaciones compactas para mantenerse en una sola fila.
+
 ## Indicadores
 
 El avance real de un checklist es el promedio de sus tareas activas. El avance esperado se calcula sobre la ventana de fechas baseline de esas tareas. El SPI es `real / esperado * 100`:
@@ -115,7 +117,7 @@ npm run build
 npm run preview
 ```
 
-`npm run build` compila con Vite y genera automaticamente `checklist-app/export/index.aspx` junto con sus assets mediante `scripts/export-build.mjs`. Ese contenido es el que se publica en SharePoint bajo `SiteAssets/Incorporaciones/`.
+`npm run build` compila con Vite y genera automaticamente `checklist-app/export/index.aspx` junto con sus assets mediante `scripts/export-build.mjs`. Ese contenido es el que se publica en SharePoint bajo `SiteAssets/Incorporaciones/`. El exportador copia los bundles, logos, favicon e iconos, y transforma las referencias de assets a rutas absolutas bajo `/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/` para evitar errores 404 y MIME al abrir `index.aspx`.
 
 La ejecucion local requiere una sesion corporativa valida para autenticarse y leer/escribir SharePoint. No hay pruebas automatizadas actualmente; la validacion disponible es `npm run lint`, `npm run build` y una prueba manual del portal publicado.
 
