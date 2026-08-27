@@ -55,6 +55,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
 
     const [filtroAlerta, setFiltroAlerta] = useState(false);
     const [columnFilters, setColumnFilters] = useState({});
+    const [openColumn, setOpenColumn] = useState(null);
     const [verSolicitudes, setVerSolicitudes] = useState(false); // ver la bandeja de aprobaciones
 
     // Eliminación de un checklist (solo administradores).
@@ -117,6 +118,17 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
     }, [role, currentUser]);
 
     useEffect(() => { setCurrentPage(1); }, [filtroAlerta, columnFilters, verSolicitudes]);
+
+    useEffect(() => {
+        if (!openColumn) return undefined;
+        const handleOutsideClick = (event) => {
+            if (!event.target.closest('.column-filter-popover') && !event.target.closest('.filterable-header-button')) {
+                setOpenColumn(null);
+            }
+        };
+        document.addEventListener('mousedown', handleOutsideClick);
+        return () => document.removeEventListener('mousedown', handleOutsideClick);
+    }, [openColumn]);
 
     // Borrado definitivo del registro en SharePoint. Solo lo alcanzan los admins y
     // exige escribir el nombre exacto del checklist en el modal de confirmación.
