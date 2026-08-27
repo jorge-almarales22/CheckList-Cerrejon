@@ -49,7 +49,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [filterEstadoTarea, setFilterEstadoTarea] = useState(''); // '', 'terminadas', 'faltantes', 'en_rojo'
     const [filterAvanceEsperado, setFilterAvanceEsperado] = useState(''); // rango id
     const [filterAvanceReal, setFilterAvanceReal] = useState('');
-    const [filterTaskId, setFilterTaskId] = useState('');
+    const [filterTaskId, setFilterTaskId] = useState(() => new Set());
     const [busquedaGeneral, setBusquedaGeneral] = useState('');
     const [fotoActivaIdx, setFotoActivaIdx] = useState(0); // carrusel de fotos del equipo
     // Visor de fotos a pantalla completa: { fotos: [...], idx } o null si esta cerrado.
@@ -1091,7 +1091,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const listadoResponsablesUnicos = [...new Set(checklist.items.map(it => it.NombreResponsable).filter(Boolean))].sort();
 
     const RANGOS_AVANCE = [
-        { id: '0-25', label: '0% - 25%' },
+        { id: '0', label: '0%' },
+        { id: '1-25', label: '1% - 25%' },
         { id: '26-50', label: '26% - 50%' },
         { id: '51-75', label: '51% - 75%' },
         { id: '76-99', label: '76% - 99%' },
@@ -1099,7 +1100,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     ];
     const enRango = (valor, id) => {
         const v = parseInt(valor || 0);
-        if (id === '0-25') return v <= 25;
+        if (id === '0') return v === 0;
+        if (id === '1-25') return v >= 1 && v <= 25;
         if (id === '26-50') return v >= 26 && v <= 50;
         if (id === '51-75') return v >= 51 && v <= 75;
         if (id === '76-99') return v >= 76 && v <= 99;
@@ -1130,14 +1132,18 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     if (filterAvanceReal && (filterAvanceReal.match(/^\d+-\d+$/) || filterAvanceReal === '100')) {
         itemsFiltrados = itemsFiltrados.filter(it => enRango(parseInt(it.Avance || it.avance || 0), filterAvanceReal));
     }
-    if (filterTaskId) {
-        itemsFiltrados = itemsFiltrados.filter(it => numeroTarea(it) === parseInt(filterTaskId, 10));
+    if (filterTaskId.size > 0) {
+        itemsFiltrados = itemsFiltrados.filter(it => filterTaskId.has(numeroTarea(it)));
     }
     if (busquedaGeneral.trim()) {
         const q = busquedaGeneral.trim().toLowerCase();
         itemsFiltrados = itemsFiltrados.filter(it => {
+            // Las tareas pueden tener campos en mayuscula inicial (Descripcion/Entregable)
+            // o en camelCase segun el origen del dato; cubrimos ambos.
             const campos = [
-                it.actividades, it.entregable, it.NombreResponsable, it.Corresponsable,
+                it.actividades, it.Actividades, it.actividadesTarea, it.Descripcion,
+                it.entregable, it.Entregable,
+                it.NombreResponsable, it.Corresponsable,
                 it.Observaciones, it.comentarios
             ];
             return campos.some(c => c && String(c).toLowerCase().includes(q));
@@ -1576,10 +1582,22 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 <div className="flex flex-col md:flex-row gap-3 flex-1 w-full">
                     <div className="flex flex-col w-full md:w-1/4">
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">ID de Tarea</span>
-                        <select className={`${inputClasses} text-xs font-semibold`} value={filterTaskId} onChange={(e) => setFilterTaskId(e.target.value)}>
-                            <option value="">Todas las tareas</option>
-                            {listadoOrdenado.map(it => <option key={it.Id} value={numeroTarea(it)}>#{numeroTarea(it)}</option>)}
-                        </select>
+                        <ColumnFilterTrigger
+                            column={{ key: 'taskId', label: 'ID TAREA' }}
+                            values={listadoOrdenado.map(it => `#${numeroTarea(it)}`)}
+                            selectedValues={[...filterTaskId].map(n => `#${n}`)}
+                            theme={theme}
+                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-3 py-1.5 text-[11px] uppercase font-bold text-slate-900 dark:text-slate-200"
+                            onApply={(selected) => {
+                                const next = new Set();
+                                selected.forEach(label => {
+                                    const n = parseInt(String(label).replace('#', ''), 10);
+                                    if (!isNaN(n)) next.add(n);
+                                });
+                                setFilterTaskId(next);
+                            }}
+                            onClear={() => setFilterTaskId(new Set())}
+                        />
                     </div>
                     <div className="flex flex-col w-full md:w-1/3">
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Buscador general</span>
