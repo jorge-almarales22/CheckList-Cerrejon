@@ -49,6 +49,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [filterEstadoTarea, setFilterEstadoTarea] = useState(() => new Set()); // 'terminadas' | 'faltantes' | 'en_rojo'
     const [filterAvanceEsperado, setFilterAvanceEsperado] = useState(() => new Set()); // rangos 0-25, 26-50, 51-75, 76-99, 100
     const [filterAvanceReal, setFilterAvanceReal] = useState(() => new Set());     // idem
+    const [filterTaskId, setFilterTaskId] = useState(() => new Set());            // numeros de tarea seleccionados
     const [busquedaGeneral, setBusquedaGeneral] = useState('');
     const [fotoActivaIdx, setFotoActivaIdx] = useState(0); // carrusel de fotos del equipo
     // Visor de fotos a pantalla completa: { fotos: [...], idx } o null si esta cerrado.
@@ -1139,6 +1140,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             return RANGOS_AVANCE.some(r => filterAvanceReal.has(r.id) && enRango(real, r.id));
         });
     }
+    if (filterTaskId.size > 0) {
+        itemsFiltrados = itemsFiltrados.filter(it => filterTaskId.has(numeroTarea(it)));
+    }
     if (busquedaGeneral.trim()) {
         const q = busquedaGeneral.trim().toLowerCase();
         itemsFiltrados = itemsFiltrados.filter(it => {
@@ -1580,6 +1584,25 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
             <div className={`${cardClass} border p-5 rounded-2xl mb-6 flex flex-col gap-4`}>
                 <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+                    <div className="flex flex-col w-full md:w-[140px]">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Filtrar por ID de Tarea</span>
+                        <ColumnFilterTrigger
+                            column={{ key: 'taskId', label: 'ID TAREA' }}
+                            values={listadoOrdenado.map(it => `#${numeroTarea(it)}`)}
+                            selectedValues={[...filterTaskId].map(n => `#${n}`)}
+                            theme={theme}
+                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200"
+                            onApply={(selected) => {
+                                const next = new Set();
+                                selected.forEach(label => {
+                                    const n = parseInt(String(label).replace('#', ''), 10);
+                                    if (!isNaN(n)) next.add(n);
+                                });
+                                setFilterTaskId(next);
+                            }}
+                            onClear={() => setFilterTaskId(new Set())}
+                        />
+                    </div>
                     <div className="flex-1 min-w-[180px]">
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Buscador general</span>
                         <div className="relative">
