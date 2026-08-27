@@ -95,6 +95,8 @@ El usuario puede crear checklists, diligenciar tareas, adjuntar evidencias, regi
 
 La tabla de incorporaciones incluye filtros multi-seleccion por columna en `NOM. CHK.`, `PLAN (ESP.)`, `COMPL. (REAL)`, `GER.`, `SUPT.`, `TIPO INCORP.` y `CREAD. POR`. Cada filtro ofrece busqueda, checkboxes, `Todos`, `Ninguno`, `Limpiar` y `Aplicar`. Las selecciones se aplican al pulsar `Aplicar` o al hacer clic fuera del menu; `Limpiar` elimina la seleccion y cierra el menu. Los encabezados usan abreviaciones compactas para mantenerse en una sola fila.
 
+El encabezado de la tabla se mantiene visible al hacer scroll (sticky) anclado justo debajo del Navbar: el `<main>` quita su padding superior en la vista de `checklist_all` para que el sticky se pegue al tope sin dejar una franja vacia. Cada celda del `<thead>` tiene fondo gris claro/oscuro solido y las esquinas extremas quedan redondeadas (`rounded-tl-3xl` y `rounded-tr-3xl`) para acompanar el `rounded-3xl` de la tarjeta. El modelo de bordes usa `border-separate border-spacing-0` para que las esquinas redondeadas rendericen correctamente.
+
 La pantalla inicial mantiene una cabecera compacta de introduccion de activos: la ilustracion se muestra reducida y el texto queda alineado hacia arriba para liberar espacio vertical para la tabla de incorporaciones.
 
 ## Indicadores
