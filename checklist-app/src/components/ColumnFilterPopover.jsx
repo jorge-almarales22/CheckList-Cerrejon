@@ -27,20 +27,32 @@ export const ColumnFilterPopover = ({ column, values, selectedValues, theme, onA
     );
 
     useEffect(() => {
-        searchRef.current?.focus();
+        // El listener de clic fuera se registra en el siguiente tick para no
+        // capturar el mismo mousedown que abrio el popover y cerrarlo de inmediato.
+        const id = window.setTimeout(() => searchRef.current?.focus(), 0);
         const applyAndClose = () => onApply(selected);
         const handleKeyDown = (event) => { if (event.key === 'Escape') applyAndClose(); };
         const handleOutsideClick = (event) => {
-            if (!event.target.closest('.column-filter-popover')) applyAndClose();
+            const target = event.target;
+            if (!target || !(target instanceof Element)) return;
+            if (target.closest('.column-filter-popover')) return;
+            if (anchorRef?.current && anchorRef.current.contains(target)) return;
+            applyAndClose();
         };
         document.addEventListener('keydown', handleKeyDown);
-        document.addEventListener('mousedown', handleOutsideClick);
+        // El listener se pospone un ciclo para no reaccionar al mousedown que abrio
+        // el popover. Si no, al dar clic en el boton se abre y se cierra al toque.
+        const outsideId = window.setTimeout(() => {
+            document.addEventListener('mousedown', handleOutsideClick);
+        }, 0);
         return () => {
+            window.clearTimeout(id);
+            window.clearTimeout(outsideId);
             document.removeEventListener('keydown', handleKeyDown);
             document.removeEventListener('mousedown', handleOutsideClick);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [onApply, selected]);
+    }, [onApply, selected, anchorRef]);
 
     const toggleValue = (value) => {
         setSelected(previous => {

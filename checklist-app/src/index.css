@@ -165,7 +165,7 @@ input:-webkit-autofill:active {
 
 .column-filter-popover {
     position: fixed;
-    z-index: 40;
+    z-index: 1100;
     max-height: min(22rem, calc(100vh - 1.5rem));
     display: flex;
     flex-direction: column;

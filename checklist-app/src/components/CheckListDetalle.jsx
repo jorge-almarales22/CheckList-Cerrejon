@@ -1582,16 +1582,16 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 </div>
             )}
 
-            <div className={`${cardClass} border p-5 rounded-2xl mb-6 flex flex-col gap-4`}>
-                <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
-                    <div className="flex flex-col w-full md:w-[140px]">
-                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Filtrar por ID de Tarea</span>
+            <div className={`${cardClass} border p-4 rounded-2xl mb-4`}>
+                <div className="flex flex-wrap gap-3 items-end">
+                    <div className="flex flex-col min-w-[160px]">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Filtrar por ID de Tarea</span>
                         <ColumnFilterTrigger
                             column={{ key: 'taskId', label: 'ID TAREA' }}
                             values={listadoOrdenado.map(it => `#${numeroTarea(it)}`)}
                             selectedValues={[...filterTaskId].map(n => `#${n}`)}
                             theme={theme}
-                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200"
+                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-3 py-1.5 text-[11px] uppercase font-bold text-slate-900 dark:text-slate-200"
                             onApply={(selected) => {
                                 const next = new Set();
                                 selected.forEach(label => {
@@ -1603,27 +1603,27 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                             onClear={() => setFilterTaskId(new Set())}
                         />
                     </div>
-                    <div className="flex-1 min-w-[180px]">
-                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Buscador general</span>
+                    <div className="flex flex-col flex-1 min-w-[160px]">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Buscador general</span>
                         <div className="relative">
                             <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" /></svg>
                             <input
                                 type="text"
-                                placeholder="Buscar por descripcion, responsable, tarea..."
+                                placeholder="Buscar descripcion, responsable, tarea..."
                                 value={busquedaGeneral}
                                 onChange={(e) => setBusquedaGeneral(e.target.value)}
-                                className={`${inputClasses} pl-10 text-xs font-semibold`}
+                                className={`${inputClasses} pl-9 text-[11px] font-semibold`}
                             />
                         </div>
                     </div>
-                    <div className="flex flex-col w-full md:w-[200px]">
-                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Filtrar por Responsable</span>
+                    <div className="flex flex-col min-w-[160px]">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Filtrar por Responsable</span>
                         <ColumnFilterTrigger
                             column={{ key: 'responsable', label: 'RESPONSABLE' }}
                             values={[MIS_TAREAS, ...listadoResponsablesUnicos].map(v => v === MIS_TAREAS ? 'Mis tareas (responsable o corresponsable)' : v)}
                             selectedValues={[...filterResponsable].map(v => v === MIS_TAREAS ? 'Mis tareas (responsable o corresponsable)' : v)}
                             theme={theme}
-                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200"
+                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-3 py-1.5 text-[11px] uppercase font-bold text-slate-900 dark:text-slate-200"
                             onApply={(selected) => {
                                 const next = new Set();
                                 selected.forEach(v => {
@@ -1635,8 +1635,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                             onClear={() => setFilterResponsable(new Set())}
                         />
                     </div>
-                    <div className="flex flex-col w-full md:w-[180px]">
-                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Filtrar por Estado</span>
+                    <div className="flex flex-col min-w-[150px]">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Filtrar por Estado</span>
                         <ColumnFilterTrigger
                             column={{ key: 'estadoTarea', label: 'ESTADO TAREA' }}
                             values={[
@@ -1650,7 +1650,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 return `En rojo: atrasadas o sin fecha de entrega (${totalEnRojo})`;
                             })}
                             theme={theme}
-                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200"
+                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-3 py-1.5 text-[11px] uppercase font-bold text-slate-900 dark:text-slate-200"
                             onApply={(selected) => {
                                 const next = new Set();
                                 selected.forEach(v => {
@@ -1663,14 +1663,14 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                             onClear={() => setFilterEstadoTarea(new Set())}
                         />
                     </div>
-                    <div className="flex flex-col w-full md:w-[180px]">
-                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Avance Esperado</span>
+                    <div className="flex flex-col min-w-[150px]">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Avance Esperado</span>
                         <ColumnFilterTrigger
                             column={{ key: 'avanceEsperado', label: 'AVANCE ESPERADO' }}
                             values={RANGOS_AVANCE.map(r => r.label)}
                             selectedValues={[...filterAvanceEsperado].map(id => RANGOS_AVANCE.find(r => r.id === id)?.label).filter(Boolean)}
                             theme={theme}
-                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200"
+                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-3 py-1.5 text-[11px] uppercase font-bold text-slate-900 dark:text-slate-200"
                             onApply={(selected) => {
                                 const next = new Set();
                                 selected.forEach(label => {
@@ -1682,14 +1682,14 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                             onClear={() => setFilterAvanceEsperado(new Set())}
                         />
                     </div>
-                    <div className="flex flex-col w-full md:w-[180px]">
-                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Avance Real</span>
+                    <div className="flex flex-col min-w-[150px]">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Avance Real</span>
                         <ColumnFilterTrigger
                             column={{ key: 'avanceReal', label: 'AVANCE REAL' }}
                             values={RANGOS_AVANCE.map(r => r.label)}
                             selectedValues={[...filterAvanceReal].map(id => RANGOS_AVANCE.find(r => r.id === id)?.label).filter(Boolean)}
                             theme={theme}
-                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200"
+                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-3 py-1.5 text-[11px] uppercase font-bold text-slate-900 dark:text-slate-200"
                             onApply={(selected) => {
                                 const next = new Set();
                                 selected.forEach(label => {
@@ -1701,14 +1701,14 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                             onClear={() => setFilterAvanceReal(new Set())}
                         />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <input type="checkbox" id="detAlertCheckbox" checked={filterAlertaOnly} onChange={(e) => setFilterAlertaOnly(e.target.checked)} className="accent-yellow-500 cursor-pointer h-4 w-4" />
-                        <label htmlFor="detAlertCheckbox" className="text-xs font-bold text-slate-900 dark:text-slate-200 cursor-pointer">{"Solo en Alerta"}</label>
-                    </div>
+                    <label className="flex items-center gap-2 text-[11px] font-bold cursor-pointer text-slate-900 dark:text-slate-200 whitespace-nowrap mb-0.5">
+                        <input type="checkbox" id="detAlertCheckbox" checked={filterAlertaOnly} onChange={(e) => setFilterAlertaOnly(e.target.checked)} className="accent-yellow-500 cursor-pointer h-3.5 w-3.5" />
+                        Solo en Alerta
+                    </label>
                 </div>
                 <div className="flex justify-end">
                     {!isFinalizado && isAdmin && (
-                        <button onClick={() => setShowAddTaskForm(!showAddTaskForm)} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg border border-blue-400/40 transition-colors shadow">
+                        <button onClick={() => setShowAddTaskForm(!showAddTaskForm)} className="bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold px-4 py-1.5 rounded border border-blue-400/40 transition-colors shadow">
                             {showAddTaskForm ? "Cancelar Nueva" : "Agregar Nueva Tarea"}
                         </button>
                     )}
