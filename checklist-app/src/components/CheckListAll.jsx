@@ -352,7 +352,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                 <div className={`rounded-3xl border ${cardClass}`}>
                     <div className="overflow-x-clip">
                         <table className="checklist-table w-full text-left border-separate border-spacing-0">
-                            <thead className={`sticky top-0 z-10 shadow-[0_4px_8px_-4px_rgba(0,0,0,0.15)]`}>
+                            <thead className={`sticky top-0 z-20 -mt-px shadow-[0_2px_0_0_rgba(0,0,0,0.08),0_4px_8px_-2px_rgba(0,0,0,0.18)] ${theme==='dark'?'bg-slate-900':'bg-slate-100'}`}>
                                 <tr className={`${theme==='dark'?'text-white':'text-slate-900'} text-xs uppercase font-extrabold tracking-wider`}>
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[0])} extraClass="rounded-tl-3xl" />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[1])} />
