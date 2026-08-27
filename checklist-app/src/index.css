@@ -65,12 +65,22 @@ input:-webkit-autofill:active {
 .filterable-table-header {
     position: relative;
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid #e2e8f0;
     vertical-align: middle;
 }
 
 .compact-table-header {
     white-space: nowrap;
+}
+
+/* Con border-separate (necesario para que las esquinas redondeadas del sticky
+   header rendericen) los separadores de fila se pintan en las celdas, porque
+   los bordes sobre <tr> solo aplican en el modelo collapse. */
+.checklist-table tbody td {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.dark .checklist-table tbody td {
+    border-bottom: 1px solid #1e293b;
 }
 
 .filterable-header-button {

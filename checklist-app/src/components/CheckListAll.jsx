@@ -98,7 +98,7 @@ const ColumnFilterPopover = ({ column, values, selectedValues, theme, onApply, s
     );
 };
 
-const FilterableHeader = ({ column, active, theme, onOpen, isOpen, values, selectedValues, onApply, visibilityClass = '' }) => {
+const FilterableHeader = ({ column, active, theme, onOpen, isOpen, values, selectedValues, onApply, visibilityClass = '', extraClass = '' }) => {
     const buttonRef = useRef(null);
     const [popoverStyle, setPopoverStyle] = useState({});
 
@@ -131,7 +131,7 @@ const FilterableHeader = ({ column, active, theme, onOpen, isOpen, values, selec
     }, [isOpen]);
 
     return (
-        <th className={`filterable-table-header ${visibilityClass}`}>
+        <th className={`filterable-table-header ${visibilityClass} ${extraClass} border-b border-slate-200 dark:border-slate-800 ${theme==='dark'?'bg-slate-900':'bg-white'}`}>
             <button ref={buttonRef} type="button" className={`filterable-header-button ${theme === 'dark' ? 'filterable-header-button-dark' : ''} ${active ? 'filterable-header-button-active' : ''}`} onClick={onOpen} aria-haspopup="dialog" aria-expanded={isOpen} title={`Filtrar ${column.label}`}>
                 <span>{column.label}</span>
                 {active > 0 && <span className="filterable-header-badge">{active}</span>}
@@ -351,20 +351,20 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
             ) : (
                 <div className={`rounded-3xl border ${cardClass}`}>
                     <div className="overflow-x-clip">
-                        <table className="w-full text-left border-collapse">
-                            <thead className={`sticky top-0 z-10 shadow-sm ${theme==='dark'?'bg-slate-900':'bg-white'}`}>
-                                <tr className={`${theme==='dark'?'bg-slate-950/40 text-white':'bg-slate-100 text-slate-900'} text-xs uppercase font-extrabold tracking-wider`}>
-                                    <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[0])} />
+                        <table className="checklist-table w-full text-left border-separate border-spacing-0">
+                            <thead className={`sticky top-0 z-10 shadow-sm`}>
+                                <tr className={`${theme==='dark'?'text-white':'text-slate-900'} text-xs uppercase font-extrabold tracking-wider`}>
+                                    <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[0])} extraClass="rounded-tl-3xl" />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[1])} />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[2])} />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[3])} visibilityClass="hidden lg:table-cell" />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[4])} visibilityClass="hidden xl:table-cell" />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[5])} visibilityClass="hidden md:table-cell" />
-                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden lg:table-cell">EQ(S).</th>
-                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">FEC. INICIO</th>
-                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 hidden md:table-cell">FEC. FIN</th>
+                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hidden lg:table-cell">EQ(S).</th>
+                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hidden md:table-cell">FEC. INICIO</th>
+                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hidden md:table-cell">FEC. FIN</th>
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[6])} visibilityClass="hidden lg:table-cell" />
-                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 text-center">ACC.</th>
+                                    <th className="compact-table-header rounded-tr-3xl p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-center">ACC.</th>
                                 </tr>
                             </thead>
                             <tbody className="text-[11px] md:text-sm">
