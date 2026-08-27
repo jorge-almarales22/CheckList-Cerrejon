@@ -383,8 +383,13 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                             : 'border-b border-slate-200 dark:border-slate-800/50 hover:bg-slate-500/5';
 
                                     return (
-                                        <tr key={chk.ID_x002d_checklist} className={`transition-colors ${rowClass}`}>
-                                            <td className="p-2 md:p-3 font-bold break-words min-w-[130px] max-w-[260px] align-top" title={chk.Name}>
+                                        <tr
+                                            key={chk.ID_x002d_checklist}
+                                            className={`transition-colors cursor-pointer ${rowClass}`}
+                                            onDoubleClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)}
+                                            title="Doble clic para abrir"
+                                        >
+                                            <td className="p-2 md:p-3 font-bold break-words min-w-[160px] max-w-[340px] align-top" title={chk.Name}>
                                                 <div className="flex flex-wrap gap-1 mb-1">
                                                     {rechazado && <span className="bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-black">NO APROBADO</span>}
                                                     {pendiente && <span className="bg-amber-500 text-black px-2 py-0.5 rounded text-[10px] font-black">PENDIENTE</span>}
@@ -402,14 +407,14 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                                     <SPIBadge real={promReal} esperado={promCalc} />
                                                 </div>
                                             </td>
-                                            <td className="p-2 md:p-3">
+                                            <td className="p-2 md:p-3 w-[88px]">
                                                 <div className="flex items-center gap-2 text-xs font-bold">
                                                     <span className={`font-black text-base ${isDelayed ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>{promReal}%</span>
                                                     {chk.Estado === 'Finalizado' && <span className="bg-green-500/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded text-[10px] font-extrabold">COMPLETADO</span>}
                                                 </div>
                                             </td>
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden lg:table-cell">{chk.Metadata?.gerencia || '-'}</td>
-                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden xl:table-cell">{chk.Metadata?.superintendencia || '-'}</td>
+                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden xl:table-cell w-[180px] truncate max-w-[180px]" title={chk.Metadata?.superintendencia || ''}>{chk.Metadata?.superintendencia || '-'}</td>
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden md:table-cell">{chk.Tipo || '-'}</td>
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold max-w-[150px] break-words hidden lg:table-cell" title={(chk.Metadata?.equipos || []).filter(Boolean).join(', ')}>
                                                 {(chk.Metadata?.equipos || []).filter(Boolean).join(', ') || '-'}

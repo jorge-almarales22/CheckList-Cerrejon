@@ -73,14 +73,40 @@ input:-webkit-autofill:active {
 }
 
 /* Con border-separate (necesario para que las esquinas redondeadas del sticky
-   header rendericen) los separadores de fila se pintan en las celdas, porque
-   los bordes sobre <tr> solo aplican en el modelo collapse. */
+   header rendericen) los separadores de fila y columna se pintan en las celdas,
+   porque los bordes sobre <tr> solo aplican en el modelo collapse. */
 .checklist-table tbody td {
     border-bottom: 1px solid #e2e8f0;
+    border-right: 1px dashed #e2e8f0;
+}
+
+.checklist-table tbody td:last-child {
+    border-right: 0;
 }
 
 .dark .checklist-table tbody td {
     border-bottom: 1px solid #1e293b;
+    border-right: 1px dashed #334155;
+}
+
+.dark .checklist-table tbody td:last-child {
+    border-right: 0;
+}
+
+.checklist-table thead th {
+    border-right: 1px dashed #e2e8f0;
+}
+
+.checklist-table thead th:last-child {
+    border-right: 0;
+}
+
+.dark .checklist-table thead th {
+    border-right: 1px dashed #334155;
+}
+
+.dark .checklist-table thead th:last-child {
+    border-right: 0;
 }
 
 .filterable-header-button {
