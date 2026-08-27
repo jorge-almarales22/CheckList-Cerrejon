@@ -415,7 +415,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                             </td>
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden lg:table-cell">{chk.Metadata?.gerencia || '-'}</td>
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden xl:table-cell w-[130px] truncate max-w-[130px]" title={chk.Metadata?.superintendencia || ''}>{chk.Metadata?.superintendencia || '-'}</td>
-                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden md:table-cell w-[140px] truncate max-w-[140px]" title={chk.Tipo || ''}>{chk.Tipo || '-'}</td>
+                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden md:table-cell">{chk.Tipo || '-'}</td>
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold max-w-[150px] break-words hidden lg:table-cell" title={(chk.Metadata?.equipos || []).filter(Boolean).join(', ')}>
                                                 {(chk.Metadata?.equipos || []).filter(Boolean).join(', ') || '-'}
                                             </td>
@@ -425,9 +425,12 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                             </td>
                                             <td className="p-2 md:p-3 hidden lg:table-cell">
                                                 {chk.CreadoPor ? (
-                                                    <div className="flex items-center gap-2 max-w-[200px]">
+                                                    <div className="flex items-center gap-2 max-w-[220px]">
                                                         <img src={USERPHOTO(chk.CreadoPor)} onError={(e) => { e.target.src = AVATAR_FALLBACK; }} className="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-700 object-cover bg-slate-200 shrink-0" alt="" />
-                                                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate" title={chk.CreadoPor}>{chk.CreadoPor}</p>
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate" title={chk.CreadoPorNombre || chk.CreadoPor}>{chk.CreadoPorNombre || chk.CreadoPor}</p>
+                                                            <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate" title={chk.CreadoPor}>{chk.CreadoPor}</p>
+                                                        </div>
                                                     </div>
                                                 ) : esHistorico(chk) ? (
                                                     // Los checklists migrados no traen creador: se marcan como históricos.
