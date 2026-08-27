@@ -13,11 +13,11 @@ const USERPHOTO = (email) => `https://glencore.sharepoint.com/_layouts/15/userph
 const AVATAR_FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
 
 const COLUMN_FILTERS = [
-    { key: 'nombre', label: 'NOM. CHK.' },
+    { key: 'nombre', label: 'NOMBRE DE INCORPORACIÓN' },
     { key: 'esperado', label: 'PLAN (ESP.)' },
     { key: 'real', label: 'COMPL. (REAL)' },
-    { key: 'gerencia', label: 'GER.' },
-    { key: 'superintendencia', label: 'SUPT.' },
+    { key: 'gerencia', label: 'GERENCIA' },
+    { key: 'superintendencia', label: 'SUPERINTENDENCIA' },
     { key: 'tipo', label: 'TIPO INCORP.' },
     { key: 'creadoPor', label: 'CREAD. POR' }
 ];
@@ -364,7 +364,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                     <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 hidden md:table-cell">FEC. INICIO</th>
                                     <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 hidden md:table-cell">FEC. FIN</th>
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[6])} visibilityClass="hidden lg:table-cell" />
-                                    <th className="compact-table-header rounded-tr-3xl p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-center">ACC.</th>
+                                    <th className="compact-table-header rounded-tr-3xl p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-center">ACCIONES</th>
                                 </tr>
                             </thead>
                             <tbody className="text-[11px] md:text-sm">
@@ -389,7 +389,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                             onDoubleClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)}
                                             title="Doble clic para abrir"
                                         >
-                                            <td className="p-2 md:p-3 font-bold break-words min-w-[160px] max-w-[340px] align-top" title={chk.Name}>
+                                            <td className="p-2 md:p-3 font-bold break-words min-w-[180px] max-w-[400px] align-top" title={chk.Name}>
                                                 <div className="flex flex-wrap gap-1 mb-1">
                                                     {rechazado && <span className="bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-black">NO APROBADO</span>}
                                                     {pendiente && <span className="bg-amber-500 text-black px-2 py-0.5 rounded text-[10px] font-black">PENDIENTE</span>}
@@ -414,8 +414,8 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                                 </div>
                                             </td>
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden lg:table-cell">{chk.Metadata?.gerencia || '-'}</td>
-                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden xl:table-cell w-[180px] truncate max-w-[180px]" title={chk.Metadata?.superintendencia || ''}>{chk.Metadata?.superintendencia || '-'}</td>
-                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden md:table-cell">{chk.Tipo || '-'}</td>
+                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden xl:table-cell w-[130px] truncate max-w-[130px]" title={chk.Metadata?.superintendencia || ''}>{chk.Metadata?.superintendencia || '-'}</td>
+                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden md:table-cell w-[140px] truncate max-w-[140px]" title={chk.Tipo || ''}>{chk.Tipo || '-'}</td>
                                             <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold max-w-[150px] break-words hidden lg:table-cell" title={(chk.Metadata?.equipos || []).filter(Boolean).join(', ')}>
                                                 {(chk.Metadata?.equipos || []).filter(Boolean).join(', ') || '-'}
                                             </td>
@@ -425,12 +425,9 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                             </td>
                                             <td className="p-2 md:p-3 hidden lg:table-cell">
                                                 {chk.CreadoPor ? (
-                                                    <div className="flex items-center gap-2 max-w-[210px]">
+                                                    <div className="flex items-center gap-2 max-w-[200px]">
                                                         <img src={USERPHOTO(chk.CreadoPor)} onError={(e) => { e.target.src = AVATAR_FALLBACK; }} className="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-700 object-cover bg-slate-200 shrink-0" alt="" />
-                                                        <div className="min-w-0">
-                                                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate" title={chk.CreadoPorNombre || chk.CreadoPor}>{chk.CreadoPorNombre || chk.CreadoPor}</p>
-                                                            <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate" title={chk.CreadoPor}>{chk.CreadoPor}</p>
-                                                        </div>
+                                                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate" title={chk.CreadoPor}>{chk.CreadoPor}</p>
                                                     </div>
                                                 ) : esHistorico(chk) ? (
                                                     // Los checklists migrados no traen creador: se marcan como históricos.
