@@ -349,10 +349,10 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                     {verSolicitudes && <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Cuando alguien cree una nueva incorporación, aparecerá aquí para su aprobación.</p>}
                 </div>
             ) : (
-                <div className={`rounded-3xl border overflow-hidden ${cardClass}`}>
-                    <div className="overflow-x-auto">
+                <div className={`rounded-3xl border ${cardClass}`}>
+                    <div className="overflow-x-clip">
                         <table className="w-full text-left border-collapse">
-                            <thead>
+                            <thead className={`sticky top-0 z-10 shadow-sm ${theme==='dark'?'bg-slate-900':'bg-white'}`}>
                                 <tr className={`${theme==='dark'?'bg-slate-950/40 text-white':'bg-slate-100 text-slate-900'} text-xs uppercase font-extrabold tracking-wider`}>
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[0])} />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[1])} />
