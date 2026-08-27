@@ -10,7 +10,6 @@ import DashboardCharts from './DashboardCharts';
 import GanttChart from './GanttChart';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { ColumnFilterTrigger } from './ColumnFilterPopover';
 
 // Valor centinela del filtro de responsable: no es un correo, asi que no choca
 // con ningun responsable real de la lista.
@@ -49,7 +48,6 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [filterEstadoTarea, setFilterEstadoTarea] = useState(''); // '', 'terminadas', 'faltantes', 'en_rojo'
     const [filterAvanceEsperado, setFilterAvanceEsperado] = useState(''); // rango id
     const [filterAvanceReal, setFilterAvanceReal] = useState('');
-    const [filterTaskId, setFilterTaskId] = useState(() => new Set());
     const [busquedaGeneral, setBusquedaGeneral] = useState('');
     const [fotoActivaIdx, setFotoActivaIdx] = useState(0); // carrusel de fotos del equipo
     // Visor de fotos a pantalla completa: { fotos: [...], idx } o null si esta cerrado.
@@ -1126,14 +1124,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     } else if (filterEstadoTarea === 'en_rojo') {
         itemsFiltrados = itemsFiltrados.filter(it => getEstadoTarea(it).enRojo);
     }
-    if (filterAvanceEsperado && (filterAvanceEsperado.match(/^\d+-\d+$/) || filterAvanceEsperado === '100')) {
+    if (filterAvanceEsperado && (filterAvanceEsperado.match(/^\d+-\d+$/) || filterAvanceEsperado === '100' || filterAvanceEsperado === '0')) {
         itemsFiltrados = itemsFiltrados.filter(it => enRango(parseInt(getEstadoTarea(it).esperado || 0), filterAvanceEsperado));
     }
-    if (filterAvanceReal && (filterAvanceReal.match(/^\d+-\d+$/) || filterAvanceReal === '100')) {
+    if (filterAvanceReal && (filterAvanceReal.match(/^\d+-\d+$/) || filterAvanceReal === '100' || filterAvanceReal === '0')) {
         itemsFiltrados = itemsFiltrados.filter(it => enRango(parseInt(it.Avance || it.avance || 0), filterAvanceReal));
-    }
-    if (filterTaskId.size > 0) {
-        itemsFiltrados = itemsFiltrados.filter(it => filterTaskId.has(numeroTarea(it)));
     }
     if (busquedaGeneral.trim()) {
         const q = busquedaGeneral.trim().toLowerCase();
@@ -1580,25 +1575,6 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
             <div className={`${cardClass} border p-5 rounded-2xl mb-6 flex flex-col md:flex-row gap-4 items-center justify-between`}>
                 <div className="flex flex-col md:flex-row gap-3 flex-1 w-full">
-                    <div className="flex flex-col w-full md:w-1/4">
-                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">ID de Tarea</span>
-                        <ColumnFilterTrigger
-                            column={{ key: 'taskId', label: 'ID TAREA' }}
-                            values={listadoOrdenado.map(it => `#${numeroTarea(it)}`)}
-                            selectedValues={[...filterTaskId].map(n => `#${n}`)}
-                            theme={theme}
-                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-3 py-1.5 text-[11px] uppercase font-bold text-slate-900 dark:text-slate-200"
-                            onApply={(selected) => {
-                                const next = new Set();
-                                selected.forEach(label => {
-                                    const n = parseInt(String(label).replace('#', ''), 10);
-                                    if (!isNaN(n)) next.add(n);
-                                });
-                                setFilterTaskId(next);
-                            }}
-                            onClear={() => setFilterTaskId(new Set())}
-                        />
-                    </div>
                     <div className="flex flex-col w-full md:w-1/3">
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Buscador general</span>
                         <div className="relative">
