@@ -298,14 +298,14 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
             {/* Título centrado, descripción justificada a la izquierda e ilustración a la derecha */}
             <div className={`${cardClass} border p-4 md:p-6 rounded-3xl mb-5`}>
                 <h2 className="text-2xl md:text-3xl font-normal leading-tight text-center">Incorporación de Activos</h2>
-                <div className="mt-3 flex flex-col-reverse md:flex-row md:items-start gap-4 md:gap-8">
+                <div className="mt-3 flex flex-col-reverse md:flex-row md:items-center gap-4 md:gap-8">
                     <p className="flex-1 min-w-0 text-sm md:text-base text-justify text-slate-700 dark:text-slate-300 leading-relaxed">
                         {DESCRIPCION_INCORPORACION}
                     </p>
                     <img
                         src={dibujoSvg}
                         alt="Ilustración de incorporación de activos"
-                        className="w-36 sm:w-44 md:w-48 lg:w-56 shrink-0 self-center select-none pointer-events-none"
+                        className="w-28 sm:w-32 md:w-36 lg:w-40 shrink-0 self-center select-none pointer-events-none"
                     />
                 </div>
             </div>
