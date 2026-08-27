@@ -10,6 +10,7 @@ import DashboardCharts from './DashboardCharts';
 import GanttChart from './GanttChart';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { ColumnFilterTrigger } from './ColumnFilterPopover';
 
 // Valor centinela del filtro de responsable: no es un correo, asi que no choca
 // con ningun responsable real de la lista.
@@ -43,9 +44,12 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectComment, setRejectComment] = useState('');
 
-    const [filterResponsable, setFilterResponsable] = useState('');
+    const [filterResponsable, setFilterResponsable] = useState(() => new Set());
     const [filterAlertaOnly, setFilterAlertaOnly] = useState(false);
-    const [filterEstadoTarea, setFilterEstadoTarea] = useState(''); // '', 'terminadas', 'faltantes'
+    const [filterEstadoTarea, setFilterEstadoTarea] = useState(() => new Set()); // 'terminadas' | 'faltantes' | 'en_rojo'
+    const [filterAvanceEsperado, setFilterAvanceEsperado] = useState(() => new Set()); // rangos 0-25, 26-50, 51-75, 76-99, 100
+    const [filterAvanceReal, setFilterAvanceReal] = useState(() => new Set());     // idem
+    const [busquedaGeneral, setBusquedaGeneral] = useState('');
     const [fotoActivaIdx, setFotoActivaIdx] = useState(0); // carrusel de fotos del equipo
     // Visor de fotos a pantalla completa: { fotos: [...], idx } o null si esta cerrado.
     // Guarda la lista y no solo el indice porque tambien se abre desde el modo
@@ -993,7 +997,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             setEditForm({});
             setEvidenciasItem({});
             setNuevosComentarios({});
-            setFilterResponsable('');
+            setFilterResponsable(new Set());
             setEvidenciasPresence({});
             fetchEvidencePresence(updatedChecklist);
 
@@ -1085,28 +1089,65 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
     const listadoResponsablesUnicos = [...new Set(checklist.items.map(it => it.NombreResponsable).filter(Boolean))].sort();
 
+    // Etiquetas y rangos de los filtros de Avance Esperado / Real (%).
+    const RANGOS_AVANCE = [
+        { id: '0-25', label: '0% - 25%' },
+        { id: '26-50', label: '26% - 50%' },
+        { id: '51-75', label: '51% - 75%' },
+        { id: '76-99', label: '76% - 99%' },
+        { id: '100', label: '100%' }
+    ];
+    const enRango = (valor, id) => {
+        const v = parseInt(valor || 0);
+        if (id === '0-25') return v <= 25;
+        if (id === '26-50') return v >= 26 && v <= 50;
+        if (id === '51-75') return v >= 51 && v <= 75;
+        if (id === '76-99') return v >= 76 && v <= 99;
+        if (id === '100') return v === 100;
+        return false;
+    };
+
     let itemsFiltrados = listadoOrdenado;
-    if (filterResponsable === MIS_TAREAS) {
-        // Atajo para quien gestiona: sus tareas como responsable y las que le
-        // delegaron como corresponsable. Se pasa esAdmin=false a proposito, si no
-        // un administrador veria todas.
-        itemsFiltrados = itemsFiltrados.filter(it => puedeGestionarTarea(it, currentUser, false));
-    } else if (filterResponsable) {
-        itemsFiltrados = itemsFiltrados.filter(it => it.NombreResponsable === filterResponsable);
+    if (filterResponsable.size > 0) {
+        itemsFiltrados = itemsFiltrados.filter(it => {
+            if (filterResponsable.has(MIS_TAREAS) && puedeGestionarTarea(it, currentUser, false)) return true;
+            return filterResponsable.has(it.NombreResponsable);
+        });
     }
     if (filterAlertaOnly) {
         itemsFiltrados = itemsFiltrados.filter(it => it.Alerta === 'Si');
     }
     // Una tarea esta "terminada" si esta al 100% y tiene evidencias cargadas.
     const tareaTerminada = (it) => parseInt(it.Avance || it.avance || 0) === 100 && !!evidenciasPresence[it.Id];
-    if (filterEstadoTarea === 'terminadas') {
-        itemsFiltrados = itemsFiltrados.filter(tareaTerminada);
-    } else if (filterEstadoTarea === 'faltantes') {
-        itemsFiltrados = itemsFiltrados.filter(it => !tareaTerminada(it));
-    } else if (filterEstadoTarea === 'en_rojo') {
-        // Mismo criterio que el semaforo de la tarjeta: atrasadas respecto al plan
-        // o sin plan (esperado y real en 0 por falta de fechas de entrega).
-        itemsFiltrados = itemsFiltrados.filter(it => getEstadoTarea(it).enRojo);
+    if (filterEstadoTarea.size > 0) {
+        itemsFiltrados = itemsFiltrados.filter(it => {
+            if (filterEstadoTarea.has('terminadas') && !tareaTerminada(it)) return false;
+            if (filterEstadoTarea.has('faltantes') && tareaTerminada(it)) return false;
+            if (filterEstadoTarea.has('en_rojo') && !getEstadoTarea(it).enRojo) return false;
+            return true;
+        });
+    }
+    if (filterAvanceEsperado.size > 0) {
+        itemsFiltrados = itemsFiltrados.filter(it => {
+            const esperado = parseInt(getEstadoTarea(it).esperado || 0);
+            return RANGOS_AVANCE.some(r => filterAvanceEsperado.has(r.id) && enRango(esperado, r.id));
+        });
+    }
+    if (filterAvanceReal.size > 0) {
+        itemsFiltrados = itemsFiltrados.filter(it => {
+            const real = parseInt(it.Avance || it.avance || 0);
+            return RANGOS_AVANCE.some(r => filterAvanceReal.has(r.id) && enRango(real, r.id));
+        });
+    }
+    if (busquedaGeneral.trim()) {
+        const q = busquedaGeneral.trim().toLowerCase();
+        itemsFiltrados = itemsFiltrados.filter(it => {
+            const campos = [
+                it.actividades, it.entregable, it.NombreResponsable, it.Corresponsable,
+                it.Observaciones, it.comentarios, it.numeroTarea
+            ];
+            return campos.some(c => c && String(c).toLowerCase().includes(q));
+        });
     }
 
     const totalEnRojo = activas.filter(it => getEstadoTarea(it).enRojo).length;
@@ -1537,40 +1578,118 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 </div>
             )}
 
-            <div className={`${cardClass} border p-5 rounded-2xl mb-6 flex flex-col md:flex-row gap-4 items-center justify-between`}>
-                <div className="flex flex-col md:flex-row gap-4 flex-1 w-full">
-                    <div className="flex flex-col w-full md:w-1/3">
-                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">{"Filtrar por Responsable"}</span>
-                        <select className={`${inputClasses} text-xs font-semibold`} value={filterResponsable} onChange={(e) => setFilterResponsable(e.target.value)}>
-                            <option value="">{"Todos los Responsables"}</option>
-                            <option value={MIS_TAREAS}>Mis tareas (responsable o corresponsable)</option>
-                            {listadoResponsablesUnicos.map(r => <option key={r} value={r}>{r}</option>)}
-                        </select>
+            <div className={`${cardClass} border p-5 rounded-2xl mb-6 flex flex-col gap-4`}>
+                <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+                    <div className="flex-1 min-w-[180px]">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Buscador general</span>
+                        <div className="relative">
+                            <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" /></svg>
+                            <input
+                                type="text"
+                                placeholder="Buscar por descripcion, responsable, tarea..."
+                                value={busquedaGeneral}
+                                onChange={(e) => setBusquedaGeneral(e.target.value)}
+                                className={`${inputClasses} pl-10 text-xs font-semibold`}
+                            />
+                        </div>
                     </div>
-                    <div className="flex flex-col w-full md:w-1/3">
-                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">{"Filtrar por Estado"}</span>
-                        <select className={`${inputClasses} text-xs font-semibold`} value={filterEstadoTarea} onChange={(e) => setFilterEstadoTarea(e.target.value)}>
-                            <option value="">Todas las tareas</option>
-                            <option value="terminadas">Terminadas (100% + evidencias)</option>
-                            <option value="faltantes">Faltantes (por terminar)</option>
-                            <option value="en_rojo">En rojo: atrasadas o sin fecha de entrega ({totalEnRojo})</option>
-                        </select>
-                        {filterEstadoTarea === 'en_rojo' && (
-                            <span className="text-[10px] font-bold text-red-600 dark:text-red-400 mt-1">
-                                Mostrando las tareas por debajo del avance esperado y las que están en 0% sin fechas de entrega.
-                            </span>
-                        )}
+                    <div className="flex flex-col w-full md:w-[200px]">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Filtrar por Responsable</span>
+                        <ColumnFilterTrigger
+                            column={{ key: 'responsable', label: 'RESPONSABLE' }}
+                            values={[MIS_TAREAS, ...listadoResponsablesUnicos].map(v => v === MIS_TAREAS ? 'Mis tareas (responsable o corresponsable)' : v)}
+                            selectedValues={[...filterResponsable].map(v => v === MIS_TAREAS ? 'Mis tareas (responsable o corresponsable)' : v)}
+                            theme={theme}
+                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200"
+                            onApply={(selected) => {
+                                const next = new Set();
+                                selected.forEach(v => {
+                                    if (v === 'Mis tareas (responsable o corresponsable)') next.add(MIS_TAREAS);
+                                    else next.add(v);
+                                });
+                                setFilterResponsable(next);
+                            }}
+                            onClear={() => setFilterResponsable(new Set())}
+                        />
                     </div>
-                    <div className="flex items-center gap-2 mt-4 md:mt-0">
+                    <div className="flex flex-col w-full md:w-[180px]">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Filtrar por Estado</span>
+                        <ColumnFilterTrigger
+                            column={{ key: 'estadoTarea', label: 'ESTADO TAREA' }}
+                            values={[
+                                { id: 'terminadas', label: 'Terminadas (100% + evidencias)' },
+                                { id: 'faltantes', label: 'Faltantes (por terminar)' },
+                                { id: 'en_rojo', label: `En rojo: atrasadas o sin fecha de entrega (${totalEnRojo})` }
+                            ].map(o => o.label)}
+                            selectedValues={[...filterEstadoTarea].map(v => {
+                                if (v === 'terminadas') return 'Terminadas (100% + evidencias)';
+                                if (v === 'faltantes') return 'Faltantes (por terminar)';
+                                return `En rojo: atrasadas o sin fecha de entrega (${totalEnRojo})`;
+                            })}
+                            theme={theme}
+                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200"
+                            onApply={(selected) => {
+                                const next = new Set();
+                                selected.forEach(v => {
+                                    if (v === 'Terminadas (100% + evidencias)') next.add('terminadas');
+                                    else if (v === 'Faltantes (por terminar)') next.add('faltantes');
+                                    else if (v.startsWith('En rojo')) next.add('en_rojo');
+                                });
+                                setFilterEstadoTarea(next);
+                            }}
+                            onClear={() => setFilterEstadoTarea(new Set())}
+                        />
+                    </div>
+                    <div className="flex flex-col w-full md:w-[180px]">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Avance Esperado</span>
+                        <ColumnFilterTrigger
+                            column={{ key: 'avanceEsperado', label: 'AVANCE ESPERADO' }}
+                            values={RANGOS_AVANCE.map(r => r.label)}
+                            selectedValues={[...filterAvanceEsperado].map(id => RANGOS_AVANCE.find(r => r.id === id)?.label).filter(Boolean)}
+                            theme={theme}
+                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200"
+                            onApply={(selected) => {
+                                const next = new Set();
+                                selected.forEach(label => {
+                                    const r = RANGOS_AVANCE.find(x => x.label === label);
+                                    if (r) next.add(r.id);
+                                });
+                                setFilterAvanceEsperado(next);
+                            }}
+                            onClear={() => setFilterAvanceEsperado(new Set())}
+                        />
+                    </div>
+                    <div className="flex flex-col w-full md:w-[180px]">
+                        <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1 block">Avance Real</span>
+                        <ColumnFilterTrigger
+                            column={{ key: 'avanceReal', label: 'AVANCE REAL' }}
+                            values={RANGOS_AVANCE.map(r => r.label)}
+                            selectedValues={[...filterAvanceReal].map(id => RANGOS_AVANCE.find(r => r.id === id)?.label).filter(Boolean)}
+                            theme={theme}
+                            className="w-full justify-between bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200"
+                            onApply={(selected) => {
+                                const next = new Set();
+                                selected.forEach(label => {
+                                    const r = RANGOS_AVANCE.find(x => x.label === label);
+                                    if (r) next.add(r.id);
+                                });
+                                setFilterAvanceReal(next);
+                            }}
+                            onClear={() => setFilterAvanceReal(new Set())}
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
                         <input type="checkbox" id="detAlertCheckbox" checked={filterAlertaOnly} onChange={(e) => setFilterAlertaOnly(e.target.checked)} className="accent-yellow-500 cursor-pointer h-4 w-4" />
                         <label htmlFor="detAlertCheckbox" className="text-xs font-bold text-slate-900 dark:text-slate-200 cursor-pointer">{"Solo en Alerta"}</label>
                     </div>
                 </div>
-                {!isFinalizado && isAdmin && (
-                    <button onClick={() => setShowAddTaskForm(!showAddTaskForm)} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg border border-blue-400/40 transition-colors shadow">
-                        {showAddTaskForm ? "Cancelar Nueva" : "Agregar Nueva Tarea"}
-                    </button>
-                )}
+                <div className="flex justify-end">
+                    {!isFinalizado && isAdmin && (
+                        <button onClick={() => setShowAddTaskForm(!showAddTaskForm)} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg border border-blue-400/40 transition-colors shadow">
+                            {showAddTaskForm ? "Cancelar Nueva" : "Agregar Nueva Tarea"}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {showAddTaskForm && (

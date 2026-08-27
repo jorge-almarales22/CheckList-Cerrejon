@@ -5,6 +5,7 @@ import { getRequestDigest, deleteSPListItem } from '../utils/sharepointApi';
 import GerenciaPieCharts from './GerenciaPieCharts';
 import SPIBadge from './SPIBadge';
 import dibujoSvg from '../assets/dibujoSvg.svg';
+import { ColumnFilterTrigger } from './ColumnFilterPopover';
 
 // Descripcion institucional de la fase de Incorporación de Activos.
 const DESCRIPCION_INCORPORACION = "Durante la fase de incorporación de activos, Cerrejón desarrolla las capacidades necesarias (personas, sistemas y equipos), define las estrategias de operación y mantenimiento, y asegura la disponibilidad de información clave sobre confiabilidad, repuestos, costos del ciclo de vida, capacitación y contratos. Asimismo, valida que toda la información del activo esté completa y gestionada para soportar su operación y mantenimiento durante todo el ciclo de vida.";
@@ -33,111 +34,16 @@ const getColumnFilterValue = (checklist, key) => {
     return '-';
 };
 
-const ColumnFilterPopover = ({ column, values, selectedValues, theme, onApply, style }) => {
-    const [search, setSearch] = useState('');
-    const [selected, setSelected] = useState(() => new Set(selectedValues));
-    const searchRef = useRef(null);
-    const visibleValues = values.filter(value => value.toLowerCase().includes(search.trim().toLowerCase()));
-
-    useEffect(() => {
-        searchRef.current?.focus();
-        const applyAndClose = () => onApply(selected);
-        const handleKeyDown = (event) => { if (event.key === 'Escape') applyAndClose(); };
-        const handleOutsideClick = (event) => {
-            if (!event.target.closest('.column-filter-popover')) applyAndClose();
-        };
-        document.addEventListener('keydown', handleKeyDown);
-        document.addEventListener('mousedown', handleOutsideClick);
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-            document.removeEventListener('mousedown', handleOutsideClick);
-        };
-    }, [onApply, selected]);
-
-    const toggleValue = (value) => {
-        setSelected(previous => {
-            const next = new Set(previous);
-            if (next.has(value)) next.delete(value); else next.add(value);
-            return next;
-        });
-    };
-
-    const selectVisible = (shouldSelect) => {
-        setSelected(previous => {
-            const next = new Set(previous);
-            visibleValues.forEach(value => shouldSelect ? next.add(value) : next.delete(value));
-            return next;
-        });
-    };
-
-    return createPortal(
-        <div style={style} className={`column-filter-popover ${theme === 'dark' ? 'column-filter-popover-dark' : ''}`} role="dialog" aria-label={`Filtrar ${column.label}`} onClick={event => event.stopPropagation()}>
-            <div className={`column-filter-search-wrap ${theme === 'dark' ? 'column-filter-search-wrap-dark' : ''}`}>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" /></svg>
-                <input ref={searchRef} value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar valor..." autoComplete="off" />
-            </div>
-            <div className="column-filter-quick-actions">
-                <button type="button" onClick={() => selectVisible(true)}>Todos</button>
-                <button type="button" onClick={() => selectVisible(false)}>Ninguno</button>
-            </div>
-            <div className="column-filter-list" role="listbox" aria-label={`Valores de ${column.label}`}>
-                {visibleValues.length === 0 ? <p className="column-filter-empty">Sin resultados</p> : visibleValues.map(value => (
-                    <label key={value} className="column-filter-option">
-                        <input type="checkbox" checked={selected.has(value)} onChange={() => toggleValue(value)} />
-                        <span title={value}>{value}</span>
-                    </label>
-                ))}
-            </div>
-            <div className={`column-filter-footer ${theme === 'dark' ? 'column-filter-footer-dark' : ''}`}>
-                <span>{selected.size} de {values.length} seleccionados</span>
-                <button type="button" className="column-filter-clear" onClick={() => onApply(new Set())}>Limpiar</button>
-                <button type="button" className="column-filter-apply" onClick={() => onApply(selected)}>Aplicar</button>
-            </div>
-        </div>,
-        document.body
-    );
-};
-
-const FilterableHeader = ({ column, active, theme, onOpen, isOpen, values, selectedValues, onApply, visibilityClass = '', extraClass = '' }) => {
-    const buttonRef = useRef(null);
-    const [popoverStyle, setPopoverStyle] = useState({});
-
-    useEffect(() => {
-        if (!isOpen) return undefined;
-        const updatePosition = () => {
-            const rect = buttonRef.current?.getBoundingClientRect();
-            if (!rect) return;
-            const width = Math.min(336, window.innerWidth - 24);
-            const gap = 6;
-            const below = window.innerHeight - rect.bottom - gap;
-            const above = rect.top - gap;
-            const opensAbove = below < 300 && above > below;
-            const availableHeight = Math.max(220, (opensAbove ? above : below) - 12);
-            const left = Math.min(Math.max(12, rect.left), window.innerWidth - width - 12);
-            setPopoverStyle({
-                left: `${left}px`,
-                width: `${width}px`,
-                ...(opensAbove ? { bottom: `${window.innerHeight - rect.top + gap}px` } : { top: `${rect.bottom + gap}px` }),
-                maxHeight: `${availableHeight}px`
-            });
-        };
-        updatePosition();
-        window.addEventListener('resize', updatePosition);
-        window.addEventListener('scroll', updatePosition, true);
-        return () => {
-            window.removeEventListener('resize', updatePosition);
-            window.removeEventListener('scroll', updatePosition, true);
-        };
-    }, [isOpen]);
-
+const FilterableHeader = ({ column, theme, values, selectedValues, onApply, visibilityClass = '', extraClass = '' }) => {
     return (
         <th className={`filterable-table-header ${visibilityClass} ${extraClass} border-b border-slate-200 dark:border-slate-800 ${theme==='dark'?'bg-slate-900':'bg-slate-100'}`}>
-            <button ref={buttonRef} type="button" className={`filterable-header-button ${theme === 'dark' ? 'filterable-header-button-dark' : ''} ${active ? 'filterable-header-button-active' : ''}`} onClick={onOpen} aria-haspopup="dialog" aria-expanded={isOpen} title={`Filtrar ${column.label}`}>
-                <span>{column.label}</span>
-                {active > 0 && <span className="filterable-header-badge">{active}</span>}
-                <svg className="filterable-header-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7L4 5Z" /></svg>
-            </button>
-            {isOpen && <ColumnFilterPopover column={column} values={values} selectedValues={selectedValues} theme={theme} onApply={onApply} style={popoverStyle} />}
+            <ColumnFilterTrigger
+                column={column}
+                values={values}
+                selectedValues={selectedValues}
+                theme={theme}
+                onApply={(selected) => { onApply(selected); }}
+            />
         </th>
     );
 };
@@ -149,7 +55,6 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
 
     const [filtroAlerta, setFiltroAlerta] = useState(false);
     const [columnFilters, setColumnFilters] = useState({});
-    const [openColumn, setOpenColumn] = useState(null);
     const [verSolicitudes, setVerSolicitudes] = useState(false); // ver la bandeja de aprobaciones
 
     // Eliminación de un checklist (solo administradores).
@@ -269,11 +174,8 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
         column,
         theme,
         active: columnFilters[column.key]?.size || 0,
-        isOpen: openColumn === column.key,
         values: getColumnValues(column.key, listaBaseFiltros),
         selectedValues: columnFilters[column.key] || new Set(),
-        onOpen: () => setOpenColumn(openColumn === column.key ? null : column.key),
-        onClose: () => setOpenColumn(null),
         onApply: (selected) => {
             setColumnFilters(previous => ({ ...previous, [column.key]: new Set(selected) }));
             setOpenColumn(null);
