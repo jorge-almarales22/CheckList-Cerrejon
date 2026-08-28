@@ -1087,8 +1087,6 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const numeroTarea = (it) => checklist.items.findIndex(i => i.Id === it.Id) + 1;
     const allTasksComplete = activas.length > 0 && activas.every(it => parseInt(it.Avance || it.avance || 0) === 100);
 
-    const listadoResponsablesUnicos = [...new Set(checklist.items.map(it => it.NombreResponsable).filter(Boolean))].sort();
-
     const RANGOS_AVANCE = [
         { id: '0', label: '0%' },
         { id: '1-25', label: '1% - 25%' },
@@ -1108,54 +1106,90 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         return false;
     };
 
-    let itemsFiltrados = listadoOrdenado;
-    if (filterResponsable.size > 0) {
-        if (filterResponsable.has(MIS_TAREAS)) {
-            itemsFiltrados = itemsFiltrados.filter(it => puedeGestionarTarea(it, currentUser, false));
-        } else {
-            itemsFiltrados = itemsFiltrados.filter(it => filterResponsable.has(it.NombreResponsable));
+    // Aplica todos los filtros activos sobre `items`. Si `omitir` se indica,
+    // ese filtro no se aplica: sirve para calcular las opciones disponibles de
+    // cada filtro en cascada (solo valores presentes en las tareas que pasan
+    // los demas filtros).
+    const aplicarFiltros = (items, omitir = null) => {
+        let resultado = items;
+        if (omitir !== 'responsable' && filterResponsable.size > 0) {
+            if (filterResponsable.has(MIS_TAREAS)) {
+                resultado = resultado.filter(it => puedeGestionarTarea(it, currentUser, false));
+            } else {
+                resultado = resultado.filter(it => filterResponsable.has(it.NombreResponsable));
+            }
         }
-    }
-    if (filterAlertaOnly) {
-        itemsFiltrados = itemsFiltrados.filter(it => it.Alerta === 'Si');
-    }
-    const tareaTerminada = (it) => parseInt(it.Avance || it.avance || 0) === 100 && !!evidenciasPresence[it.Id];
-    if (filterEstadoTarea.size > 0) {
-        itemsFiltrados = itemsFiltrados.filter(it => {
-            if (filterEstadoTarea.has('terminadas') && tareaTerminada(it)) return true;
-            if (filterEstadoTarea.has('faltantes') && !tareaTerminada(it)) return true;
-            if (filterEstadoTarea.has('en_rojo') && getEstadoTarea(it).enRojo) return true;
-            return false;
-        });
-    }
-    if (filterAvanceEsperado.size > 0) {
-        itemsFiltrados = itemsFiltrados.filter(it => {
-            const v = parseInt(getEstadoTarea(it).esperado || 0);
-            return [...filterAvanceEsperado].some(id => enRango(v, id));
-        });
-    }
-    if (filterAvanceReal.size > 0) {
-        itemsFiltrados = itemsFiltrados.filter(it => {
-            const v = parseInt(it.Avance || it.avance || 0);
-            return [...filterAvanceReal].some(id => enRango(v, id));
-        });
-    }
-    if (busquedaGeneral.trim()) {
-        const q = busquedaGeneral.trim().toLowerCase();
-        itemsFiltrados = itemsFiltrados.filter(it => {
-            // Las tareas pueden tener campos en mayuscula inicial (Descripcion/Entregable)
-            // o en camelCase segun el origen del dato; cubrimos ambos.
-            const campos = [
-                it.actividades, it.Actividades, it.actividadesTarea, it.Descripcion,
-                it.entregable, it.Entregable,
-                it.NombreResponsable, it.Corresponsable,
-                it.Observaciones, it.comentarios
-            ];
-            return campos.some(c => c && String(c).toLowerCase().includes(q));
-        });
-    }
+        if (omitir !== 'alerta' && filterAlertaOnly) {
+            resultado = resultado.filter(it => it.Alerta === 'Si');
+        }
+        const tareaTerminada = (it) => parseInt(it.Avance || it.avance || 0) === 100 && !!evidenciasPresence[it.Id];
+        if (omitir !== 'estado' && filterEstadoTarea.size > 0) {
+            resultado = resultado.filter(it => {
+                if (filterEstadoTarea.has('terminadas') && tareaTerminada(it)) return true;
+                if (filterEstadoTarea.has('faltantes') && !tareaTerminada(it)) return true;
+                if (filterEstadoTarea.has('en_rojo') && getEstadoTarea(it).enRojo) return true;
+                return false;
+            });
+        }
+        if (omitir !== 'avanceEsperado' && filterAvanceEsperado.size > 0) {
+            resultado = resultado.filter(it => {
+                const v = parseInt(getEstadoTarea(it).esperado || 0);
+                return [...filterAvanceEsperado].some(id => enRango(v, id));
+            });
+        }
+        if (omitir !== 'avanceReal' && filterAvanceReal.size > 0) {
+            resultado = resultado.filter(it => {
+                const v = parseInt(it.Avance || it.avance || 0);
+                return [...filterAvanceReal].some(id => enRango(v, id));
+            });
+        }
+        if (omitir !== 'busqueda' && busquedaGeneral.trim()) {
+            const q = busquedaGeneral.trim().toLowerCase();
+            resultado = resultado.filter(it => {
+                // Las tareas pueden tener campos en mayuscula inicial (Descripcion/Entregable)
+                // o en camelCase segun el origen del dato; cubrimos ambos.
+                const campos = [
+                    it.actividades, it.Actividades, it.actividadesTarea, it.Descripcion,
+                    it.entregable, it.Entregable,
+                    it.NombreResponsable, it.Corresponsable,
+                    it.Observaciones, it.comentarios
+                ];
+                return campos.some(c => c && String(c).toLowerCase().includes(q));
+            });
+        }
+        return resultado;
+    };
 
-    const totalEnRojo = activas.filter(it => getEstadoTarea(it).enRojo).length;
+    // Resultado final de la tabla: todos los filtros aplicados.
+    const itemsFiltrados = aplicarFiltros(listadoOrdenado);
+
+    // Filtros en cascada: cada filtro ofrece solo los valores presentes en las
+    // tareas que pasan los DEMAS filtros (sin incluir el propio). Los valores ya
+    // seleccionados se conservan en las opciones para poder deseleccionarlos.
+    const poolResponsable = aplicarFiltros(listadoOrdenado, 'responsable');
+    const responsablesDisponibles = [...new Set(poolResponsable.map(it => it.NombreResponsable).filter(Boolean))].sort();
+    const opcionesResponsable = [...new Set([MIS_TAREAS, ...responsablesDisponibles, ...filterResponsable])];
+
+    const poolEstado = aplicarFiltros(listadoOrdenado, 'estado');
+    const tareaTerminadaPool = (it) => parseInt(it.Avance || it.avance || 0) === 100 && !!evidenciasPresence[it.Id];
+    const estadosDisponibles = [];
+    if (poolEstado.some(tareaTerminadaPool)) estadosDisponibles.push('terminadas');
+    if (poolEstado.some(it => !tareaTerminadaPool(it))) estadosDisponibles.push('faltantes');
+    if (poolEstado.some(it => getEstadoTarea(it).enRojo)) estadosDisponibles.push('en_rojo');
+    const opcionesEstado = [...new Set([...estadosDisponibles, ...filterEstadoTarea])];
+    const totalEnRojo = poolEstado.filter(it => getEstadoTarea(it).enRojo).length;
+
+    const poolEsperado = aplicarFiltros(listadoOrdenado, 'avanceEsperado');
+    const rangosEsperadoDisponibles = RANGOS_AVANCE
+        .filter(r => poolEsperado.some(it => enRango(parseInt(getEstadoTarea(it).esperado || 0), r.id)))
+        .map(r => r.id);
+    const opcionesEsperado = [...new Set([...rangosEsperadoDisponibles, ...filterAvanceEsperado])];
+
+    const poolReal = aplicarFiltros(listadoOrdenado, 'avanceReal');
+    const rangosRealDisponibles = RANGOS_AVANCE
+        .filter(r => poolReal.some(it => enRango(parseInt(it.Avance || it.avance || 0), r.id)))
+        .map(r => r.id);
+    const opcionesReal = [...new Set([...rangosRealDisponibles, ...filterAvanceReal])];
 
     return (
         <div className="max-w-[95%] mx-auto animate-[fadeIn_0.3s_ease-out]">
@@ -1602,7 +1636,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Responsable</span>
                         <ColumnFilterTrigger
                             column={{ key: 'responsable', label: 'Responsable' }}
-                            values={[MIS_TAREAS, ...listadoResponsablesUnicos]}
+                            values={opcionesResponsable}
                             selectedValues={filterResponsable}
                             theme={theme}
                             className={inputClasses + " text-xs font-semibold"}
@@ -1614,7 +1648,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Estado</span>
                         <ColumnFilterTrigger
                             column={{ key: 'estado', label: 'Estado' }}
-                            values={['terminadas', 'faltantes', 'en_rojo']}
+                            values={opcionesEstado}
                             selectedValues={filterEstadoTarea}
                             theme={theme}
                             className={inputClasses + " text-xs font-semibold"}
@@ -1630,7 +1664,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Avance Esperado</span>
                         <ColumnFilterTrigger
                             column={{ key: 'avanceEsperado', label: 'Avance Esperado' }}
-                            values={RANGOS_AVANCE.map(r => r.id)}
+                            values={opcionesEsperado}
                             selectedValues={filterAvanceEsperado}
                             theme={theme}
                             className={inputClasses + " text-xs font-semibold"}
@@ -1642,7 +1676,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Avance Real</span>
                         <ColumnFilterTrigger
                             column={{ key: 'avanceReal', label: 'Avance Real' }}
-                            values={RANGOS_AVANCE.map(r => r.id)}
+                            values={opcionesReal}
                             selectedValues={filterAvanceReal}
                             theme={theme}
                             className={inputClasses + " text-xs font-semibold"}

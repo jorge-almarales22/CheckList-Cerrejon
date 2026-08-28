@@ -93,6 +93,8 @@ The trigger accepts `valueLabels` (an object mapping raw values to friendly labe
 
 Both the main table (`CheckListAll.jsx`) and the detail view (`CheckListDetalle.jsx`) use `ColumnFilterTrigger`. In the detail view, the internal task filters (responsable, estado, avance esperado, avance real) store their selections as `Set` in React state and combine values with OR semantics within each filter. The `MIS_TAREAS` sentinel (`__mis_tareas__`) is a special responsable option that filters tasks the current user can manage. When changing checklist type, `setFilterResponsable(new Set())` resets the responsable filter.
 
+The detail filters are **cascading**: each filter only offers the values present in the tasks that pass the *other* filters. This is implemented with a single `aplicarFiltros(items, omitir)` helper that applies all active filters except the one named in `omitir`; each filter's option pool is computed by calling it with its own key omitted (e.g. `aplicarFiltros(listadoOrdenado, 'responsable')` yields the responsable options). Already-selected values are always kept in the option list so the user can deselect them even if they no longer match the filtered set.
+
 ## Commands and Deployment
 
 Run commands from `checklist-app/`:
