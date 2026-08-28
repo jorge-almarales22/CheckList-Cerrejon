@@ -18,7 +18,7 @@ import { createPortal } from 'react-dom';
  *  - onClear:   opcional; si se omite, onApply(new Set()) se usa al pulsar Limpiar.
  *  - anchorRef: ref del boton ancla para posicionar el popover.
  */
-export const ColumnFilterPopover = ({ column, values, selectedValues, theme, onApply, onClear, anchorRef }) => {
+export const ColumnFilterPopover = ({ column, values, selectedValues, theme, onApply, onClear, anchorRef, style }) => {
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState(() => new Set(selectedValues || []));
     const searchRef = useRef(null);
@@ -80,6 +80,7 @@ export const ColumnFilterPopover = ({ column, values, selectedValues, theme, onA
 
     return createPortal(
         <div
+            style={style}
             className={`column-filter-popover ${theme === 'dark' ? 'column-filter-popover-dark' : ''}`}
             role="dialog"
             aria-label={`Filtrar ${column.label}`}
@@ -203,6 +204,7 @@ export const ColumnFilterTrigger = ({
                     values={values}
                     selectedValues={selectedValues}
                     theme={theme}
+                    style={popoverStyle}
                     onApply={(selected) => {
                         // [DIAG] Log temporal para depurar el aplicar.
                         console.log('[FILTRO] Aplicar', column?.key, 'seleccion=', selected?.size);
