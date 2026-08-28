@@ -134,6 +134,18 @@ export const listFolderFiles = async (folderUrl, siteUrl = SGIA_SITE_URL) => {
     return json.d?.results || [];
 };
 
+// Lista las subcarpetas de una carpeta. Devuelve [] si la carpeta aún no existe.
+export const listFolderSubfolders = async (folderUrl, siteUrl = SGIA_SITE_URL) => {
+    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(folderUrl)}')/Folders?$select=Name,ServerRelativeUrl&$top=5000`;
+    const res = await fetch(url, {
+        headers: { "Accept": "application/json;odata=verbose" },
+        credentials: 'same-origin'
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.d?.results || [];
+};
+
 // Envía un archivo a la papelera de reciclaje del sitio.
 export const recycleFile = async (fileRef, digest, siteUrl = SGIA_SITE_URL) => {
     const url = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${encodeURIComponent(fileRef)}')/recycle()`;

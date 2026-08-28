@@ -48,6 +48,10 @@ Deliverables (task evidence) are stored as binary files in the SGIA root site do
 
 The type folders are `Checklist Ensamble`, `Checklist Compra Instalada`, and `Checklist Proyectos`. Images are compressed in the browser before upload. The application also reads legacy base64 evidence from the `EvidenciasChecklist` list for migrated records.
 
+Each task has its own default subfolder inside the checklist folder, named `<orden>_<descripcion corta>` (e.g. `03_Pruebas_comisionamiento`). Users can also create additional subfolders from the evidence uploader (a folder selector per task with a "Nueva carpeta..." option) to organize many documents. Uploaded files are named `<orden>_<nombreDocOriginal>_<usuarioSinDominio>.<ext>` (e.g. `03_Informe_Pruebas_juan.perez.pdf`), where the order identifies the task, the original document name is preserved, and the user is the email prefix (before `@`). The detail view reads files from the root folder and from all subfolders of each task.
+
+The metadata header includes an "Ir a Entregables" button (visible to all users) that opens the checklist's root folder in the SGIA document library in a new browser tab.
+
 Equipment photos are compressed data URLs inside checklist `Metadata`. Finalized PDFs are generated in the browser with `html2canvas` and `jsPDF`, then uploaded to the same root folder of their incorporation (next to the task deliverables):
 
 `/sites/co-lmn-sgia/Documentos compartidos/Incorporación/Entregables/{tipo}/{nombre-del-checklist}/`
@@ -58,7 +62,7 @@ Other SharePoint data sources:
 - `EquiposAC` on the `ac` site supplies process/unit options.
 - `EvidenciasChecklist` is the legacy evidence compatibility source.
 
-The application uses `/_api/contextinfo` for request digests and list item CRUD under `/_api/web/lists/getbytitle(...)/items`. PeoplePicker uses the SharePoint people search endpoint. File operations use folder creation, binary upload, listing, and recycle-bin endpoints against the SGIA root site (the deliverable library is not on the `ac` site).
+The application uses `/_api/contextinfo` for request digests and list item CRUD under `/_api/web/lists/getbytitle(...)/items`. PeoplePicker uses the SharePoint people search endpoint. File operations use folder creation, binary upload, listing, subfolder listing, and recycle-bin endpoints against the SGIA root site (the deliverable library is not on the `ac` site).
 
 ## Functional Areas
 

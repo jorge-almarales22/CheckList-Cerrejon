@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { esPendiente, esRechazado, esHistorico, esHistoricoGestionado, marcarHistoricoGestionado, getEstadoTarea, getCorresponsable, puedeGestionarTarea, puedeAsignarCorresponsable, mismoUsuario } from '../utils/calculations';
 import { notificarTeams } from '../utils/notifications';
-import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, recycleFile, dataUrlToUint8Array, fetchJerarquiaOpciones, conValorActual, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
+import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, listFolderSubfolders, recycleFile, dataUrlToUint8Array, fetchJerarquiaOpciones, conValorActual, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
 import { AC_HOST, TIPOS_CHECKLIST, getTipoChecklist } from '../data/constants';
 import PeoplePicker from './PeoplePicker';
@@ -74,6 +74,15 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
     const [modalEvidences, setModalEvidences] = useState(null);
     const [activeEvidenciaIndex, setActiveEvidenciaIndex] = useState(0);
+
+    // Subcarpetas de entregables por tarea: itemId -> [nombres de subcarpetas].
+    // El usuario puede organizar los documentos de una tarea en varias carpetas.
+    const [subcarpetasPorTarea, setSubcarpetasPorTarea] = useState({});
+    // Carpeta destino elegida en el cargue de evidencias: itemId -> nombre de
+    // subcarpeta ('' = la subcarpeta por defecto de la tarea, '__nueva__' = crear).
+    const [carpetaDestinoPorTarea, setCarpetaDestinoPorTarea] = useState({});
+    // Nombre de la nueva carpeta a crear: itemId -> texto.
+    const [nuevaCarpetaPorTarea, setNuevaCarpetaPorTarea] = useState({});
 
     const [showGanttModal, setShowGanttModal] = useState(false);
     const [evidenciasPresence, setEvidenciasPresence] = useState({});
@@ -281,6 +290,24 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         return idx >= 0 ? String(idx + 1).padStart(2, '0') : null;
     };
 
+    // Limpia un texto para usarlo como nombre de carpeta/archivo en SharePoint.
+    const sanitizarNombre = (texto, max = 40) =>
+        (texto || '')
+            .replace(/[~"#%&*:<>?/\\{|}']/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, max) || 'SinNombre';
+
+    // Nombre de la subcarpeta por defecto de una tarea: "<orden>_<descripcion corta>".
+    // Es estable (depende solo del orden y la descripcion), asi la lectura de
+    // evidencias encuentra los archivos aunque se recargue la pagina.
+    const nombreSubcarpetaTarea = (itemId) => {
+        const item = (checklist?.items || []).find(i => i.Id === itemId);
+        const orden = getOrdenTarea(itemId) || '00';
+        const descripcion = sanitizarNombre(item?.Descripcion || item?.actividades || 'Tarea', 40);
+        return `${orden}_${descripcion}`;
+    };
+
     // Un archivo pertenece a la tarea si empieza por su numero de orden ("06_...")
     // o por el formato anterior basado en el Id ("Evidencia_<id>_...").
     const archivoEsDeTarea = (nombre, itemId, orden) =>
@@ -307,22 +334,34 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             } catch (error) {
                 console.error("Error cargando evidencias legacy", error);
             }
-            // Nuevo: archivos en la carpeta del checklist.
+            // Nuevo: archivos en la carpeta del checklist (raiz + subcarpetas de la tarea).
             try {
                 if (checklist?.Tipo && checklist?.Name) {
                     const folderUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
-                    const files = await listFolderFiles(folderUrl);
                     const orden = getOrdenTarea(itemId);
+                    const pushFile = (f) => combined.push({
+                        Id: `file_${f.ServerRelativeUrl}`,
+                        source: 'file',
+                        fileRef: f.ServerRelativeUrl,
+                        Name: f.Name,
+                        Data: `${AC_HOST}${f.ServerRelativeUrl}`,
+                        isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
+                    });
+
+                    // Archivos de la raiz.
+                    const files = await listFolderFiles(folderUrl);
                     files
                         .filter(f => archivoEsDeTarea(f.Name, itemId, orden))
-                        .forEach(f => combined.push({
-                            Id: `file_${f.ServerRelativeUrl}`,
-                            source: 'file',
-                            fileRef: f.ServerRelativeUrl,
-                            Name: f.Name,
-                            Data: `${AC_HOST}${f.ServerRelativeUrl}`,
-                            isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
-                        }));
+                        .forEach(pushFile);
+
+                    // Archivos dentro de las subcarpetas de la tarea.
+                    const subcarpetas = await listFolderSubfolders(folderUrl);
+                    const subcarpetasTarea = (subcarpetasPorTarea[itemId] || []);
+                    for (const sub of subcarpetas) {
+                        if (!subcarpetasTarea.includes(sub.Name)) continue;
+                        const subFiles = await listFolderFiles(sub.ServerRelativeUrl);
+                        subFiles.forEach(pushFile);
+                    }
                 }
             } catch (error) {
                 console.error("Error cargando evidencias (carpeta)", error);
@@ -347,10 +386,16 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             return idx >= 0 ? String(idx + 1).padStart(2, '0') : null;
         };
 
-        // 1. Archivos de la carpeta (una sola llamada) agrupados por tarea.
+        // 1. Archivos de la carpeta raiz + subcarpetas, agrupados por tarea.
+        //    Tambien se guarda la lista de subcarpetas por tarea para el selector
+        //    de carpeta destino en el cargue de evidencias.
         try {
             const folderUrl = getEvidenciasFolderUrl(checklistData.Tipo, checklistData.Name);
             const files = await listFolderFiles(folderUrl);
+            const subcarpetas = await listFolderSubfolders(folderUrl);
+            const subcarpetasPorTareaMap = {};
+
+            // Archivos de la raiz (formato viejo y nuevo sin subcarpeta).
             items.forEach(it => {
                 const orden = ordenDe(it.Id);
                 const evs = files
@@ -365,6 +410,35 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     }));
                 if (evs.length) map[it.Id] = evs;
             });
+
+            // Archivos dentro de cada subcarpeta. La subcarpeta por defecto de una
+            // tarea empieza por su orden ("06_..."), asi se sabe a que tarea va.
+            for (const sub of subcarpetas) {
+                const subFiles = await listFolderFiles(sub.ServerRelativeUrl);
+                const subNombre = sub.Name;
+                // Determinar a que tarea pertenece la subcarpeta por su prefijo de orden.
+                const matchOrden = subNombre.match(/^(\d+)_/);
+                const tareaDeSub = matchOrden
+                    ? items.find(it => ordenDe(it.Id) === String(parseInt(matchOrden[1], 10)).padStart(2, '0'))
+                    : null;
+                if (tareaDeSub) {
+                    (subcarpetasPorTareaMap[tareaDeSub.Id] = subcarpetasPorTareaMap[tareaDeSub.Id] || []).push(subNombre);
+                }
+                subFiles.forEach(f => {
+                    const orden = tareaDeSub ? ordenDe(tareaDeSub.Id) : null;
+                    const evs = (map[tareaDeSub?.Id] = map[tareaDeSub?.Id] || []);
+                    evs.push({
+                        Id: `file_${f.ServerRelativeUrl}`,
+                        source: 'file',
+                        fileRef: f.ServerRelativeUrl,
+                        Name: f.Name,
+                        Data: `${AC_HOST}${f.ServerRelativeUrl}`,
+                        isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
+                    });
+                });
+            }
+
+            setSubcarpetasPorTarea(prev => ({ ...prev, ...subcarpetasPorTareaMap }));
         } catch (err) {
             console.error("Error cargando evidencias de carpeta (todas):", err);
         }
@@ -426,22 +500,38 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         setIsUploading(true);
         try {
             const digest = await getRequestDigest();
-            // Carpeta destino: /Entregables/{Checklist Tipo}/{Nombre del Checklist}/
-            const folderUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
-            await ensureFolder(folderUrl, digest);
+            // Carpeta raiz de la incorporacion: /Entregables/{Tipo}/{Nombre}/
+            const raizUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
+            await ensureFolder(raizUrl, digest);
 
-            // Nombre = "<orden>_<responsable>_<AAAAMMDD>". El orden identifica la tarea.
+            // Carpeta destino: por defecto la subcarpeta de la tarea
+            // ("<orden>_<descripcion>"), o la subcarpeta elegida por el usuario,
+            // o una nueva carpeta que el usuario acaba de nombrar.
+            const carpetaElegida = carpetaDestinoPorTarea[itemId];
+            let carpetaDestino;
+            if (carpetaElegida === '__nueva__') {
+                const nombreNueva = sanitizarNombre(nuevaCarpetaPorTarea[itemId], 60);
+                carpetaDestino = `${raizUrl}/${nombreNueva}`;
+            } else if (carpetaElegida) {
+                carpetaDestino = `${raizUrl}/${carpetaElegida}`;
+            } else {
+                carpetaDestino = `${raizUrl}/${nombreSubcarpetaTarea(itemId)}`;
+            }
+            await ensureFolder(carpetaDestino, digest);
+
+            // Nombre = "<orden>_<nombreDocOriginal>_<usuarioSinDominio>". El orden
+            // identifica la tarea; el nombre original del documento y el usuario
+            // (sin @dominio) permiten reconocer cada archivo sin perderse.
             const item = (checklist.items || []).find(i => i.Id === itemId);
             const orden = getOrdenTarea(itemId) || '00';
-            const responsable = (item?.NombreResponsable || 'SinResponsable')
+            const usuario = (currentUser || 'usuario').split('@')[0]
                 .replace(/[~"#%&*:<>?/\\{|}']/g, '')
                 .trim()
                 .replace(/\s+/g, '_')
-                .slice(0, 40) || 'SinResponsable';
-            const fecha = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                .slice(0, 30) || 'usuario';
 
-            // Se listan los existentes para no sobrescribir cargas del mismo dia.
-            const existentes = await listFolderFiles(folderUrl);
+            // Se listan los existentes en la carpeta destino para no sobrescribir.
+            const existentes = await listFolderFiles(carpetaDestino);
             const usados = new Set(existentes.map(f => f.Name.toLowerCase()));
 
             for (let file of files) {
@@ -463,7 +553,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     ext = (file.name.split('.').pop() || 'dat').replace(/[^a-z0-9]/gi, '') || 'dat';
                 }
 
-                const base = `${orden}_${responsable}_${fecha}`;
+                // Nombre original del documento sin extension, sanitizado.
+                const nombreDoc = sanitizarNombre(file.name.replace(/\.[^.]+$/, ''), 60);
+                const base = `${orden}_${nombreDoc}_${usuario}`;
                 let fileName = `${base}.${ext}`;
                 let n = 2;
                 while (usados.has(fileName.toLowerCase())) {
@@ -472,7 +564,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 }
                 usados.add(fileName.toLowerCase());
 
-                await uploadFileToFolder(folderUrl, fileName, body, digest);
+                await uploadFileToFolder(carpetaDestino, fileName, body, digest);
             }
 
             alert('Proceso de carga finalizado.');
@@ -873,6 +965,14 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const handleStartEditMetadata = () => {
         setEditMetadataForm(JSON.parse(JSON.stringify(checklist.Metadata)));
         setIsEditingMetadata(true);
+    };
+
+    // Abre en una pestaña nueva la carpeta raiz de la incorporacion en la
+    // biblioteca de Entregables (Documentos compartidos del sitio raiz SGIA).
+    const abrirCarpetaEntregables = () => {
+        if (!checklist?.Tipo || !checklist?.Name) return;
+        const folderUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
+        window.open(`${AC_HOST}${folderUrl}`, '_blank');
     };
 
     const handleSaveMetadata = async () => {
@@ -1333,25 +1433,31 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             {checklist.Metadata && (
                 <div className="flex flex-col xl:flex-row gap-5 mb-8 items-stretch">
                 <div className={`flex-1 min-w-0 border rounded-2xl overflow-hidden text-sm shadow-lg ${theme === 'dark' ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'}`}>
-                    {isAdmin && !isFinalizado && (
-                        <div className={`px-5 py-2 border-b flex justify-between items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-amber-50'}`}>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Metadatos del Checklist</span>
-                            {!isEditingMetadata ? (
-                                <button onClick={handleStartEditMetadata} className="bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 text-xs font-bold px-3 py-1 rounded border border-amber-500/30 transition-colors">
-                                    Editar Metadatos
-                                </button>
-                            ) : (
-                                <div className="flex gap-2">
-                                    <button onClick={handleSaveMetadata} className="bg-green-500/20 hover:bg-green-500/40 text-green-600 dark:text-green-300 text-xs font-bold px-3 py-1 rounded border border-green-500/30 transition-colors">
-                                        Guardar Cambios
+                    <div className={`px-5 py-2 border-b flex justify-between items-center ${theme === 'dark' ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-amber-50'}`}>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Metadatos del Checklist</span>
+                        <div className="flex gap-2 items-center">
+                            <button onClick={abrirCarpetaEntregables} className="bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 text-xs font-bold px-3 py-1 rounded border border-blue-500/30 transition-colors flex items-center gap-1.5">
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                                Ir a Entregables
+                            </button>
+                            {isAdmin && !isFinalizado && (
+                                !isEditingMetadata ? (
+                                    <button onClick={handleStartEditMetadata} className="bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 text-xs font-bold px-3 py-1 rounded border border-amber-500/30 transition-colors">
+                                        Editar Metadatos
                                     </button>
-                                    <button onClick={() => { setIsEditingMetadata(false); setEditMetadataForm(null); }} className="bg-gray-500/20 hover:bg-gray-500/40 text-gray-600 dark:text-gray-300 text-xs font-bold px-3 py-1 rounded border border-gray-500/30 transition-colors">
-                                        Cancelar
-                                    </button>
-                                </div>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <button onClick={handleSaveMetadata} className="bg-green-500/20 hover:bg-green-500/40 text-green-600 dark:text-green-300 text-xs font-bold px-3 py-1 rounded border border-green-500/30 transition-colors">
+                                            Guardar Cambios
+                                        </button>
+                                        <button onClick={() => { setIsEditingMetadata(false); setEditMetadataForm(null); }} className="bg-gray-500/20 hover:bg-gray-500/40 text-gray-600 dark:text-gray-300 text-xs font-bold px-3 py-1 rounded border border-gray-500/30 transition-colors">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                )
                             )}
                         </div>
-                    )}
+                    </div>
                     <div className={`flex flex-col md:flex-row border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                         <div className={`w-full md:w-1/3 p-5 border-r flex flex-col gap-2 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
                             <span className="font-extrabold text-[10px] uppercase tracking-widest text-slate-900 dark:text-slate-200 mb-2">DESCRIPCIÓN DE EQUIPO(S) A INCORPORAR</span>
@@ -2026,6 +2132,33 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                                                     {!isFinalizado && puedeGestionar && (
                                                         <div className={`pt-2 border-t ${theme==='dark'?'border-slate-800':'border-slate-200'}`}>
+                                                            <div className="flex flex-col gap-1.5 mb-2">
+                                                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200">
+                                                                    Carpeta destino
+                                                                </label>
+                                                                <div className="flex gap-2">
+                                                                    <select
+                                                                        className={`text-[11px] font-semibold rounded border px-2 py-1 outline-none flex-1 ${theme==='dark'?'bg-slate-950/60 text-white border-slate-700':'bg-white text-slate-900 border-slate-300'}`}
+                                                                        value={carpetaDestinoPorTarea[it.Id] || ''}
+                                                                        onChange={e => setCarpetaDestinoPorTarea(prev => ({ ...prev, [it.Id]: e.target.value }))}
+                                                                    >
+                                                                        <option value="">{nombreSubcarpetaTarea(it.Id)} (por defecto)</option>
+                                                                        {(subcarpetasPorTarea[it.Id] || []).map(sub => (
+                                                                            <option key={sub} value={sub}>{sub}</option>
+                                                                        ))}
+                                                                        <option value="__nueva__">+ Nueva carpeta...</option>
+                                                                    </select>
+                                                                </div>
+                                                                {carpetaDestinoPorTarea[it.Id] === '__nueva__' && (
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder="Nombre de la nueva carpeta"
+                                                                        className={`text-[11px] font-semibold rounded border px-2 py-1 outline-none w-full ${theme==='dark'?'bg-slate-950/60 text-white border-slate-700':'bg-white text-slate-900 border-slate-300'}`}
+                                                                        value={nuevaCarpetaPorTarea[it.Id] || ''}
+                                                                        onChange={e => setNuevaCarpetaPorTarea(prev => ({ ...prev, [it.Id]: e.target.value }))}
+                                                                    />
+                                                                )}
+                                                            </div>
                                                             <input type="file" multiple className="text-[10px] text-slate-900 dark:text-slate-200 font-bold w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 transition-all cursor-pointer block" onChange={(e) => handleFileUpload(it.Id, e)} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" disabled={isUploading} />
                                                             {isUploading && <span className="text-yellow-500 text-xs mt-1 block font-semibold">Procesando y subiendo archivo(s)... no cierres la pestaña.</span>}
                                                         </div>

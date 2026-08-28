@@ -60,7 +60,7 @@ Los entregables de cada tarea se guardan como archivos binarios en la biblioteca
 
 `/sites/co-lmn-sgia/Documentos compartidos/Incorporación/Entregables/`
 
-Se organizan por tipo (`Checklist Ensamble`, `Checklist Compra Instalada`, `Checklist Proyectos`) y por nombre del checklist. Las evidencias antiguas migradas pueden seguir leyendose desde la lista `EvidenciasChecklist`, donde fueron almacenadas como base64.
+Se organizan por tipo (`Checklist Ensamble`, `Checklist Compra Instalada`, `Checklist Proyectos`) y por nombre del checklist. Cada tarea tiene su subcarpeta por defecto (`<orden>_<descripcion corta>`, ej. `03_Pruebas_comisionamiento`) y el usuario puede crear subcarpetas adicionales desde el cargue de evidencias. Los archivos se nombran `<orden>_<nombreDocOriginal>_<usuarioSinDominio>.<ext>` (ej. `03_Informe_Pruebas_juan.perez.pdf`) para conservar el nombre del documento y saber quien lo subio. La cabecera de metadatos incluye un boton "Ir a Entregables" que abre la carpeta raiz de la incorporacion en una pestana nueva. Las evidencias antiguas migradas pueden seguir leyendose desde la lista `EvidenciasChecklist`, donde fueron almacenadas como base64.
 
 ### Fotografias y PDFs
 
