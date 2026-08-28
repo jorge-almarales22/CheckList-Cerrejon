@@ -95,6 +95,8 @@ El usuario puede crear checklists, diligenciar tareas, adjuntar evidencias, regi
 
 La tabla de incorporaciones incluye filtros multi-seleccion por columna en `NOM. CHK.`, `PLAN (ESP.)`, `COMPL. (REAL)`, `GER.`, `SUPT.`, `TIPO INCORP.` y `CREAD. POR`. Cada filtro ofrece busqueda, checkboxes, `Todos`, `Ninguno`, `Limpiar` y `Aplicar`. Las selecciones se aplican al pulsar `Aplicar` o al hacer clic fuera del menu; `Limpiar` elimina la seleccion y cierra el menu. Los encabezados usan abreviaciones compactas para mantenerse en una sola fila.
 
+El detalle de un checklist incluye filtros internos sobre sus tareas: buscador general (descripcion, responsable, tarea), responsable, estado (terminadas, faltantes, en rojo), rango de avance esperado, rango de avance real y la casilla `Solo en Alerta`. Estos filtros son independientes de los filtros de la tabla principal y no los afectan.
+
 El encabezado de la tabla se mantiene visible al hacer scroll (sticky) anclado justo debajo del Navbar: el `<main>` quita su padding superior en la vista de `checklist_all` para que el sticky se pegue al tope sin dejar una franja vacia. Cada celda del `<thead>` tiene fondo gris claro/oscuro solido y las esquinas extremas quedan redondeadas (`rounded-tl-3xl` y `rounded-tr-3xl`) para acompanar el `rounded-3xl` de la tarjeta. El modelo de bordes usa `border-separate border-spacing-0` para que las esquinas redondeadas rendericen correctamente.
 
 La pantalla inicial mantiene una cabecera compacta de introduccion de activos: la ilustracion se muestra reducida y el texto queda alineado hacia arriba para liberar espacio vertical para la tabla de incorporaciones.
@@ -121,7 +123,7 @@ npm run build
 npm run preview
 ```
 
-`npm run build` compila con Vite y genera automaticamente `checklist-app/export/index.aspx` junto con sus assets mediante `scripts/export-build.mjs`. Ese contenido es el que se publica en SharePoint bajo `SiteAssets/Incorporaciones/`. El exportador copia los bundles, logos, favicon e iconos, y transforma las referencias de assets a rutas absolutas bajo `/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/` para evitar errores 404 y MIME al abrir `index.aspx`.
+`npm run build` compila con Vite y genera automaticamente `checklist-app/export/index.aspx` junto con sus assets mediante `scripts/export-build.mjs`. Ese contenido es el que se publica en SharePoint bajo `SiteAssets/Incorporaciones/`. El exportador copia unicamente los bundles JS/CSS y transforma las referencias de assets a rutas absolutas bajo `/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/` para evitar errores 404 y MIME al abrir `index.aspx`. Las imagenes (logos, favicon, iconos e ilustraciones) no se copian al export: ya estan publicadas en SharePoint con nombres estables y el bundle las referencia por URL relativa, por lo que no cambian entre builds. Para publicar basta reemplazar en SharePoint los 4 archivos de `export/assets/` y el `export/index.aspx`.
 
 La ejecucion local requiere una sesion corporativa valida para autenticarse y leer/escribir SharePoint. No hay pruebas automatizadas actualmente; la validacion disponible es `npm run lint`, `npm run build` y una prueba manual del portal publicado.
 

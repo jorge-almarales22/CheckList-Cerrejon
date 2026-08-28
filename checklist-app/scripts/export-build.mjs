@@ -9,7 +9,6 @@ const distIndexPath = resolve(distPath, 'index.html');
 const exportIndexPath = resolve(exportPath, 'index.aspx');
 const exportAssetsPath = resolve(exportPath, 'assets');
 const distAssetsPath = resolve(distPath, 'assets');
-const distImgPath = resolve(distPath, 'img');
 
 await rm(exportPath, { recursive: true, force: true });
 await mkdir(exportPath, { recursive: true });
@@ -22,10 +21,12 @@ const sharePointIndex = index
 await writeFile(resolve(exportPath, 'index.html'), sharePointIndex, 'utf8');
 await rename(resolve(exportPath, 'index.html'), exportIndexPath);
 
+// Solo se exportan los bundles JS/CSS y el index.aspx: favicon, icons e img ya
+// estan publicados en SharePoint y no cambian entre builds. Las imagenes que el
+// bundle referencia (dibujoSvg, logo_blanco, logo_negro) tambien permanecen en
+// SharePoint con el mismo nombre, por lo que no se copian aqui.
 const assetNames = await readdir(distAssetsPath);
 const bundles = assetNames.filter(name => /\.(?:js|css)$/i.test(name));
 await Promise.all(bundles.map(name => cp(resolve(distAssetsPath, name), resolve(exportAssetsPath, name))));
-await cp(distImgPath, resolve(exportPath, 'img'), { recursive: true });
-await Promise.all(['favicon.svg', 'icons.svg'].map(name => cp(resolve(distPath, name), resolve(exportPath, name))));
 
 console.log(`SharePoint export generated at ${exportPath}`);
