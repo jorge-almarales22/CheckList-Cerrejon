@@ -74,7 +74,7 @@ const Dashboard = ({ user, userName, role, onLogout }) => {
             <main
                 ref={mainRef}
                 onScroll={handleScroll}
-                className={`flex-1 overflow-y-auto overflow-x-hidden ${view === 'checklist_all' ? 'p-0' : 'p-4 md:p-8'}`}
+                className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8"
             >
                 {view === 'home' && (
                     <div className="max-w-[95%] mx-auto flex flex-col items-center justify-center mt-8 md:mt-16 animate-[fadeIn_0.5s_ease-out]">

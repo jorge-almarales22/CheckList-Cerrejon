@@ -26,11 +26,14 @@ export const ColumnFilterPopover = ({ column, values, selectedValues, theme, onA
         value.toLowerCase().includes(search.trim().toLowerCase())
     );
 
+    // Refleja la seleccion actual para que los handlers vean siempre el ultimo
+    // estado, incluso si el useEffect no se ha vuelto a ejecutar.
+    const selectedRef = useRef(selected);
+    useEffect(() => { selectedRef.current = selected; }, [selected]);
+
     useEffect(() => {
-        // El listener de clic fuera se registra en el siguiente tick para no
-        // capturar el mismo mousedown que abrio el popover y cerrarlo de inmediato.
         const id = window.setTimeout(() => searchRef.current?.focus(), 0);
-        const applyAndClose = () => onApply(selected);
+        const applyAndClose = () => onApply(selectedRef.current);
         const handleKeyDown = (event) => { if (event.key === 'Escape') applyAndClose(); };
         const handleOutsideClick = (event) => {
             const target = event.target;
@@ -40,8 +43,6 @@ export const ColumnFilterPopover = ({ column, values, selectedValues, theme, onA
             applyAndClose();
         };
         document.addEventListener('keydown', handleKeyDown);
-        // El listener se pospone un ciclo para no reaccionar al mousedown que abrio
-        // el popover. Si no, al dar clic en el boton se abre y se cierra al toque.
         const outsideId = window.setTimeout(() => {
             document.addEventListener('mousedown', handleOutsideClick);
         }, 0);
@@ -51,8 +52,7 @@ export const ColumnFilterPopover = ({ column, values, selectedValues, theme, onA
             document.removeEventListener('keydown', handleKeyDown);
             document.removeEventListener('mousedown', handleOutsideClick);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [onApply, selected, anchorRef]);
+    }, [onApply, anchorRef]);
 
     const toggleValue = (value) => {
         setSelected(previous => {
