@@ -26,6 +26,9 @@ export const ColumnFilterPopover = ({ column, values, selectedValues, theme, onA
         value.toLowerCase().includes(search.trim().toLowerCase())
     );
 
+    // [DIAG] Log temporal para confirmar que el popover se monta.
+    console.log('[FILTRO] POPOVER montado para', column?.key, 'con', values?.length, 'valores');
+
     // Refleja la seleccion actual para que los handlers vean siempre el ultimo
     // estado, incluso si el useEffect no se ha vuelto a ejecutar.
     const selectedRef = useRef(selected);
@@ -140,6 +143,9 @@ export const ColumnFilterTrigger = ({
     const [isOpen, setIsOpen] = useState(false);
     const [popoverStyle, setPopoverStyle] = useState({});
 
+    // [DIAG] Logs temporales para depurar por que no se abre el popover.
+    console.log('[FILTRO] render trigger', column?.key, 'isOpen=', isOpen, 'values=', values?.length);
+
     useEffect(() => {
         if (!isOpen) return undefined;
         const updatePosition = () => {
@@ -176,7 +182,11 @@ export const ColumnFilterTrigger = ({
                 ref={buttonRef}
                 type="button"
                 className={`filterable-header-button ${theme === 'dark' ? 'filterable-header-button-dark' : ''} ${activeCount > 0 ? 'filterable-header-button-active' : ''} ${className}`}
-                onClick={() => setIsOpen(true)}
+                onClick={() => {
+                    // [DIAG] Log temporal para depurar el clic.
+                    console.log('[FILTRO] CLIC en', column?.key, 'isOpen antes=', isOpen);
+                    setIsOpen(true);
+                }}
                 aria-haspopup="dialog"
                 aria-expanded={isOpen}
                 title={`Filtrar ${column.label}`}
@@ -194,6 +204,8 @@ export const ColumnFilterTrigger = ({
                     selectedValues={selectedValues}
                     theme={theme}
                     onApply={(selected) => {
+                        // [DIAG] Log temporal para depurar el aplicar.
+                        console.log('[FILTRO] Aplicar', column?.key, 'seleccion=', selected?.size);
                         onApply(selected);
                         setIsOpen(false);
                     }}
