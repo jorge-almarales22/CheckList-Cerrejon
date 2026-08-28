@@ -38,19 +38,19 @@ Checklist records are stored in the SharePoint list `DB_CHECKLIST_APP` at the ch
 
 `https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist`
 
-The lists for this subsite can be administered from [Contenido del sitio](https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist/_layouts/15/viewlsts.aspx?view=14). The subsite stores checklist records and legacy compatibility data; the published application and current evidence/PDF libraries are under the `ac` site.
+The lists for this subsite can be administered from [Contenido del sitio](https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist/_layouts/15/viewlsts.aspx?view=14). The subsite stores checklist records and legacy compatibility data; the published application lives under the `ac` site, and the deliverable/PDF library lives in the SGIA root site.
 
 Each list item stores the checklist object as JSON in the `Data` field. The object includes metadata, type, approval status, creator, general comments, and task records. Tasks contain responsible users, optional corresponsible, baseline and actual dates, progress, evidence references, alerts, status, and comments.
 
-Evidence is stored primarily as binary files in the `ac` site, under:
+Deliverables (task evidence) are stored as binary files in the SGIA root site document library, under:
 
-`/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/Evidencias/{tipo}/{nombre-del-checklist}/`
+`/sites/co-lmn-sgia/Documentos compartidos/Incorporación/Entregables/{tipo}/{nombre-del-checklist}/`
 
 The type folders are `Checklist Ensamble`, `Checklist Compra Instalada`, and `Checklist Proyectos`. Images are compressed in the browser before upload. The application also reads legacy base64 evidence from the `EvidenciasChecklist` list for migrated records.
 
-Equipment photos are compressed data URLs inside checklist `Metadata`. Finalized PDFs are generated in the browser with `html2canvas` and `jsPDF`, then uploaded to:
+Equipment photos are compressed data URLs inside checklist `Metadata`. Finalized PDFs are generated in the browser with `html2canvas` and `jsPDF`, then uploaded to the same root folder of their incorporation (next to the task deliverables):
 
-`/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/PDFs`
+`/sites/co-lmn-sgia/Documentos compartidos/Incorporación/Entregables/{tipo}/{nombre-del-checklist}/`
 
 Other SharePoint data sources:
 
@@ -58,7 +58,7 @@ Other SharePoint data sources:
 - `EquiposAC` on the `ac` site supplies process/unit options.
 - `EvidenciasChecklist` is the legacy evidence compatibility source.
 
-The application uses `/_api/contextinfo` for request digests and list item CRUD under `/_api/web/lists/getbytitle(...)/items`. PeoplePicker uses the SharePoint people search endpoint. File operations use folder creation, binary upload, listing, and recycle-bin endpoints.
+The application uses `/_api/contextinfo` for request digests and list item CRUD under `/_api/web/lists/getbytitle(...)/items`. PeoplePicker uses the SharePoint people search endpoint. File operations use folder creation, binary upload, listing, and recycle-bin endpoints against the SGIA root site (the deliverable library is not on the `ac` site).
 
 ## Functional Areas
 

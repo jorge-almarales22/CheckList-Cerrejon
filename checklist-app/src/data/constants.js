@@ -1,16 +1,21 @@
 export const SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist";
 
-// Sitio "ac" y biblioteca de documentos donde se guardan evidencias/PDFs como archivos reales.
+// Sitio "ac" donde se publica la aplicacion y vive la lista EquiposAC.
 export const AC_SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/ac";
 
 // Sitio raiz de SGIA, donde vive la lista JerarquiaL (Gerencia / G_ABREVIADA /
-// Superintendencia) que alimenta los selects de metadatos del checklist.
+// Superintendencia) que alimenta los selects de metadatos del checklist, y la
+// biblioteca "Documentos compartidos" con los Entregables de cada incorporacion.
 export const SGIA_SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia";
 export const JERARQUIA_LIST = "JerarquiaL";
 export const AC_HOST = "https://glencore.sharepoint.com";
-export const EVIDENCIAS_BASE = "/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/Evidencias";
 
-// Mapea el Tipo del checklist a su carpeta contenedora dentro de /Evidencias.
+// Biblioteca de documentos del sitio raiz donde se guardan los entregables de
+// cada tarea y los PDFs de registro final:
+// /Documentos compartidos/Incorporación/Entregables/{Checklist Tipo}/{Nombre del Checklist}/
+export const ENTREGABLES_BASE = "/sites/co-lmn-sgia/Documentos compartidos/Incorporación/Entregables";
+
+// Mapea el Tipo del checklist a su carpeta contenedora dentro de /Entregables.
 export const TIPO_FOLDER_MAP = {
     "ENSAMBLE": "Checklist Ensamble",
     "COMPRA INSTALADA": "Checklist Compra Instalada",

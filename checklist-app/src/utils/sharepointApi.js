@@ -1,4 +1,4 @@
-import { SITE_URL, AC_SITE_URL, SGIA_SITE_URL, JERARQUIA_LIST, EVIDENCIAS_BASE, TIPO_FOLDER_MAP } from '../data/constants';
+import { SITE_URL, AC_SITE_URL, SGIA_SITE_URL, JERARQUIA_LIST, ENTREGABLES_BASE, TIPO_FOLDER_MAP } from '../data/constants';
 
 export const getRequestDigest = async () => {
     const res = await fetch(`${SITE_URL}/_api/contextinfo`, {
@@ -67,10 +67,10 @@ export const deleteSPListItem = async (listName, itemId, digest) => {
 };
 
 // ---------------------------------------------------------------------------
-// Evidencias como ARCHIVOS en la biblioteca de documentos (sitio "ac").
+// Entregables como ARCHIVOS en la biblioteca de documentos del sitio raiz SGIA.
 // Antes se guardaban en base64 dentro de la lista EvidenciasChecklist, lo que
 // saturaba el almacenamiento. Ahora se suben como archivos reales a
-// /Incorporaciones/Evidencias/{Checklist Tipo}/{Nombre del Checklist}/.
+// /Documentos compartidos/Incorporación/Entregables/{Checklist Tipo}/{Nombre del Checklist}/.
 // ---------------------------------------------------------------------------
 
 // Limpia un texto para usarlo como nombre de carpeta/archivo en SharePoint
@@ -81,16 +81,20 @@ export const sanitizeSPName = (name) =>
         .replace(/\s+/g, ' ')
         .trim() || 'SinNombre';
 
-// Ruta server-relative de la carpeta de evidencias de un checklist concreto.
-export const getEvidenciasFolderUrl = (tipo, checklistName) => {
+// Ruta server-relative de la carpeta de entregables de un checklist concreto.
+export const getEntregablesFolderUrl = (tipo, checklistName) => {
     const tipoFolder = TIPO_FOLDER_MAP[(tipo || '').toUpperCase()] || 'Checklist Proyectos';
-    return `${EVIDENCIAS_BASE}/${tipoFolder}/${sanitizeSPName(checklistName)}`;
+    return `${ENTREGABLES_BASE}/${tipoFolder}/${sanitizeSPName(checklistName)}`;
 };
 
+// Alias historico: el codigo y los datos existentes hablan de "evidencias".
+export const getEvidenciasFolderUrl = getEntregablesFolderUrl;
+
 // Crea una carpeta (idempotente). Si ya existe, SharePoint responde error y se ignora.
-export const ensureFolder = async (serverRelativeUrl, digest) => {
+// La biblioteca de entregables vive en el sitio raiz SGIA, no en el sitio "ac".
+export const ensureFolder = async (serverRelativeUrl, digest, siteUrl = SGIA_SITE_URL) => {
     try {
-        const res = await fetch(`${AC_SITE_URL}/_api/web/folders/addUsingPath(DecodedUrl='${encodeURIComponent(serverRelativeUrl)}')`, {
+        const res = await fetch(`${siteUrl}/_api/web/folders/addUsingPath(DecodedUrl='${encodeURIComponent(serverRelativeUrl)}')`, {
             method: 'POST',
             headers: { "Accept": "application/json;odata=verbose", "X-RequestDigest": digest },
             credentials: 'same-origin'
@@ -102,8 +106,8 @@ export const ensureFolder = async (serverRelativeUrl, digest) => {
 };
 
 // Sube un archivo binario (ArrayBuffer/Uint8Array) a una carpeta del document library.
-export const uploadFileToFolder = async (folderUrl, fileName, body, digest) => {
-    const url = `${AC_SITE_URL}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(folderUrl)}')/Files/add(url='${encodeURIComponent(fileName)}',overwrite=true)`;
+export const uploadFileToFolder = async (folderUrl, fileName, body, digest, siteUrl = SGIA_SITE_URL) => {
+    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(folderUrl)}')/Files/add(url='${encodeURIComponent(fileName)}',overwrite=true)`;
     const res = await fetch(url, {
         method: 'POST',
         headers: {
@@ -119,8 +123,8 @@ export const uploadFileToFolder = async (folderUrl, fileName, body, digest) => {
 };
 
 // Lista los archivos de una carpeta. Devuelve [] si la carpeta aún no existe.
-export const listFolderFiles = async (folderUrl) => {
-    const url = `${AC_SITE_URL}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(folderUrl)}')/Files?$select=Name,ServerRelativeUrl,TimeCreated&$top=5000`;
+export const listFolderFiles = async (folderUrl, siteUrl = SGIA_SITE_URL) => {
+    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(folderUrl)}')/Files?$select=Name,ServerRelativeUrl,TimeCreated&$top=5000`;
     const res = await fetch(url, {
         headers: { "Accept": "application/json;odata=verbose" },
         credentials: 'same-origin'
@@ -131,8 +135,8 @@ export const listFolderFiles = async (folderUrl) => {
 };
 
 // Envía un archivo a la papelera de reciclaje del sitio.
-export const recycleFile = async (fileRef, digest) => {
-    const url = `${AC_SITE_URL}/_api/web/GetFileByServerRelativeUrl('${encodeURIComponent(fileRef)}')/recycle()`;
+export const recycleFile = async (fileRef, digest, siteUrl = SGIA_SITE_URL) => {
+    const url = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${encodeURIComponent(fileRef)}')/recycle()`;
     const res = await fetch(url, {
         method: 'POST',
         headers: { "Accept": "application/json;odata=verbose", "X-RequestDigest": digest },

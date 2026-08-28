@@ -426,7 +426,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         setIsUploading(true);
         try {
             const digest = await getRequestDigest();
-            // Carpeta destino: /Evidencias/{Checklist Tipo}/{Nombre del Checklist}/
+            // Carpeta destino: /Entregables/{Checklist Tipo}/{Nombre del Checklist}/
             const folderUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
             await ensureFolder(folderUrl, digest);
 
@@ -549,9 +549,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         }
     };
 
-    // Ruta SharePoint donde se guarda el PDF como registro documental al finalizar.
-    const PDF_FOLDER_RELATIVE = '/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/PDFs';
-    const AC_SITE_URL = "https://glencore.sharepoint.com/sites/co-lmn-sgia/ac";
+    // El PDF de registro final se guarda en la carpeta raiz de la incorporacion,
+    // junto a los entregables de sus tareas (misma ruta que getEntregablesFolderUrl).
 
     // Construye el PDF del checklist a partir de un snapshot (puede ser el checklist actual
     // o uno ya finalizado). Devuelve { pdf, nombreArchivo }.
@@ -676,21 +675,14 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             }, digest);
             setChecklist(updatedChecklist);
 
-            // Generar y subir el PDF como registro documental a la nueva ruta SharePoint.
+            // Generar y subir el PDF como registro documental a la carpeta raiz
+            // de la incorporacion (junto a los entregables de sus tareas).
             try {
                 const { pdf, nombreArchivo } = await construirPDF(updatedChecklist);
                 const arrayBuffer = pdf.output('arraybuffer');
-                const uploadUrl = `${AC_SITE_URL}/_api/web/GetFolderByServerRelativeUrl('${PDF_FOLDER_RELATIVE}')/Files/add(url='${encodeURIComponent(nombreArchivo)}',overwrite=true)`;
-                await fetch(uploadUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/octet-stream',
-                        'X-RequestDigest': digest,
-                        'Accept': 'application/json;odata=verbose'
-                    },
-                    body: arrayBuffer,
-                    credentials: 'same-origin'
-                });
+                const folderUrl = getEvidenciasFolderUrl(updatedChecklist.Tipo, updatedChecklist.Name);
+                await ensureFolder(folderUrl, digest);
+                await uploadFileToFolder(folderUrl, nombreArchivo, arrayBuffer, digest);
             } catch (uploadErr) {
                 console.error('Error subiendo PDF a SharePoint:', uploadErr);
                 alert('El checklist se finalizó, pero hubo un error al guardar el PDF en SharePoint. Revisa la consola.');

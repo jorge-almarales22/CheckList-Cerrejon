@@ -14,7 +14,7 @@ Las listas del subsitio se administran desde:
 
 https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist/_layouts/15/viewlsts.aspx?view=14
 
-Las evidencias nuevas se guardan como archivos en `ac/SiteAssets/Incorporaciones/Evidencias/`. Los PDFs se guardan en `ac/SiteAssets/Incorporaciones/PDFs`. Las fotos del equipo se almacenan comprimidas dentro de `Metadata` del checklist. La aplicacion usa SharePoint REST y autenticacion con la sesion de Microsoft 365.
+Los entregables de cada tarea se guardan como archivos en la biblioteca `Documentos compartidos` del sitio raiz SGIA, bajo `Incorporación/Entregables/{tipo}/{nombre-del-checklist}/`. Los PDFs de registro final se guardan en la carpeta raiz de su incorporacion, junto a los entregables. Las fotos del equipo se almacenan comprimidas dentro de `Metadata` del checklist. La aplicacion usa SharePoint REST y autenticacion con la sesion de Microsoft 365.
 
 ## Documentacion
 

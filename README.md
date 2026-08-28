@@ -50,23 +50,23 @@ Los checklists se guardan en la lista SharePoint `DB_CHECKLIST_APP`, en el sitio
 
 `https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist`
 
-Las listas disponibles en este subsitio se administran desde [Contenido del sitio](https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist/_layouts/15/viewlsts.aspx?view=14). El subsitio `checklist` contiene los registros y compatibilidad historica; el portal publicado y la biblioteca actual de evidencias/PDFs estan en el sitio `ac`.
+Las listas disponibles en este subsitio se administran desde [Contenido del sitio](https://glencore.sharepoint.com/sites/co-lmn-sgia/checklist/_layouts/15/viewlsts.aspx?view=14). El subsitio `checklist` contiene los registros y compatibilidad historica; el portal publicado esta en el sitio `ac` y la biblioteca de entregables/PDFs vive en el sitio raiz SGIA.
 
 Cada item guarda el objeto completo serializado como JSON en el campo `Data`. Incluye los metadatos, tipo, estado de aprobacion, creador, comentarios y tareas.
 
-### Evidencias
+### Entregables (evidencias de tareas)
 
-Las evidencias nuevas se guardan como archivos binarios en el sitio `ac`:
+Los entregables de cada tarea se guardan como archivos binarios en la biblioteca `Documentos compartidos` del sitio raiz SGIA:
 
-`/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/Evidencias/`
+`/sites/co-lmn-sgia/Documentos compartidos/Incorporación/Entregables/`
 
 Se organizan por tipo (`Checklist Ensamble`, `Checklist Compra Instalada`, `Checklist Proyectos`) y por nombre del checklist. Las evidencias antiguas migradas pueden seguir leyendose desde la lista `EvidenciasChecklist`, donde fueron almacenadas como base64.
 
 ### Fotografias y PDFs
 
-Las fotografias del equipo se comprimen y se guardan dentro de `Metadata` del checklist. Los PDFs finalizados se generan en el navegador y se suben a:
+Las fotografias del equipo se comprimen y se guardan dentro de `Metadata` del checklist. Los PDFs finalizados se generan en el navegador y se suben a la carpeta raiz de su incorporacion, junto a los entregables de sus tareas:
 
-`/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/PDFs`
+`/sites/co-lmn-sgia/Documentos compartidos/Incorporación/Entregables/{tipo}/{nombre-del-checklist}/`
 
 ### Catalogos
 
