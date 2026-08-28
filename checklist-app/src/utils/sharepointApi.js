@@ -124,7 +124,7 @@ export const uploadFileToFolder = async (folderUrl, fileName, body, digest, site
 
 // Lista los archivos de una carpeta. Devuelve [] si la carpeta aún no existe.
 export const listFolderFiles = async (folderUrl, siteUrl = SGIA_SITE_URL) => {
-    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(folderUrl)}')/Files?$select=Name,ServerRelativeUrl,TimeCreated&$top=5000`;
+    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(folderUrl)}')/Files?$select=Name,ServerRelativeUrl,TimeCreated,TimeLastModified,Length&$top=5000`;
     const res = await fetch(url, {
         headers: { "Accept": "application/json;odata=verbose" },
         credentials: 'same-origin'
@@ -155,6 +155,90 @@ export const recycleFile = async (fileRef, digest, siteUrl = SGIA_SITE_URL) => {
         credentials: 'same-origin'
     });
     if (!res.ok) throw new Error(`HTTP ${res.status} eliminando archivo`);
+};
+
+// Envía una carpeta (y su contenido) a la papelera de reciclaje del sitio.
+export const recycleFolder = async (folderRef, digest, siteUrl = SGIA_SITE_URL) => {
+    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(folderRef)}')/recycle()`;
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { "Accept": "application/json;odata=verbose", "X-RequestDigest": digest },
+        credentials: 'same-origin'
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} eliminando carpeta`);
+};
+
+// Renombra un archivo dentro de su carpeta usando MoveTo (flag 1 = overwrite).
+// nuevoNombre debe incluir la extensión.
+// Nota: SharePoint espera las rutas DECODIFICADAS (con espacios reales y "/"
+// sin escapar) en GetFileByServerRelativeUrl y MoveTo; por eso se aplica
+// decodeURIComponent antes de construir la URL del endpoint.
+export const renameFile = async (fileRef, nuevoNombre, digest, siteUrl = SGIA_SITE_URL) => {
+    const origen = decodeURIComponent(fileRef);
+    const carpeta = origen.substring(0, origen.lastIndexOf('/'));
+    const destino = `${carpeta}/${nuevoNombre}`;
+    const url = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${encodeURIComponent(origen)}')/MoveTo('${encodeURIComponent(destino)}',1)`;
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { "Accept": "application/json;odata=verbose", "X-RequestDigest": digest },
+        credentials: 'same-origin'
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} renombrando archivo`);
+};
+
+// Renombra una carpeta usando MoveTo (flag 1 = overwrite).
+export const renameFolder = async (folderRef, nuevoNombre, digest, siteUrl = SGIA_SITE_URL) => {
+    const origen = decodeURIComponent(folderRef);
+    const padre = origen.substring(0, origen.lastIndexOf('/'));
+    const destino = `${padre}/${nuevoNombre}`;
+    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(origen)}')/MoveTo('${encodeURIComponent(destino)}',1)`;
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { "Accept": "application/json;odata=verbose", "X-RequestDigest": digest },
+        credentials: 'same-origin'
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} renombrando carpeta`);
+};
+
+// Mueve un archivo a otra carpeta (misma biblioteca). carpetaDestinoUrl es la
+// ruta server-relative de la carpeta destino (sin el nombre del archivo).
+export const moveFile = async (fileRef, carpetaDestinoUrl, digest, siteUrl = SGIA_SITE_URL) => {
+    const origen = decodeURIComponent(fileRef);
+    const nombre = origen.substring(origen.lastIndexOf('/') + 1);
+    const destino = `${decodeURIComponent(carpetaDestinoUrl)}/${nombre}`;
+    const url = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${encodeURIComponent(origen)}')/MoveTo('${encodeURIComponent(destino)}',1)`;
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { "Accept": "application/json;odata=verbose", "X-RequestDigest": digest },
+        credentials: 'same-origin'
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} moviendo archivo`);
+};
+
+// Mueve una carpeta a otra carpeta (misma biblioteca).
+export const moveFolder = async (folderRef, carpetaDestinoUrl, digest, siteUrl = SGIA_SITE_URL) => {
+    const origen = decodeURIComponent(folderRef);
+    const nombre = origen.substring(origen.lastIndexOf('/') + 1);
+    const destino = `${decodeURIComponent(carpetaDestinoUrl)}/${nombre}`;
+    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(origen)}')/MoveTo('${encodeURIComponent(destino)}',1)`;
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { "Accept": "application/json;odata=verbose", "X-RequestDigest": digest },
+        credentials: 'same-origin'
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} moviendo carpeta`);
+};
+
+// Descarga el contenido binario de un archivo (GET no requiere digest).
+// Devuelve un Blob listo para <a download>.
+export const downloadFileContent = async (fileRef, siteUrl = SGIA_SITE_URL) => {
+    const url = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${encodeURIComponent(fileRef)}')/$value`;
+    const res = await fetch(url, {
+        headers: { "Accept": "application/octet-stream" },
+        credentials: 'same-origin'
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} descargando archivo`);
+    return res.blob();
 };
 
 // ---------------------------------------------------------------------------

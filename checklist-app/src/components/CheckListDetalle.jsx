@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { esPendiente, esRechazado, esHistorico, esHistoricoGestionado, marcarHistoricoGestionado, getEstadoTarea, getCorresponsable, puedeGestionarTarea, puedeAsignarCorresponsable, mismoUsuario } from '../utils/calculations';
 import { notificarTeams } from '../utils/notifications';
-import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, listFolderSubfolders, recycleFile, dataUrlToUint8Array, fetchJerarquiaOpciones, conValorActual, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
+import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, listFolderSubfolders, recycleFile, fetchJerarquiaOpciones, conValorActual, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
 import { AC_HOST, TIPOS_CHECKLIST, getTipoChecklist } from '../data/constants';
 import PeoplePicker from './PeoplePicker';
 import DashboardCharts from './DashboardCharts';
 import GanttChart from './GanttChart';
+import FileManager from './FileManager';
 import { ColumnFilterTrigger } from './ColumnFilterPopover';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -37,7 +38,6 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [nuevosComentarios, setNuevosComentarios] = useState({});
     const [evidenciasItem, setEvidenciasItem] = useState({});
     const [cargandoEvidencias, setCargandoEvidencias] = useState({});
-    const [isUploading, setIsUploading] = useState(false);
 
     const [inactivatingItemId, setInactivatingItemId] = useState(null);
     const [inactivateReasonText, setInactivateReasonText] = useState('');
@@ -75,17 +75,12 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [modalEvidences, setModalEvidences] = useState(null);
     const [activeEvidenciaIndex, setActiveEvidenciaIndex] = useState(0);
 
-    // Subcarpetas de entregables por tarea: itemId -> [nombres de subcarpetas].
-    // El usuario puede organizar los documentos de una tarea en varias carpetas.
-    const [subcarpetasPorTarea, setSubcarpetasPorTarea] = useState({});
-    // Carpeta destino elegida en el cargue de evidencias: itemId -> nombre de
-    // subcarpeta ('' = la subcarpeta por defecto de la tarea, '__nueva__' = crear).
-    const [carpetaDestinoPorTarea, setCarpetaDestinoPorTarea] = useState({});
-    // Nombre de la nueva carpeta a crear: itemId -> texto.
-    const [nuevaCarpetaPorTarea, setNuevaCarpetaPorTarea] = useState({});
-
     const [showGanttModal, setShowGanttModal] = useState(false);
     const [evidenciasPresence, setEvidenciasPresence] = useState({});
+
+    // Id de la tarea cuyo File Manager (gestor de entregables) está abierto.
+    // null = cerrado. Se abre desde el boton "Abrir Gestor de Entregables".
+    const [fileManagerTarea, setFileManagerTarea] = useState(null);
 
     // Unidades de proceso: siguen saliendo de la lista EquiposAC.
     const [acData, setAcData] = useState({ unidades: [] });
@@ -348,19 +343,35 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
                     });
 
-                    // Archivos de la raiz.
+                    // Lectura recursiva del arbol de una carpeta: lista los
+                    // archivos de la carpeta y de todas sus subcarpetas (a
+                    // cualquier profundidad).
+                    const leerArbol = async (carpetaUrl, acumulador) => {
+                        const [files, subs] = await Promise.all([
+                            listFolderFiles(carpetaUrl),
+                            listFolderSubfolders(carpetaUrl)
+                        ]);
+                        files.forEach(f => acumulador.push(f));
+                        for (const sub of subs) {
+                            await leerArbol(sub.ServerRelativeUrl, acumulador);
+                        }
+                        return acumulador;
+                    };
+
+                    // Archivos de la raiz del checklist que pertenecen a esta tarea.
                     const files = await listFolderFiles(folderUrl);
                     files
                         .filter(f => archivoEsDeTarea(f.Name, itemId, orden))
                         .forEach(pushFile);
 
-                    // Archivos dentro de las subcarpetas de la tarea.
+                    // Archivos dentro de la subcarpeta por defecto de la tarea
+                    // y de TODAS sus subcarpetas (recursivo).
+                    const subcarpetaTarea = nombreSubcarpetaTarea(itemId);
                     const subcarpetas = await listFolderSubfolders(folderUrl);
-                    const subcarpetasTarea = (subcarpetasPorTarea[itemId] || []);
-                    for (const sub of subcarpetas) {
-                        if (!subcarpetasTarea.includes(sub.Name)) continue;
-                        const subFiles = await listFolderFiles(sub.ServerRelativeUrl);
-                        subFiles.forEach(pushFile);
+                    const subTarea = subcarpetas.find(s => s.Name === subcarpetaTarea);
+                    if (subTarea) {
+                        const arbol = await leerArbol(subTarea.ServerRelativeUrl, []);
+                        arbol.forEach(pushFile);
                     }
                 }
             } catch (error) {
@@ -393,7 +404,6 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             const folderUrl = getEvidenciasFolderUrl(checklistData.Tipo, checklistData.Name);
             const files = await listFolderFiles(folderUrl);
             const subcarpetas = await listFolderSubfolders(folderUrl);
-            const subcarpetasPorTareaMap = {};
 
             // Archivos de la raiz (formato viejo y nuevo sin subcarpeta).
             items.forEach(it => {
@@ -411,20 +421,30 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 if (evs.length) map[it.Id] = evs;
             });
 
-            // Archivos dentro de cada subcarpeta. La subcarpeta por defecto de una
-            // tarea empieza por su orden ("06_..."), asi se sabe a que tarea va.
+            // Archivos dentro de cada subcarpeta (recursivo, a cualquier
+            // profundidad). La subcarpeta por defecto de una tarea empieza por
+            // su orden ("06_..."), asi se sabe a que tarea va.
+            const leerArbol = async (carpetaUrl, acumulador) => {
+                const [subFiles, subSubs] = await Promise.all([
+                    listFolderFiles(carpetaUrl),
+                    listFolderSubfolders(carpetaUrl)
+                ]);
+                subFiles.forEach(f => acumulador.push(f));
+                for (const sub of subSubs) {
+                    await leerArbol(sub.ServerRelativeUrl, acumulador);
+                }
+                return acumulador;
+            };
+
             for (const sub of subcarpetas) {
-                const subFiles = await listFolderFiles(sub.ServerRelativeUrl);
                 const subNombre = sub.Name;
                 // Determinar a que tarea pertenece la subcarpeta por su prefijo de orden.
                 const matchOrden = subNombre.match(/^(\d+)_/);
                 const tareaDeSub = matchOrden
                     ? items.find(it => ordenDe(it.Id) === String(parseInt(matchOrden[1], 10)).padStart(2, '0'))
                     : null;
-                if (tareaDeSub) {
-                    (subcarpetasPorTareaMap[tareaDeSub.Id] = subcarpetasPorTareaMap[tareaDeSub.Id] || []).push(subNombre);
-                }
-                subFiles.forEach(f => {
+                const arbol = await leerArbol(sub.ServerRelativeUrl, []);
+                arbol.forEach(f => {
                     const orden = tareaDeSub ? ordenDe(tareaDeSub.Id) : null;
                     const evs = (map[tareaDeSub?.Id] = map[tareaDeSub?.Id] || []);
                     evs.push({
@@ -437,8 +457,6 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     });
                 });
             }
-
-            setSubcarpetasPorTarea(prev => ({ ...prev, ...subcarpetasPorTareaMap }));
         } catch (err) {
             console.error("Error cargando evidencias de carpeta (todas):", err);
         }
@@ -489,94 +507,6 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             cargarTodasEvidencias(checklist);
         }
     }, [checklist, checklistId]);
-
-    const handleFileUpload = async (itemId, e) => {
-        const files = Array.from(e.target.files);
-        if (!files.length) return;
-        if (!checklist?.Tipo || !checklist?.Name) {
-            alert('No se pudo determinar el checklist para guardar la evidencia.');
-            return;
-        }
-        setIsUploading(true);
-        try {
-            const digest = await getRequestDigest();
-            // Carpeta raiz de la incorporacion: /Entregables/{Tipo}/{Nombre}/
-            const raizUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
-            await ensureFolder(raizUrl, digest);
-
-            // Carpeta destino: por defecto la subcarpeta de la tarea
-            // ("<orden>_<descripcion>"), o la subcarpeta elegida por el usuario,
-            // o una nueva carpeta que el usuario acaba de nombrar.
-            const carpetaElegida = carpetaDestinoPorTarea[itemId];
-            let carpetaDestino;
-            if (carpetaElegida === '__nueva__') {
-                const nombreNueva = sanitizarNombre(nuevaCarpetaPorTarea[itemId], 60);
-                carpetaDestino = `${raizUrl}/${nombreNueva}`;
-            } else if (carpetaElegida) {
-                carpetaDestino = `${raizUrl}/${carpetaElegida}`;
-            } else {
-                carpetaDestino = `${raizUrl}/${nombreSubcarpetaTarea(itemId)}`;
-            }
-            await ensureFolder(carpetaDestino, digest);
-
-            // Nombre = "<orden>_<nombreDocOriginal>_<usuarioSinDominio>". El orden
-            // identifica la tarea; el nombre original del documento y el usuario
-            // (sin @dominio) permiten reconocer cada archivo sin perderse.
-            const item = (checklist.items || []).find(i => i.Id === itemId);
-            const orden = getOrdenTarea(itemId) || '00';
-            const usuario = (currentUser || 'usuario').split('@')[0]
-                .replace(/[~"#%&*:<>?/\\{|}']/g, '')
-                .trim()
-                .replace(/\s+/g, '_')
-                .slice(0, 30) || 'usuario';
-
-            // Se listan los existentes en la carpeta destino para no sobrescribir.
-            const existentes = await listFolderFiles(carpetaDestino);
-            const usados = new Set(existentes.map(f => f.Name.toLowerCase()));
-
-            for (let file of files) {
-                let body;
-                let ext;
-
-                if (file.type.startsWith('image/')) {
-                    // Se comprime la imagen y se convierte a binario para subirla como archivo.
-                    const dataUrl = await comprimirImagen(file, 1024, 0.6);
-                    body = dataUrlToUint8Array(dataUrl);
-                    ext = 'jpg';
-                } else {
-                    const maxSize = 25 * 1024 * 1024;
-                    if (file.size > maxSize) {
-                        alert(`El archivo "${file.name}" supera el límite de 25MB.`);
-                        continue;
-                    }
-                    body = await file.arrayBuffer();
-                    ext = (file.name.split('.').pop() || 'dat').replace(/[^a-z0-9]/gi, '') || 'dat';
-                }
-
-                // Nombre original del documento sin extension, sanitizado.
-                const nombreDoc = sanitizarNombre(file.name.replace(/\.[^.]+$/, ''), 60);
-                const base = `${orden}_${nombreDoc}_${usuario}`;
-                let fileName = `${base}.${ext}`;
-                let n = 2;
-                while (usados.has(fileName.toLowerCase())) {
-                    fileName = `${base}_${n}.${ext}`;
-                    n++;
-                }
-                usados.add(fileName.toLowerCase());
-
-                await uploadFileToFolder(carpetaDestino, fileName, body, digest);
-            }
-
-            alert('Proceso de carga finalizado.');
-            setEvidenciasPresence(prev => ({ ...prev, [itemId]: true }));
-            await cargarEvidencias(itemId);
-        } catch (error) {
-            alert('Error subiendo evidencia. Revisa la consola.');
-            console.error(error);
-        } finally {
-            setIsUploading(false);
-        }
-    };
 
     const eliminarEvidencia = async (itemId, ev) => {
         if (!window.confirm("¿Seguro que deseas eliminar esta evidencia?")) return;
@@ -2094,12 +2024,29 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                                 Sin Evidencias
                                                             </span>
                                                         )}
-                                                    </span>
-                                                    <div className="flex gap-2">
-                                                        {evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0 && (
-                                                            <button onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(0); }} className="text-[10px] bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-2 py-1 rounded border border-yellow-500/30 transition-colors shadow flex items-center gap-1 font-semibold">
-                                                                Ver Visualizador
+                                                        {!isFinalizado && puedeGestionar && (
+                                                            <button
+                                                                onClick={() => setFileManagerTarea(it.Id)}
+                                                                title="Abrir Gestor de Entregables"
+                                                                className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-colors border border-amber-500/40"
+                                                            >
+                                                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                                                </svg>
+                                                                Abrir Gestor
                                                             </button>
+                                                        )}
+                                                    </span>
+                                                    <div className="flex gap-2 items-center">
+                                                        {evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0 && (
+                                                            <>
+                                                                <span className={`text-[10px] font-bold px-2 py-1 rounded border ${theme==='dark'?'bg-slate-950/60 text-slate-300 border-slate-700':'bg-white text-slate-600 border-slate-300'}`}>
+                                                                    {evidenciasItem[it.Id].length} archivo{evidenciasItem[it.Id].length !== 1 ? 's' : ''}
+                                                                </span>
+                                                                <button onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(0); }} className="text-[10px] bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-2 py-1 rounded border border-yellow-500/30 transition-colors shadow flex items-center gap-1 font-semibold">
+                                                                    Ver Visualizador
+                                                                </button>
+                                                            </>
                                                         )}
                                                     </div>
                                                 </div>
@@ -2132,35 +2079,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                                                     {!isFinalizado && puedeGestionar && (
                                                         <div className={`pt-2 border-t ${theme==='dark'?'border-slate-800':'border-slate-200'}`}>
-                                                            <div className="flex flex-col gap-1.5 mb-2">
-                                                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200">
-                                                                    Carpeta destino
-                                                                </label>
-                                                                <div className="flex gap-2">
-                                                                    <select
-                                                                        className={`text-[11px] font-semibold rounded border px-2 py-1 outline-none flex-1 ${theme==='dark'?'bg-slate-950/60 text-white border-slate-700':'bg-white text-slate-900 border-slate-300'}`}
-                                                                        value={carpetaDestinoPorTarea[it.Id] || ''}
-                                                                        onChange={e => setCarpetaDestinoPorTarea(prev => ({ ...prev, [it.Id]: e.target.value }))}
-                                                                    >
-                                                                        <option value="">{nombreSubcarpetaTarea(it.Id)} (por defecto)</option>
-                                                                        {(subcarpetasPorTarea[it.Id] || []).map(sub => (
-                                                                            <option key={sub} value={sub}>{sub}</option>
-                                                                        ))}
-                                                                        <option value="__nueva__">+ Nueva carpeta...</option>
-                                                                    </select>
-                                                                </div>
-                                                                {carpetaDestinoPorTarea[it.Id] === '__nueva__' && (
-                                                                    <input
-                                                                        type="text"
-                                                                        placeholder="Nombre de la nueva carpeta"
-                                                                        className={`text-[11px] font-semibold rounded border px-2 py-1 outline-none w-full ${theme==='dark'?'bg-slate-950/60 text-white border-slate-700':'bg-white text-slate-900 border-slate-300'}`}
-                                                                        value={nuevaCarpetaPorTarea[it.Id] || ''}
-                                                                        onChange={e => setNuevaCarpetaPorTarea(prev => ({ ...prev, [it.Id]: e.target.value }))}
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                            <input type="file" multiple className="text-[10px] text-slate-900 dark:text-slate-200 font-bold w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 transition-all cursor-pointer block" onChange={(e) => handleFileUpload(it.Id, e)} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" disabled={isUploading} />
-                                                            {isUploading && <span className="text-yellow-500 text-xs mt-1 block font-semibold">Procesando y subiendo archivo(s)... no cierres la pestaña.</span>}
+                                                            <p className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold text-center">
+                                                                Usa el botón "Gestor" para crear carpetas, subir archivos o carpetas completas, renombrar, mover y descargar.
+                                                            </p>
                                                         </div>
                                                     )}
                                                 </div>
@@ -2530,6 +2451,30 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 </div>,
                 document.body
             )}
+
+            {fileManagerTarea && (() => {
+                const tareaFM = (checklist?.items || []).find(t => t.Id === fileManagerTarea);
+                const puedeGestionarFM = tareaFM
+                    ? puedeGestionarTarea(tareaFM, currentUser, isAdmin)
+                    : false;
+                return (
+                    <FileManager
+                        open={!!fileManagerTarea}
+                        onClose={() => setFileManagerTarea(null)}
+                        checklist={checklist}
+                        itemId={fileManagerTarea}
+                        orden={getOrdenTarea(fileManagerTarea) || '00'}
+                        nombreSubcarpetaTarea={nombreSubcarpetaTarea(fileManagerTarea)}
+                        currentUser={currentUser}
+                        puedeGestionar={puedeGestionarFM}
+                        theme={theme}
+                        onEvidenciasChanged={() => {
+                            cargarEvidencias(fileManagerTarea);
+                            setEvidenciasPresence(prev => ({ ...prev, [fileManagerTarea]: true }));
+                        }}
+                    />
+                );
+            })()}
         </div>
     );
 };
