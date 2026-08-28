@@ -233,8 +233,11 @@ const FileManager = ({
                 listFolderSubfolders(carpetaActualUrl),
                 listFolderFiles(carpetaActualUrl)
             ]);
-            setCarpetas(subs.map(s => ({ ...s, tipo: 'carpeta' })));
-            setArchivos(files.map(f => ({ ...f, tipo: 'archivo' })));
+            // Id unico por elemento: ServerRelativeUrl es la unica clave
+            // estable que distingue carpetas y archivos (SharePoint no
+            // devuelve un campo Id en estas consultas).
+            setCarpetas(subs.map(s => ({ ...s, tipo: 'carpeta', Id: `carpeta_${s.ServerRelativeUrl}` })));
+            setArchivos(files.map(f => ({ ...f, tipo: 'archivo', Id: `archivo_${f.ServerRelativeUrl}` })));
         } catch (err) {
             console.error('Error cargando carpeta', err);
             setError('No se pudo cargar la carpeta. Revisa la consola.');
@@ -252,7 +255,7 @@ const FileManager = ({
             const propios = files.filter(f =>
                 (orden && f.Name.startsWith(`${orden}_`)) || f.Name.startsWith(`Evidencia_${itemId}_`)
             );
-            setLegacyRaiz(propios.map(f => ({ ...f, tipo: 'archivo' })));
+            setLegacyRaiz(propios.map(f => ({ ...f, tipo: 'archivo', Id: `legacy_${f.ServerRelativeUrl}` })));
         } catch (err) {
             console.error('Error cargando legacy raiz', err);
             setLegacyRaiz([]);
