@@ -82,6 +82,17 @@ Templates are defined in `src/data/constants.js`: `PROYECTO`, `COMPRA INSTALADA`
 - SPI below 90 is `Atrasado`; 90-94 is `En riesgo`; 95 or higher is `En tiempo`.
 - Progress above 90 requires evidence, and a task is complete only at 100 with evidence.
 
+## Column Filters (Shared Popover)
+
+The multi-select column filters are implemented by the shared component `checklist-app/src/components/ColumnFilterPopover.jsx`, which exports two pieces:
+
+- `ColumnFilterPopover`: the popover UI (search, checkboxes, `Todos`/`Ninguno`, counter, `Limpiar`/`Aplicar`), rendered via `createPortal` into `document.body` with `position: fixed`. It closes on outside click or Escape, and applies the selection on `Aplicar` or on outside click.
+- `ColumnFilterTrigger`: a self-managed button that owns its own `isOpen` state and renders the popover when open. It computes a `popoverStyle` (top/left/width/maxHeight) from the anchor button's `getBoundingClientRect()` and **must pass it to the popover via the `style` prop** — if `style` is omitted, the popover mounts off-screen and appears broken even though React state works. This was the root cause of the "filters don't open" bug fixed in commit `4407009`.
+
+The trigger accepts `valueLabels` (an object mapping raw values to friendly labels) so popovers can display readable text (e.g. `en_rojo` → `En rojo: atrasadas o sin fecha de entrega`).
+
+Both the main table (`CheckListAll.jsx`) and the detail view (`CheckListDetalle.jsx`) use `ColumnFilterTrigger`. In the detail view, the internal task filters (responsable, estado, avance esperado, avance real) store their selections as `Set` in React state and combine values with OR semantics within each filter. The `MIS_TAREAS` sentinel (`__mis_tareas__`) is a special responsable option that filters tasks the current user can manage. When changing checklist type, `setFilterResponsable(new Set())` resets the responsable filter.
+
 ## Commands and Deployment
 
 Run commands from `checklist-app/`:

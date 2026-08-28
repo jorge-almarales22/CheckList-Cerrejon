@@ -8,6 +8,7 @@ import { AC_HOST, TIPOS_CHECKLIST, getTipoChecklist } from '../data/constants';
 import PeoplePicker from './PeoplePicker';
 import DashboardCharts from './DashboardCharts';
 import GanttChart from './GanttChart';
+import { ColumnFilterTrigger } from './ColumnFilterPopover';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -43,11 +44,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectComment, setRejectComment] = useState('');
 
-    const [filterResponsable, setFilterResponsable] = useState('');
+    const [filterResponsable, setFilterResponsable] = useState(new Set());
     const [filterAlertaOnly, setFilterAlertaOnly] = useState(false);
-    const [filterEstadoTarea, setFilterEstadoTarea] = useState(''); // '', 'terminadas', 'faltantes', 'en_rojo'
-    const [filterAvanceEsperado, setFilterAvanceEsperado] = useState(''); // rango id
-    const [filterAvanceReal, setFilterAvanceReal] = useState('');
+    const [filterEstadoTarea, setFilterEstadoTarea] = useState(new Set()); // 'terminadas', 'faltantes', 'en_rojo'
+    const [filterAvanceEsperado, setFilterAvanceEsperado] = useState(new Set()); // rango id
+    const [filterAvanceReal, setFilterAvanceReal] = useState(new Set());
     const [busquedaGeneral, setBusquedaGeneral] = useState('');
     const [fotoActivaIdx, setFotoActivaIdx] = useState(0); // carrusel de fotos del equipo
     // Visor de fotos a pantalla completa: { fotos: [...], idx } o null si esta cerrado.
@@ -1108,27 +1109,36 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     };
 
     let itemsFiltrados = listadoOrdenado;
-    if (filterResponsable === MIS_TAREAS) {
-        itemsFiltrados = itemsFiltrados.filter(it => puedeGestionarTarea(it, currentUser, false));
-    } else if (filterResponsable) {
-        itemsFiltrados = itemsFiltrados.filter(it => it.NombreResponsable === filterResponsable);
+    if (filterResponsable.size > 0) {
+        if (filterResponsable.has(MIS_TAREAS)) {
+            itemsFiltrados = itemsFiltrados.filter(it => puedeGestionarTarea(it, currentUser, false));
+        } else {
+            itemsFiltrados = itemsFiltrados.filter(it => filterResponsable.has(it.NombreResponsable));
+        }
     }
     if (filterAlertaOnly) {
         itemsFiltrados = itemsFiltrados.filter(it => it.Alerta === 'Si');
     }
     const tareaTerminada = (it) => parseInt(it.Avance || it.avance || 0) === 100 && !!evidenciasPresence[it.Id];
-    if (filterEstadoTarea === 'terminadas') {
-        itemsFiltrados = itemsFiltrados.filter(tareaTerminada);
-    } else if (filterEstadoTarea === 'faltantes') {
-        itemsFiltrados = itemsFiltrados.filter(it => !tareaTerminada(it));
-    } else if (filterEstadoTarea === 'en_rojo') {
-        itemsFiltrados = itemsFiltrados.filter(it => getEstadoTarea(it).enRojo);
+    if (filterEstadoTarea.size > 0) {
+        itemsFiltrados = itemsFiltrados.filter(it => {
+            if (filterEstadoTarea.has('terminadas') && tareaTerminada(it)) return true;
+            if (filterEstadoTarea.has('faltantes') && !tareaTerminada(it)) return true;
+            if (filterEstadoTarea.has('en_rojo') && getEstadoTarea(it).enRojo) return true;
+            return false;
+        });
     }
-    if (filterAvanceEsperado && (filterAvanceEsperado.match(/^\d+-\d+$/) || filterAvanceEsperado === '100' || filterAvanceEsperado === '0')) {
-        itemsFiltrados = itemsFiltrados.filter(it => enRango(parseInt(getEstadoTarea(it).esperado || 0), filterAvanceEsperado));
+    if (filterAvanceEsperado.size > 0) {
+        itemsFiltrados = itemsFiltrados.filter(it => {
+            const v = parseInt(getEstadoTarea(it).esperado || 0);
+            return [...filterAvanceEsperado].some(id => enRango(v, id));
+        });
     }
-    if (filterAvanceReal && (filterAvanceReal.match(/^\d+-\d+$/) || filterAvanceReal === '100' || filterAvanceReal === '0')) {
-        itemsFiltrados = itemsFiltrados.filter(it => enRango(parseInt(it.Avance || it.avance || 0), filterAvanceReal));
+    if (filterAvanceReal.size > 0) {
+        itemsFiltrados = itemsFiltrados.filter(it => {
+            const v = parseInt(it.Avance || it.avance || 0);
+            return [...filterAvanceReal].some(id => enRango(v, id));
+        });
     }
     if (busquedaGeneral.trim()) {
         const q = busquedaGeneral.trim().toLowerCase();
@@ -1590,34 +1600,55 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     </div>
                     <div className="flex flex-col w-full md:w-1/4">
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Responsable</span>
-                        <select className={`${inputClasses} text-xs font-semibold`} value={filterResponsable} onChange={(e) => setFilterResponsable(e.target.value)}>
-                            <option value="">Todos los Responsables</option>
-                            <option value={MIS_TAREAS}>Mis tareas (responsable o corresponsable)</option>
-                            {listadoResponsablesUnicos.map(r => <option key={r} value={r}>{r}</option>)}
-                        </select>
+                        <ColumnFilterTrigger
+                            column={{ key: 'responsable', label: 'Responsable' }}
+                            values={[MIS_TAREAS, ...listadoResponsablesUnicos]}
+                            selectedValues={filterResponsable}
+                            theme={theme}
+                            className={inputClasses + " text-xs font-semibold"}
+                            valueLabels={{ [MIS_TAREAS]: 'Mis tareas (responsable o corresponsable)' }}
+                            onApply={(selected) => setFilterResponsable(selected)}
+                        />
                     </div>
                     <div className="flex flex-col w-full md:w-1/4">
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Estado</span>
-                        <select className={`${inputClasses} text-xs font-semibold`} value={filterEstadoTarea} onChange={(e) => setFilterEstadoTarea(e.target.value)}>
-                            <option value="">Todas las tareas</option>
-                            <option value="terminadas">Terminadas (100% + evidencias)</option>
-                            <option value="faltantes">Faltantes (por terminar)</option>
-                            <option value="en_rojo">En rojo: atrasadas o sin fecha de entrega ({totalEnRojo})</option>
-                        </select>
+                        <ColumnFilterTrigger
+                            column={{ key: 'estado', label: 'Estado' }}
+                            values={['terminadas', 'faltantes', 'en_rojo']}
+                            selectedValues={filterEstadoTarea}
+                            theme={theme}
+                            className={inputClasses + " text-xs font-semibold"}
+                            valueLabels={{
+                                'terminadas': 'Terminadas (100% + evidencias)',
+                                'faltantes': 'Faltantes (por terminar)',
+                                'en_rojo': `En rojo: atrasadas o sin fecha de entrega (${totalEnRojo})`
+                            }}
+                            onApply={(selected) => setFilterEstadoTarea(selected)}
+                        />
                     </div>
                     <div className="flex flex-col w-full md:w-1/5">
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Avance Esperado</span>
-                        <select className={`${inputClasses} text-xs font-semibold`} value={filterAvanceEsperado} onChange={(e) => setFilterAvanceEsperado(e.target.value)}>
-                            <option value="">Todos</option>
-                            {RANGOS_AVANCE.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
-                        </select>
+                        <ColumnFilterTrigger
+                            column={{ key: 'avanceEsperado', label: 'Avance Esperado' }}
+                            values={RANGOS_AVANCE.map(r => r.id)}
+                            selectedValues={filterAvanceEsperado}
+                            theme={theme}
+                            className={inputClasses + " text-xs font-semibold"}
+                            valueLabels={Object.fromEntries(RANGOS_AVANCE.map(r => [r.id, r.label]))}
+                            onApply={(selected) => setFilterAvanceEsperado(selected)}
+                        />
                     </div>
                     <div className="flex flex-col w-full md:w-1/5">
                         <span className="text-[10px] uppercase font-bold text-slate-900 dark:text-slate-200 mb-1">Avance Real</span>
-                        <select className={`${inputClasses} text-xs font-semibold`} value={filterAvanceReal} onChange={(e) => setFilterAvanceReal(e.target.value)}>
-                            <option value="">Todos</option>
-                            {RANGOS_AVANCE.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
-                        </select>
+                        <ColumnFilterTrigger
+                            column={{ key: 'avanceReal', label: 'Avance Real' }}
+                            values={RANGOS_AVANCE.map(r => r.id)}
+                            selectedValues={filterAvanceReal}
+                            theme={theme}
+                            className={inputClasses + " text-xs font-semibold"}
+                            valueLabels={Object.fromEntries(RANGOS_AVANCE.map(r => [r.id, r.label]))}
+                            onApply={(selected) => setFilterAvanceReal(selected)}
+                        />
                     </div>
                     <div className="flex items-center gap-2 mt-4 md:mt-0">
                         <input type="checkbox" id="detAlertCheckbox" checked={filterAlertaOnly} onChange={(e) => setFilterAlertaOnly(e.target.checked)} className="accent-yellow-500 cursor-pointer h-4 w-4" />

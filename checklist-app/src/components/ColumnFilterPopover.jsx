@@ -17,17 +17,16 @@ import { createPortal } from 'react-dom';
  *                                             al hacer clic fuera.
  *  - onClear:   opcional; si se omite, onApply(new Set()) se usa al pulsar Limpiar.
  *  - anchorRef: ref del boton ancla para posicionar el popover.
+ *  - valueLabels: opcional; objeto { valor: etiqueta } para mostrar textos
+ *                 amigables en lugar del valor crudo (ej: 'en_rojo' -> 'En rojo').
  */
-export const ColumnFilterPopover = ({ column, values, selectedValues, theme, onApply, onClear, anchorRef, style }) => {
+export const ColumnFilterPopover = ({ column, values, selectedValues, theme, onApply, onClear, anchorRef, style, valueLabels }) => {
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState(() => new Set(selectedValues || []));
     const searchRef = useRef(null);
     const visibleValues = values.filter(value =>
         value.toLowerCase().includes(search.trim().toLowerCase())
     );
-
-    // [DIAG] Log temporal para confirmar que el popover se monta.
-    console.log('[FILTRO] POPOVER montado para', column?.key, 'con', values?.length, 'valores');
 
     // Refleja la seleccion actual para que los handlers vean siempre el ultimo
     // estado, incluso si el useEffect no se ha vuelto a ejecutar.
@@ -112,7 +111,7 @@ export const ColumnFilterPopover = ({ column, values, selectedValues, theme, onA
                             checked={selected.has(value)}
                             onChange={() => toggleValue(value)}
                         />
-                        <span title={value}>{value}</span>
+                        <span title={value}>{valueLabels?.[value] || value}</span>
                     </label>
                 ))}
             </div>
@@ -138,14 +137,12 @@ export const ColumnFilterTrigger = ({
     theme,
     onApply,
     onClear,
-    className = ''
+    className = '',
+    valueLabels
 }) => {
     const buttonRef = useRef(null);
     const [isOpen, setIsOpen] = useState(false);
     const [popoverStyle, setPopoverStyle] = useState({});
-
-    // [DIAG] Logs temporales para depurar por que no se abre el popover.
-    console.log('[FILTRO] render trigger', column?.key, 'isOpen=', isOpen, 'values=', values?.length);
 
     useEffect(() => {
         if (!isOpen) return undefined;
@@ -183,11 +180,7 @@ export const ColumnFilterTrigger = ({
                 ref={buttonRef}
                 type="button"
                 className={`filterable-header-button ${theme === 'dark' ? 'filterable-header-button-dark' : ''} ${activeCount > 0 ? 'filterable-header-button-active' : ''} ${className}`}
-                onClick={() => {
-                    // [DIAG] Log temporal para depurar el clic.
-                    console.log('[FILTRO] CLIC en', column?.key, 'isOpen antes=', isOpen);
-                    setIsOpen(true);
-                }}
+                onClick={() => setIsOpen(true)}
                 aria-haspopup="dialog"
                 aria-expanded={isOpen}
                 title={`Filtrar ${column.label}`}
@@ -205,9 +198,8 @@ export const ColumnFilterTrigger = ({
                     selectedValues={selectedValues}
                     theme={theme}
                     style={popoverStyle}
+                    valueLabels={valueLabels}
                     onApply={(selected) => {
-                        // [DIAG] Log temporal para depurar el aplicar.
-                        console.log('[FILTRO] Aplicar', column?.key, 'seleccion=', selected?.size);
                         onApply(selected);
                         setIsOpen(false);
                     }}
