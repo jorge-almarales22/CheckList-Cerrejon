@@ -466,56 +466,6 @@ const FileManager = ({
         }
     };
 
-    // Sube una carpeta completa (drag & drop) recorriendo su arbol con webkitGetAsEntry.
-    // Las subcarpetas se crean UNA sola vez al entrar al directorio (no por
-    // archivo), evitando llamadas repetidas a addUsingPath.
-    const subirCarpetaCompleta = async (entry, rutaRelativa, digest) => {
-        if (entry.isFile) {
-            const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
-            // Si la carpeta tiene subcarpetas, el archivo va en la subcarpeta correspondiente.
-            if (rutaRelativa) {
-                const usuario = (currentUser || 'usuario').split('@')[0]
-                    .replace(/[~"#%&*:<>?/\\{|}']/g, '')
-                    .trim()
-                    .replace(/\s+/g, '_')
-                    .slice(0, 30) || 'usuario';
-                const nombreDoc = sanitizarNombre(file.name.replace(/\.[^.]+$/, ''), 60);
-                const ext = (file.name.split('.').pop() || 'dat').replace(/[^a-z0-9]/gi, '') || 'dat';
-                const fileName = `${orden}_${nombreDoc}_${usuario}.${ext}`;
-                // Binario original: sin compresion ni redimension.
-                const body = await file.arrayBuffer();
-                await uploadFileToFolder(`${carpetaActualUrl}/${rutaRelativa}`, fileName, body, digest);
-            } else {
-                await subirArchivos([file]);
-            }
-        } else if (entry.isDirectory) {
-            // Crear la subcarpeta de ESTE directorio UNA vez (idempotente).
-            // La carpeta raiz arrastrada (rutaRelativa='') tambien crea su
-            // subcarpeta con entry.name; sin esto los archivos hijos iban a
-            // una ruta inexistente y no se subia nada.
-            const subcarpeta = rutaRelativa ? `${rutaRelativa}/${entry.name}` : entry.name;
-            await ensureFolder(`${carpetaActualUrl}/${subcarpeta}`, digest);
-            const reader = entry.createReader();
-            const entries = await new Promise((resolve) => {
-                const all = [];
-                const readBatch = () => {
-                    reader.readEntries((batch) => {
-                        if (batch.length) {
-                            all.push(...batch);
-                            readBatch();
-                        } else {
-                            resolve(all);
-                        }
-                    });
-                };
-                readBatch();
-            });
-            for (const child of entries) {
-                await subirCarpetaCompleta(child, subcarpeta, digest);
-            }
-        }
-    };
-
     // Maneja la entrada de un elemento arrastrado (contador anti-parpadeo).
     const handleDragEnter = (e) => {
         e.preventDefault();
@@ -561,51 +511,26 @@ const FileManager = ({
             }
         }
 
-        // 2) Si hay carpetas: subirlas completas (recursivo con subcarpetas).
+        // 2) Si hay carpetas: aviso de accion no soportada + boton al repositorio.
         if (contieneDirectorios) {
-            setIsUploading(true);
-            setProgresoSubida('Procesando carpetas...');
-            try {
-                // Un solo digest para toda la operacion (evita llamadas repetidas).
-                const digest = await getRequestDigest();
-                for (const item of items) {
-                    const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
-                    if (entry) await subirCarpetaCompleta(entry, '', digest);
+            const repoUrl = `${AC_HOST}${carpetaActualUrl}`;
+            Swal.fire({
+                icon: 'info',
+                title: 'Acción no soportada por aquí',
+                html: `
+                    <p class="text-sm text-gray-600 mb-3">
+                        Si deseas subir carpetas completas y subcarpetas, por favor dirígete directamente al repositorio en SharePoint, donde puedes arrastrarlas de golpe con total facilidad.
+                    </p>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Ir al repositorio',
+                cancelButtonText: 'Entendido',
+                confirmButtonColor: '#d97706'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.open(repoUrl, '_blank');
                 }
-                await refrescar();
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true,
-                    didOpen: (toast) => {
-                        toast.onmouseenter = Swal.stopTimer;
-                        toast.onmouseleave = Swal.resumeTimer;
-                    }
-                });
-                Toast.fire({
-                    icon: 'success',
-                    title: 'Carpetas subidas correctamente'
-                });
-            } catch (err) {
-                console.error('Error subiendo carpeta', err);
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 4000,
-                    timerProgressBar: true
-                });
-                Toast.fire({
-                    icon: 'error',
-                    title: 'Error al subir la carpeta',
-                    text: err.message || 'No se pudo subir la carpeta.'
-                });
-            } finally {
-                setIsUploading(false);
-                setProgresoSubida('');
-            }
+            });
             return;
         }
 
