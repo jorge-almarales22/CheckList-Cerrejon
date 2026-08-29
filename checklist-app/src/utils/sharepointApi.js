@@ -225,43 +225,21 @@ export const renameFolder = async (folderRef, nuevoNombre, digest, siteUrl = SGI
 
 // Mueve un archivo a otra carpeta (misma biblioteca). carpetaDestinoUrl es la
 // ruta server-relative de la carpeta destino (sin el nombre del archivo).
-// Usa la API moderna SP.MoveCopyUtil.MoveFile con las rutas decodificadas en
-// el cuerpo JSON (evita el HTTP 400 de moveto/MoveToUsingPath por encoding).
-// Si el endpoint no esta habilitado, hace fallback: descarga el blob, lo sube
-// a la carpeta destino y recicla el original.
+// Metodo directo y limpio: descarga el blob ($value), lo sube a la carpeta
+// destino y recicla el original. Evita SP.MoveCopyUtil (HTTP 500 en este
+// tenant) y los problemas de encoding de moveto/MoveToUsingPath (HTTP 400).
 export const moveFile = async (fileRef, carpetaDestinoUrl, digest, siteUrl = SGIA_SITE_URL) => {
     const srcUrl = decodeURIComponent(fileRef);
     const nombre = srcUrl.substring(srcUrl.lastIndexOf('/') + 1);
     const destUrl = `${decodeURIComponent(carpetaDestinoUrl)}/${nombre}`;
-
-    // 1) Intento principal: SP.MoveCopyUtil.MoveFile (rutas en el cuerpo JSON).
-    try {
-        const endpoint = `${siteUrl}/_api/SP.MoveCopyUtil.MoveFile`;
-        const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json;odata=verbose',
-                'Content-Type': 'application/json;odata=verbose',
-                'X-RequestDigest': digest
-            },
-            body: JSON.stringify({
-                srcUrl,
-                destUrl,
-                overwrite: true
-            }),
-            credentials: 'same-origin'
-        });
-        if (res.ok) return true;
-        console.warn(`SP.MoveCopyUtil fallo (HTTP ${res.status}); usando fallback blob->upload->recycle`);
-    } catch (err) {
-        console.warn('SP.MoveCopyUtil error; usando fallback blob->upload->recycle', err);
-    }
-
-    // 2) Fallback: descargar blob, subir a la carpeta destino, reciclar original.
     const carpetaDestino = destUrl.substring(0, destUrl.lastIndexOf('/'));
+
+    // 1) Descargar el contenido binario del archivo origen.
     const blob = await downloadFileContent(srcUrl, siteUrl);
     const body = await blob.arrayBuffer();
+    // 2) Subir el archivo a la carpeta destino (overwrite=true).
     await uploadFileToFolder(carpetaDestino, nombre, body, digest, siteUrl);
+    // 3) Enviar el archivo original a la papelera de reciclaje.
     await recycleFile(srcUrl, digest, siteUrl);
     return true;
 };
