@@ -489,10 +489,12 @@ const FileManager = ({
                 await subirArchivos([file]);
             }
         } else if (entry.isDirectory) {
-            // Crear la subcarpeta UNA vez (idempotente) antes de procesar su contenido.
-            if (rutaRelativa) {
-                await ensureFolder(`${carpetaActualUrl}/${rutaRelativa}`, digest);
-            }
+            // Crear la subcarpeta de ESTE directorio UNA vez (idempotente).
+            // La carpeta raiz arrastrada (rutaRelativa='') tambien crea su
+            // subcarpeta con entry.name; sin esto los archivos hijos iban a
+            // una ruta inexistente y no se subia nada.
+            const subcarpeta = rutaRelativa ? `${rutaRelativa}/${entry.name}` : entry.name;
+            await ensureFolder(`${carpetaActualUrl}/${subcarpeta}`, digest);
             const reader = entry.createReader();
             const entries = await new Promise((resolve) => {
                 const all = [];
@@ -509,8 +511,7 @@ const FileManager = ({
                 readBatch();
             });
             for (const child of entries) {
-                const childRuta = rutaRelativa ? `${rutaRelativa}/${entry.name}` : entry.name;
-                await subirCarpetaCompleta(child, childRuta, digest);
+                await subirCarpetaCompleta(child, subcarpeta, digest);
             }
         }
     };

@@ -90,13 +90,21 @@ export const getEntregablesFolderUrl = (tipo, checklistName) => {
 // Alias historico: el codigo y los datos existentes hablan de "evidencias".
 export const getEvidenciasFolderUrl = getEntregablesFolderUrl;
 
-// Crea una carpeta (idempotente). Si ya existe, SharePoint responde 400/409 y
-// se considera exito. La ruta se DECODIFICA antes de enviarla a addUsingPath
-// (SharePoint exige texto plano con "/" reales, no %2F ni %20).
+// Crea una carpeta (idempotente). Primero verifica si existe con GET (evita
+// el HTTP 400 en consola cuando la carpeta ya existe); solo crea si falta.
+// La ruta se DECODIFICA antes de enviarla a addUsingPath.
 // La biblioteca de entregables vive en el sitio raiz SGIA, no en el sitio "ac".
 export const ensureFolder = async (serverRelativeUrl, digest, siteUrl = SGIA_SITE_URL) => {
     const cleanPath = decodeURIComponent(serverRelativeUrl);
     try {
+        // 1) Verificar si ya existe (GET no requiere digest).
+        const check = await fetch(`${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(cleanPath)}')`, {
+            headers: { "Accept": "application/json;odata=verbose" },
+            credentials: 'same-origin'
+        });
+        if (check.ok) return true; // ya existe
+
+        // 2) Crearla (solo si no existe).
         const res = await fetch(`${siteUrl}/_api/web/folders/addUsingPath(DecodedUrl='${cleanPath}')`, {
             method: 'POST',
             headers: {
