@@ -200,6 +200,8 @@ const FileManager = ({
     // Carpetas destino disponibles para la accion "Mover" (subcarpetas de la raiz).
     const [carpetasDestino, setCarpetasDestino] = useState([]);
     const [carpetaDestinoMover, setCarpetaDestinoMover] = useState('');
+    // Indica que el movimiento esta en curso (deshabilita el boton y muestra spinner).
+    const [moviendoElemento, setMoviendoElemento] = useState(false);
 
     const [isUploading, setIsUploading] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
@@ -630,8 +632,9 @@ const FileManager = ({
     // Ejecuta el movimiento del elemento a la carpeta destino seleccionada.
     const ejecutarMover = async () => {
         const el = elementoSeleccionado;
-        if (!el) return;
+        if (!el || moviendoElemento) return;
         try {
+            setMoviendoElemento(true);
             const digest = await getRequestDigest();
             const destinoUrl = carpetaDestinoMover
                 ? `${raizUrl}/${carpetaDestinoMover}`
@@ -677,6 +680,8 @@ const FileManager = ({
                 title: 'Error al mover',
                 text: err.message || 'No se pudo mover. Revisa la consola.'
             });
+        } finally {
+            setMoviendoElemento(false);
         }
     };
 
@@ -924,6 +929,7 @@ const FileManager = ({
                                 className={`w-full rounded border px-3 py-2 outline-none text-sm font-semibold mb-4 ${theme === 'dark' ? 'bg-slate-950/60 text-white border-slate-700' : 'bg-slate-100/90 text-slate-900 border-slate-300'}`}
                                 value={carpetaDestinoMover}
                                 onChange={(e) => setCarpetaDestinoMover(e.target.value)}
+                                disabled={moviendoElemento}
                             >
                                 <option value="">Raíz de la tarea</option>
                                 {carpetasDestino
@@ -932,9 +938,31 @@ const FileManager = ({
                                         <option key={c.ruta} value={c.ruta}>{c.nombre}</option>
                                     ))}
                             </select>
+                            {/* Indicador de movimiento en curso */}
+                            {moviendoElemento && (
+                                <div className="flex items-center gap-2 text-[11px] font-bold text-amber-600 dark:text-yellow-400 mb-4">
+                                    <span className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                                    Moviendo elemento...
+                                </div>
+                            )}
                             <div className="flex gap-2 justify-end">
-                                <button onClick={() => setModalAccion(null)} className="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-white/20">Cancelar</button>
-                                <button onClick={ejecutarMover} className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-amber-400/30">Mover</button>
+                                <button
+                                    onClick={() => setModalAccion(null)}
+                                    disabled={moviendoElemento}
+                                    className="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-white/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={ejecutarMover}
+                                    disabled={moviendoElemento}
+                                    className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-amber-400/30 disabled:opacity-50 disabled:cursor-wait"
+                                >
+                                    {moviendoElemento && (
+                                        <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    )}
+                                    {moviendoElemento ? 'Moviendo...' : 'Mover'}
+                                </button>
                             </div>
                         </>
                     )}
