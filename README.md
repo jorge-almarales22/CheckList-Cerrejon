@@ -16,6 +16,7 @@ El portal publicado usa SharePoint como origen de autenticacion, datos y documen
 - JavaScript ES modules
 - SharePoint REST API
 - `html2canvas` y `jsPDF` para generar PDFs
+- `sweetalert2` para confirmaciones, toasts y progreso
 - Power Automate/Teams para notificaciones
 
 No existe backend propio: el frontend consume directamente SharePoint desde el navegador con la sesion corporativa de Microsoft 365.
@@ -30,6 +31,7 @@ checklist-app/
 		App.jsx                         Autenticacion y arranque
 		main.jsx                        Entrada React
 		components/                     Vistas y flujos de usuario
+			FileManager.jsx             Gestor de entregables (modal tipo Drive)
 		data/constants.js               URLs, permisos y plantillas
 		utils/sharepointApi.js          API REST, listas, carpetas y archivos
 		utils/calculations.js           Avances, permisos, SPI y estados
@@ -60,7 +62,28 @@ Los entregables de cada tarea se guardan como archivos binarios en la biblioteca
 
 `/sites/co-lmn-sgia/Documentos compartidos/Incorporación/Entregables/`
 
-Se organizan por tipo (`Checklist Ensamble`, `Checklist Compra Instalada`, `Checklist Proyectos`) y por nombre del checklist. Cada tarea tiene su subcarpeta por defecto (`<orden>_<descripcion corta>`, ej. `03_Pruebas_comisionamiento`) y el usuario puede crear subcarpetas adicionales desde el cargue de evidencias. Los archivos se nombran `<orden>_<nombreDocOriginal>_<usuarioSinDominio>.<ext>` (ej. `03_Informe_Pruebas_juan.perez.pdf`) para conservar el nombre del documento y saber quien lo subio. La cabecera de metadatos incluye un boton "Ir a Entregables" que abre la carpeta raiz de la incorporacion en una pestana nueva. Las evidencias antiguas migradas pueden seguir leyendose desde la lista `EvidenciasChecklist`, donde fueron almacenadas como base64.
+Se organizan por tipo (`Checklist Ensamble`, `Checklist Compra Instalada`, `Checklist Proyectos`) y por nombre del checklist. Cada tarea tiene su subcarpeta por defecto (`<orden>_<descripcion corta>`, ej. `03_Pruebas_comisionamiento`) y el usuario puede crear subcarpetas adicionales desde el cargue de evidencias. Los archivos se nombran `<orden>_<nombreDocOriginal>_<usuarioSinDominio>.<ext>` (ej. `03_Informe_Pruebas_juan.perez.pdf`) para conservar el nombre del documento y saber quien lo subio. Las evidencias antiguas migradas pueden seguir leyendose desde la lista `EvidenciasChecklist`, donde fueron almacenadas como base64.
+
+#### Gestor de Entregables (`FileManager.jsx`)
+
+Cada tarea tiene un boton **"Adjuntar evidencias"** que abre el Gestor de Entregables, un modal tipo Drive/Dropbox con:
+
+- **Breadcrumb interactivo** para navegar entre la carpeta de la tarea y sus subcarpetas.
+- **Busqueda** y filtros por tipo de archivo y fecha de subida.
+- **Crear carpeta** (`+ Nueva carpeta`) y **subir archivos** (boton `Subir` o arrastrar y soltar).
+- **Grid agrupado**: carpetas primero, luego archivos agrupados por tipo (IMAGENES, PDF, DOCUMENTOS, HOJAS, OTROS) con iconos genericos segun la extension (sin cargar miniaturas pesadas).
+- **Menu contextual** (`...`) por elemento: Abrir, Descargar, Mover (con selector de carpetas destino) y Eliminar.
+- **Drag & drop de archivos**: subida directa con compresion desactivada (calidad original) y sin limite de tamano. Al arrastrar carpetas completas, se muestra un aviso que dirige al repositorio en SharePoint (la subida recursiva de carpetas no esta soportada en el gestor).
+- **Confirmaciones y progreso** con SweetAlert2: eliminacion con confirmacion + toast de exito, movimiento con indicador "Moviendo elemento...", y subida con feedback en tiempo real.
+
+La carpeta de la tarea se crea automaticamente (con loading "Creando carpeta de entregables...") la primera vez que se sube un archivo o al usar el boton "Ir a Repositorio" en una tarea sin evidencias.
+
+#### Boton "Ir a Repositorio"
+
+El boton **"Ir a Repositorio"** de cada tarea abre la carpeta de la tarea en SharePoint en una pestana nueva. Su comportamiento depende del estado de la tarea:
+
+- **Con evidencias** (posiblemente en la raiz sin carpeta): pregunta si desea crear la carpeta y mover las evidencias legacy a la nueva subcarpeta (flujo de migracion).
+- **Sin evidencias**: crea la carpeta automaticamente (con loading "Creando carpeta para esta tarea de incorporacion...") y redirige.
 
 ### Fotografias y PDFs
 
@@ -91,7 +114,9 @@ Las plantillas actuales estan en `checklist-app/src/data/constants.js`:
 - `COMPRA INSTALADA`
 - `ENSAMBLE`
 
-El usuario puede crear checklists, diligenciar tareas, adjuntar evidencias, registrar comentarios y alertas, aprobar/rechazar, finalizar, consultar dashboards, ver Gantt, filtrar por responsables/gerencias y descargar PDFs.
+El usuario puede crear checklists, diligenciar tareas, adjuntar evidencias (via el Gestor de Entregables), registrar comentarios y alertas, aprobar/rechazar, finalizar, consultar dashboards, ver Gantt, filtrar por responsables/gerencias y descargar PDFs.
+
+Las confirmaciones, toasts y progresos usan **SweetAlert2** (`sweetalert2`): eliminacion de evidencias con confirmacion + toast de exito, aprobacion/finalizacion con confirmacion, migracion de evidencias legacy con progreso en tiempo real, y avisos de acciones no soportadas (como arrastrar carpetas completas). No quedan `window.confirm` ni `alert()` nativos en la aplicacion.
 
 La tabla de incorporaciones incluye filtros multi-seleccion por columna en `NOM. CHK.`, `PLAN (ESP.)`, `COMPL. (REAL)`, `GER.`, `SUPT.`, `TIPO INCORP.` y `CREAD. POR`. Cada filtro ofrece busqueda, checkboxes, `Todos`, `Ninguno`, `Limpiar` y `Aplicar`. Las selecciones se aplican al pulsar `Aplicar` o al hacer clic fuera del menu; `Limpiar` elimina la seleccion y cierra el menu. Los encabezados usan abreviaciones compactas para mantenerse en una sola fila.
 
