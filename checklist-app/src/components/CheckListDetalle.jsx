@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { esPendiente, esRechazado, esHistorico, esHistoricoGestionado, marcarHistoricoGestionado, getEstadoTarea, getCorresponsable, puedeGestionarTarea, puedeAsignarCorresponsable, mismoUsuario } from '../utils/calculations';
 import { notificarTeams } from '../utils/notifications';
-import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, listFolderSubfolders, recycleFile, fetchJerarquiaOpciones, conValorActual, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
+import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, listFolderFilesRecursive, listFolderSubfolders, recycleFile, fetchJerarquiaOpciones, conValorActual, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
 import { AC_HOST, TIPOS_CHECKLIST, getTipoChecklist } from '../data/constants';
 import PeoplePicker from './PeoplePicker';
@@ -192,7 +192,22 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                 if (listJson.d.results.length > 0) {
                     const row = listJson.d.results[0];
-                    const parsedData = JSON.parse(row.Data);
+                    // Parseo seguro: si el JSON esta malformado, no romper el
+                    // renderizado; se muestra un error claro.
+                    let parsedData = null;
+                    try {
+                        parsedData = JSON.parse(row.Data);
+                    } catch (parseErr) {
+                        console.error(`No se pudo parsear el JSON de la fila ${row.Id}:`, parseErr);
+                        setLoadError('El registro de la incorporación tiene datos corruptos. Contacta al administrador.');
+                        setLoading(false);
+                        return;
+                    }
+                    if (!parsedData || typeof parsedData !== 'object') {
+                        setLoadError('El registro de la incorporación tiene datos vacíos o inválidos.');
+                        setLoading(false);
+                        return;
+                    }
                     
                     if (isBackgroundPoll) {
                         setChecklist(prevChecklist => {
@@ -286,12 +301,16 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     };
 
     // Limpia un texto para usarlo como nombre de carpeta/archivo en SharePoint.
+    // Recorta espacios finales (SharePoint rechaza nombres que terminan en
+    // espacio) y caracteres no permitidos.
     const sanitizarNombre = (texto, max = 40) =>
         (texto || '')
             .replace(/[~"#%&*:<>?/\\{|}']/g, ' ')
             .replace(/\s+/g, ' ')
             .trim()
-            .slice(0, max) || 'SinNombre';
+            .slice(0, max)
+            .replace(/\s+$/g, '')
+            .replace(/[. ]+$/g, '') || 'SinNombre';
 
     // Nombre de la subcarpeta por defecto de una tarea: "<orden>_<descripcion corta>".
     // Es estable (depende solo del orden y la descripcion), asi la lectura de
@@ -343,21 +362,6 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
                     });
 
-                    // Lectura recursiva del arbol de una carpeta: lista los
-                    // archivos de la carpeta y de todas sus subcarpetas (a
-                    // cualquier profundidad).
-                    const leerArbol = async (carpetaUrl, acumulador) => {
-                        const [files, subs] = await Promise.all([
-                            listFolderFiles(carpetaUrl),
-                            listFolderSubfolders(carpetaUrl)
-                        ]);
-                        files.forEach(f => acumulador.push(f));
-                        for (const sub of subs) {
-                            await leerArbol(sub.ServerRelativeUrl, acumulador);
-                        }
-                        return acumulador;
-                    };
-
                     // Archivos de la raiz del checklist que pertenecen a esta tarea.
                     const files = await listFolderFiles(folderUrl);
                     files
@@ -365,12 +369,12 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         .forEach(pushFile);
 
                     // Archivos dentro de la subcarpeta por defecto de la tarea
-                    // y de TODAS sus subcarpetas (recursivo).
+                    // y de TODAS sus subcarpetas (recursivo, 1 sola llamada).
                     const subcarpetaTarea = nombreSubcarpetaTarea(itemId);
                     const subcarpetas = await listFolderSubfolders(folderUrl);
                     const subTarea = subcarpetas.find(s => s.Name === subcarpetaTarea);
                     if (subTarea) {
-                        const arbol = await leerArbol(subTarea.ServerRelativeUrl, []);
+                        const arbol = await listFolderFilesRecursive(subTarea.ServerRelativeUrl);
                         arbol.forEach(pushFile);
                     }
                 }
@@ -422,20 +426,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             });
 
             // Archivos dentro de cada subcarpeta (recursivo, a cualquier
-            // profundidad). La subcarpeta por defecto de una tarea empieza por
-            // su orden ("06_..."), asi se sabe a que tarea va.
-            const leerArbol = async (carpetaUrl, acumulador) => {
-                const [subFiles, subSubs] = await Promise.all([
-                    listFolderFiles(carpetaUrl),
-                    listFolderSubfolders(carpetaUrl)
-                ]);
-                subFiles.forEach(f => acumulador.push(f));
-                for (const sub of subSubs) {
-                    await leerArbol(sub.ServerRelativeUrl, acumulador);
-                }
-                return acumulador;
-            };
-
+            // profundidad, en UNA sola llamada REST). La subcarpeta por
+            // defecto de una tarea empieza por su orden ("06_..."), asi se
+            // sabe a que tarea va.
             for (const sub of subcarpetas) {
                 const subNombre = sub.Name;
                 // Determinar a que tarea pertenece la subcarpeta por su prefijo de orden.
@@ -443,7 +436,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 const tareaDeSub = matchOrden
                     ? items.find(it => ordenDe(it.Id) === String(parseInt(matchOrden[1], 10)).padStart(2, '0'))
                     : null;
-                const arbol = await leerArbol(sub.ServerRelativeUrl, []);
+                const arbol = await listFolderFilesRecursive(sub.ServerRelativeUrl);
                 arbol.forEach(f => {
                     const orden = tareaDeSub ? ordenDe(tareaDeSub.Id) : null;
                     const evs = (map[tareaDeSub?.Id] = map[tareaDeSub?.Id] || []);
@@ -2014,7 +2007,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                 <div className="flex justify-between items-center mb-2">
                                                     <span className="text-slate-900 dark:text-slate-200 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
                                                         Evidencias Cargadas
-                                                        {evidenciasPresence[it.Id] ? (
+                                                        {(evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0) ? (
                                                             <span className="bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/40 px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-normal uppercase flex items-center gap-1">
                                                                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                                                                 Con Evidencias
@@ -2036,16 +2029,20 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                                 Abrir Gestor
                                                             </button>
                                                         )}
-                                                        <button
-                                                            onClick={() => window.open(`${AC_HOST}${getEvidenciasFolderUrl(checklist?.Tipo, checklist?.Name)}/${nombreSubcarpetaTarea(it.Id)}`, '_blank')}
-                                                            title="Abrir la carpeta de esta tarea en SharePoint"
-                                                            className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-colors ${theme==='dark'?'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700':'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}`}
-                                                        >
-                                                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                            </svg>
-                                                            Ir a Repositorio
-                                                        </button>
+                                                        {/* "Ir a Repositorio" solo si la tarea ya tiene evidencias: si no
+                                                            existen, la carpeta en SharePoint tampoco existe. */}
+                                                        {evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0 && (
+                                                            <button
+                                                                onClick={() => window.open(`${AC_HOST}${getEvidenciasFolderUrl(checklist?.Tipo, checklist?.Name)}/${nombreSubcarpetaTarea(it.Id)}`, '_blank')}
+                                                                title="Abrir la carpeta de esta tarea en SharePoint"
+                                                                className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-colors ${theme==='dark'?'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700':'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}`}
+                                                            >
+                                                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                                </svg>
+                                                                Ir a Repositorio
+                                                            </button>
+                                                        )}
                                                     </span>
                                                     <div className="flex gap-2 items-center">
                                                         {evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0 && (

@@ -11,8 +11,6 @@ import {
     recycleFolder,
     renameFile,
     renameFolder,
-    moveFile,
-    moveFolder,
     downloadFileContent,
     dataUrlToUint8Array
 } from '../utils/sharepointApi';
@@ -197,11 +195,9 @@ const FileManager = ({
     const [filtroFecha, setFiltroFecha] = useState('todos');
 
     const [menuAbierto, setMenuAbierto] = useState(null); // id del elemento con menu abierto
-    const [modalAccion, setModalAccion] = useState(null); // null | 'nuevaCarpeta' | 'renombrar' | 'mover' | 'confirmarEliminar'
+    const [modalAccion, setModalAccion] = useState(null); // null | 'nuevaCarpeta' | 'renombrar' | 'confirmarEliminar'
     const [elementoSeleccionado, setElementoSeleccionado] = useState(null); // { tipo: 'carpeta'|'archivo', ... }
     const [nuevoNombre, setNuevoNombre] = useState('');
-    const [carpetaDestinoMover, setCarpetaDestinoMover] = useState(''); // ruta relativa a la raiz de la tarea
-    const [carpetasDestino, setCarpetasDestino] = useState([]); // arbol plano de carpetas para mover
 
     const [isUploading, setIsUploading] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
@@ -570,53 +566,6 @@ const FileManager = ({
         }
     };
 
-    // Abre el modal de mover y carga el arbol de carpetas destino.
-    const abrirMover = async (el) => {
-        setElementoSeleccionado(el);
-        setCarpetaDestinoMover('');
-        setModalAccion('mover');
-        setMenuAbierto(null);
-        try {
-            // Lista todas las subcarpetas de la raiz de la tarea (1 nivel).
-            const subs = await listFolderSubfolders(raizUrl);
-            setCarpetasDestino(subs.map(s => ({ nombre: s.Name, ruta: s.Name })));
-        } catch (err) {
-            console.error('Error cargando carpetas destino', err);
-            setCarpetasDestino([]);
-        }
-    };
-
-    // Ejecuta el movimiento.
-    const ejecutarMover = async () => {
-        const el = elementoSeleccionado;
-        if (!el) return;
-        try {
-            const digest = await getRequestDigest();
-            const destinoUrl = carpetaDestinoMover
-                ? `${raizUrl}/${carpetaDestinoMover}`
-                : raizUrl;
-
-            // Validacion: el destino debe ser distinto de la carpeta actual
-            // del elemento (no tiene sentido "mover" a donde ya esta).
-            const carpetaActualEl = el.ServerRelativeUrl.substring(0, el.ServerRelativeUrl.lastIndexOf('/'));
-            if (carpetaActualEl === destinoUrl) {
-                alert('El elemento ya está en esa carpeta.');
-                return;
-            }
-
-            if (el.tipo === 'carpeta') {
-                await moveFolder(el.ServerRelativeUrl, destinoUrl, digest);
-            } else {
-                await moveFile(el.ServerRelativeUrl, destinoUrl, digest);
-            }
-            setModalAccion(null);
-            await refrescar();
-        } catch (err) {
-            console.error('Error moviendo', err);
-            alert('No se pudo mover. Revisa la consola.');
-        }
-    };
-
     // Abre el modal de confirmar eliminacion.
     const abrirEliminar = (el) => {
         setElementoSeleccionado(el);
@@ -715,11 +664,6 @@ const FileManager = ({
                             </button>
                         )}
                         {puedeGestionar && (
-                            <button onClick={() => abrirMover(el)} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left">
-                                {Icono.move()} Mover
-                            </button>
-                        )}
-                        {puedeGestionar && (
                             <div className="border-t border-slate-200 dark:border-slate-700 my-1" />
                         )}
                         {puedeGestionar && (
@@ -739,11 +683,6 @@ const FileManager = ({
                         {puedeGestionar && (
                             <button onClick={() => abrirRenombrar(el)} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left">
                                 {Icono.rename()} Renombrar
-                            </button>
-                        )}
-                        {puedeGestionar && (
-                            <button onClick={() => abrirMover(el)} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left">
-                                {Icono.move()} Mover
                             </button>
                         )}
                         {puedeGestionar && (
@@ -848,29 +787,6 @@ const FileManager = ({
                             <div className="flex gap-2 justify-end">
                                 <button onClick={() => setModalAccion(null)} className="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-white/20">Cancelar</button>
                                 <button onClick={ejecutarRenombrar} className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-amber-400/30">Renombrar</button>
-                            </div>
-                        </>
-                    )}
-
-                    {modalAccion === 'mover' && el && (
-                        <>
-                            <h3 className="text-lg font-medium text-amber-400 mb-3">Mover {el.tipo === 'carpeta' ? 'carpeta' : 'archivo'}</h3>
-                            <p className="text-xs text-slate-400 font-semibold mb-2">Destino (relativo a la raíz de la tarea):</p>
-                            <select
-                                className={`w-full rounded border px-3 py-2 outline-none text-sm font-semibold mb-4 ${theme === 'dark' ? 'bg-slate-950/60 text-white border-slate-700' : 'bg-slate-100/90 text-slate-900 border-slate-300'}`}
-                                value={carpetaDestinoMover}
-                                onChange={(e) => setCarpetaDestinoMover(e.target.value)}
-                            >
-                                <option value="">Raíz de la tarea</option>
-                                {carpetasDestino
-                                    .filter(c => c.ruta !== (el.tipo === 'carpeta' ? el.Name : null))
-                                    .map(c => (
-                                        <option key={c.ruta} value={c.ruta}>{c.nombre}</option>
-                                    ))}
-                            </select>
-                            <div className="flex gap-2 justify-end">
-                                <button onClick={() => setModalAccion(null)} className="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-white/20">Cancelar</button>
-                                <button onClick={ejecutarMover} className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-amber-400/30">Mover</button>
                             </div>
                         </>
                     )}
