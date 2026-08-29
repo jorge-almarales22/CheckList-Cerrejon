@@ -225,26 +225,45 @@ export const renameFolder = async (folderRef, nuevoNombre, digest, siteUrl = SGI
 
 // Mueve un archivo a otra carpeta (misma biblioteca). carpetaDestinoUrl es la
 // ruta server-relative de la carpeta destino (sin el nombre del archivo).
-// Nota: se usa MoveToUsingPath(DecodedUrl='...') que acepta la ruta destino
-// DECODIFICADA (con "/" reales, no %2F). El metodo moveto(newurl=...) con
-// encodeURIComponent codificaba los slashes como %2F y SharePoint respondia
-// HTTP 400.
+// Usa la API moderna SP.MoveCopyUtil.MoveFile con las rutas decodificadas en
+// el cuerpo JSON (evita el HTTP 400 de moveto/MoveToUsingPath por encoding).
+// Si el endpoint no esta habilitado, hace fallback: descarga el blob, lo sube
+// a la carpeta destino y recicla el original.
 export const moveFile = async (fileRef, carpetaDestinoUrl, digest, siteUrl = SGIA_SITE_URL) => {
-    const origen = decodeURIComponent(fileRef);
-    const nombre = origen.substring(origen.lastIndexOf('/') + 1);
-    const destino = `${decodeURIComponent(carpetaDestinoUrl)}/${nombre}`;
-    const url = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${origen}')/MoveToUsingPath(DecodedUrl='${destino}',Overwrite=@a1)?@a1=true`;
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-            "Accept": "application/json;odata=verbose",
-            "Content-Type": "application/json;odata=verbose",
-            "X-RequestDigest": digest,
-            "IF-MATCH": "*"
-        },
-        credentials: 'same-origin'
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status} moviendo archivo`);
+    const srcUrl = decodeURIComponent(fileRef);
+    const nombre = srcUrl.substring(srcUrl.lastIndexOf('/') + 1);
+    const destUrl = `${decodeURIComponent(carpetaDestinoUrl)}/${nombre}`;
+
+    // 1) Intento principal: SP.MoveCopyUtil.MoveFile (rutas en el cuerpo JSON).
+    try {
+        const endpoint = `${siteUrl}/_api/SP.MoveCopyUtil.MoveFile`;
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json;odata=verbose',
+                'Content-Type': 'application/json;odata=verbose',
+                'X-RequestDigest': digest
+            },
+            body: JSON.stringify({
+                srcUrl,
+                destUrl,
+                overwrite: true
+            }),
+            credentials: 'same-origin'
+        });
+        if (res.ok) return true;
+        console.warn(`SP.MoveCopyUtil fallo (HTTP ${res.status}); usando fallback blob->upload->recycle`);
+    } catch (err) {
+        console.warn('SP.MoveCopyUtil error; usando fallback blob->upload->recycle', err);
+    }
+
+    // 2) Fallback: descargar blob, subir a la carpeta destino, reciclar original.
+    const carpetaDestino = destUrl.substring(0, destUrl.lastIndexOf('/'));
+    const blob = await downloadFileContent(srcUrl, siteUrl);
+    const body = await blob.arrayBuffer();
+    await uploadFileToFolder(carpetaDestino, nombre, body, digest, siteUrl);
+    await recycleFile(srcUrl, digest, siteUrl);
+    return true;
 };
 
 // Descarga el contenido binario de un archivo (GET no requiere digest).
