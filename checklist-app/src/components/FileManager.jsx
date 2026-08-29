@@ -204,6 +204,11 @@ const FileManager = ({
     const [isDragOver, setIsDragOver] = useState(false);
     const [progresoSubida, setProgresoSubida] = useState('');
 
+    // Contador de eventos dragenter/dragleave para evitar el parpadeo del
+    // dropzone: los hijos disparan dragleave/dragenter en cascada, y con un
+    // contador solo se apaga el banner cuando TODOS los nodos salieron.
+    const dragCounter = useRef(0);
+
     const fileInputRef = useRef(null);
     const menuRef = useRef(null);
 
@@ -483,9 +488,38 @@ const FileManager = ({
         }
     };
 
+    // Maneja la entrada de un elemento arrastrado (contador anti-parpadeo).
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current += 1;
+        if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+            setIsDragOver(true);
+        }
+    };
+
+    // Maneja la salida de un elemento arrastrado (contador anti-parpadeo).
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current -= 1;
+        if (dragCounter.current <= 0) {
+            dragCounter.current = 0;
+            setIsDragOver(false);
+        }
+    };
+
+    // Necesario para permitir el drop (sin preventDefault el navegador abre el archivo).
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
     // Maneja el drop de archivos/carpetas.
     const handleDrop = async (e) => {
         e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current = 0;
         setIsDragOver(false);
         const items = e.dataTransfer?.items;
         if (items && items.length && items[0].webkitGetAsEntry) {
@@ -945,8 +979,9 @@ const FileManager = ({
                 {/* Cuerpo */}
                 <div
                     className={`flex-1 p-6 overflow-y-auto ${isDragOver ? (theme === 'dark' ? 'bg-slate-800/50' : 'bg-slate-50') : ''}`}
-                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-                    onDragLeave={(e) => { e.preventDefault(); setIsDragOver(false); }}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    onDragOver={handleDragOver}
                     onDrop={handleDrop}
                 >
                     {cargando ? (
@@ -961,8 +996,8 @@ const FileManager = ({
                         <>
                             {/* Zona drag & drop */}
                             {isDragOver && (
-                                <div className={`border-2 border-dashed rounded-xl p-8 mb-4 text-center ${theme === 'dark' ? 'border-yellow-400/50 text-yellow-400' : 'border-amber-500/50 text-amber-600'}`}>
-                                    <p className="text-sm font-bold">Suelta los archivos o carpetas aquí</p>
+                                <div className={`pointer-events-none border-2 border-dashed rounded-xl p-8 mb-4 text-center ${theme === 'dark' ? 'border-yellow-400/50 text-yellow-400' : 'border-amber-500/50 text-amber-600'}`}>
+                                    <p className="pointer-events-none text-sm font-bold">Suelta los archivos o carpetas aquí</p>
                                 </div>
                             )}
 
