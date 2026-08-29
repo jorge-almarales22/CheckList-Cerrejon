@@ -369,17 +369,22 @@ const FileManager = ({
             .slice(0, max) || 'SinNombre';
 
     // Sube archivos a la carpeta actual (con compresion de imagenes y anti-colision).
+    // La carpeta actual ya existe en el gestor: NO se llama ensureFolder ni
+    // addUsingPath aqui (evita el HTTP 400 repetido en el log).
     const subirArchivos = async (files) => {
         if (!files || !files.length) return;
         if (!checklist?.Tipo || !checklist?.Name) {
-            alert('No se pudo determinar el checklist para guardar la evidencia.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo determinar el checklist para guardar la evidencia.'
+            });
             return;
         }
         setIsUploading(true);
         setProgresoSubida('Preparando archivos...');
         try {
             const digest = await getRequestDigest();
-            await ensureFolder(carpetaActualUrl, digest);
 
             const usuario = (currentUser || 'usuario').split('@')[0]
                 .replace(/[~"#%&*:<>?/\\{|}']/g, '')
@@ -404,7 +409,11 @@ const FileManager = ({
                 } else {
                     const maxSize = 25 * 1024 * 1024;
                     if (file.size > maxSize) {
-                        alert(`El archivo "${file.name}" supera el límite de 25MB.`);
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Archivo muy grande',
+                            text: `El archivo "${file.name}" supera el límite de 25MB.`
+                        });
                         continue;
                     }
                     body = await file.arrayBuffer();
@@ -428,10 +437,36 @@ const FileManager = ({
             setProgresoSubida('');
             if (subidos > 0) {
                 await refrescar();
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.onmouseenter = Swal.stopTimer;
+                        toast.onmouseleave = Swal.resumeTimer;
+                    }
+                });
+                Toast.fire({
+                    icon: 'success',
+                    title: `${subidos} archivo${subidos !== 1 ? 's' : ''} subido${subidos !== 1 ? 's' : ''} correctamente`
+                });
             }
         } catch (err) {
             console.error('Error subiendo archivos', err);
-            alert('Error subiendo archivos. Revisa la consola.');
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true
+            });
+            Toast.fire({
+                icon: 'error',
+                title: 'Error al subir archivos',
+                text: err.message || 'No se pudieron subir los archivos.'
+            });
         } finally {
             setIsUploading(false);
             setProgresoSubida('');
@@ -525,6 +560,15 @@ const FileManager = ({
         e.stopPropagation();
         dragCounter.current = 0;
         setIsDragOver(false);
+
+        // 1) Archivos sueltos: extraer de dataTransfer.files (mas confiable).
+        const files = Array.from(e.dataTransfer?.files || []);
+        if (files.length > 0) {
+            await subirArchivos(files);
+            return;
+        }
+
+        // 2) Carpetas completas: usar webkitGetAsEntry (recursivo).
         const items = e.dataTransfer?.items;
         if (items && items.length && items[0].webkitGetAsEntry) {
             setIsUploading(true);
@@ -539,13 +583,22 @@ const FileManager = ({
                 await refrescar();
             } catch (err) {
                 console.error('Error subiendo carpeta', err);
-                alert('Error subiendo la carpeta. Revisa la consola.');
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 4000,
+                    timerProgressBar: true
+                });
+                Toast.fire({
+                    icon: 'error',
+                    title: 'Error al subir la carpeta',
+                    text: err.message || 'No se pudo subir la carpeta.'
+                });
             } finally {
                 setIsUploading(false);
                 setProgresoSubida('');
             }
-        } else {
-            await subirArchivos(Array.from(e.dataTransfer?.files || []));
         }
     };
 
