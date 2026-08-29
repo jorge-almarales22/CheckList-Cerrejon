@@ -16,6 +16,7 @@ import {
 } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
 import { AC_HOST } from '../data/constants';
+import Swal from 'sweetalert2';
 
 // ---------------------------------------------------------------------------
 // File Manager tipo Drive/Dropbox para los entregables de una tarea.
@@ -195,7 +196,7 @@ const FileManager = ({
     const [filtroFecha, setFiltroFecha] = useState('todos');
 
     const [menuAbierto, setMenuAbierto] = useState(null); // id del elemento con menu abierto
-    const [modalAccion, setModalAccion] = useState(null); // null | 'nuevaCarpeta' | 'renombrar' | 'confirmarEliminar'
+    const [modalAccion, setModalAccion] = useState(null); // null | 'nuevaCarpeta' | 'renombrar'
     const [elementoSeleccionado, setElementoSeleccionado] = useState(null); // { tipo: 'carpeta'|'archivo', ... }
     const [nuevoNombre, setNuevoNombre] = useState('');
 
@@ -566,29 +567,59 @@ const FileManager = ({
         }
     };
 
-    // Abre el modal de confirmar eliminacion.
-    const abrirEliminar = (el) => {
-        setElementoSeleccionado(el);
-        setModalAccion('confirmarEliminar');
+    // Abre el modal de confirmar eliminacion (SweetAlert2).
+    const abrirEliminar = async (el) => {
         setMenuAbierto(null);
-    };
+        const esCarpeta = el.tipo === 'carpeta';
+        // Paso 1: modal moderno de confirmacion.
+        const result = await Swal.fire({
+            title: esCarpeta ? '¿Eliminar carpeta?' : '¿Eliminar evidencia?',
+            text: esCarpeta
+                ? 'Esta acción moverá la carpeta y todo su contenido a la papelera de SharePoint. ¿Deseas continuar?'
+                : 'Esta acción moverá el archivo a la papelera de SharePoint. ¿Deseas continuar?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            focusCancel: true
+        });
+        if (!result.isConfirmed) return;
 
-    // Ejecuta la eliminacion (papelera de reciclaje).
-    const ejecutarEliminar = async () => {
-        const el = elementoSeleccionado;
-        if (!el) return;
         try {
             const digest = await getRequestDigest();
-            if (el.tipo === 'carpeta') {
+            if (esCarpeta) {
                 await recycleFolder(el.ServerRelativeUrl, digest);
             } else {
                 await recycleFile(el.ServerRelativeUrl, digest);
             }
-            setModalAccion(null);
             await refrescar();
+
+            // Paso 2: toast de exito.
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.onmouseenter = Swal.stopTimer;
+                    toast.onmouseleave = Swal.resumeTimer;
+                }
+            });
+            Toast.fire({
+                icon: 'success',
+                title: esCarpeta ? 'Carpeta eliminada correctamente' : 'Evidencia eliminada correctamente'
+            });
         } catch (err) {
             console.error('Error eliminando', err);
-            alert('No se pudo eliminar. Revisa la consola.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al eliminar',
+                text: err.message || 'No se pudo eliminar el archivo'
+            });
         }
     };
 
@@ -787,23 +818,6 @@ const FileManager = ({
                             <div className="flex gap-2 justify-end">
                                 <button onClick={() => setModalAccion(null)} className="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-white/20">Cancelar</button>
                                 <button onClick={ejecutarRenombrar} className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-amber-400/30">Renombrar</button>
-                            </div>
-                        </>
-                    )}
-
-                    {modalAccion === 'confirmarEliminar' && el && (
-                        <>
-                            <h3 className="text-lg font-medium text-red-400 mb-3 flex items-center gap-2">
-                                {Icono.warning()} Eliminar {el.tipo === 'carpeta' ? 'carpeta' : 'archivo'}
-                            </h3>
-                            <p className="text-xs text-slate-400 font-semibold mb-4">
-                                ¿Seguro que deseas eliminar <span className="text-amber-300 font-bold">{el.Name}</span>?
-                                {el.tipo === 'carpeta' && ' Se eliminará todo su contenido.'}
-                                {' Se enviará a la papelera de reciclaje.'}
-                            </p>
-                            <div className="flex gap-2 justify-end">
-                                <button onClick={() => setModalAccion(null)} className="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-white/20">Cancelar</button>
-                                <button onClick={ejecutarEliminar} className="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors border border-red-400/30">Eliminar</button>
                             </div>
                         </>
                     )}

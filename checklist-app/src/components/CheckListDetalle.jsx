@@ -508,7 +508,21 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     }, [checklist, checklistId]);
 
     const eliminarEvidencia = async (itemId, ev) => {
-        if (!window.confirm("¿Seguro que deseas eliminar esta evidencia?")) return;
+        // Paso 1: modal moderno de confirmacion.
+        const result = await Swal.fire({
+            title: '¿Eliminar evidencia?',
+            text: 'Esta acción moverá el archivo a la papelera de SharePoint. ¿Deseas continuar?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            focusCancel: true
+        });
+        if (!result.isConfirmed) return;
+
         try {
             const digest = await getRequestDigest();
             if (ev.source === 'file') {
@@ -517,9 +531,30 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 await deleteSPListItem('EvidenciasChecklist', ev.listId, digest);
             }
             await cargarEvidencias(itemId);
+
+            // Paso 2: toast de exito.
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.onmouseenter = Swal.stopTimer;
+                    toast.onmouseleave = Swal.resumeTimer;
+                }
+            });
+            Toast.fire({
+                icon: 'success',
+                title: 'Evidencia eliminada correctamente'
+            });
         } catch (error) {
             console.error("Error eliminando evidencia", error);
-            alert("Fallo al eliminar.");
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al eliminar',
+                text: error.message || 'No se pudo eliminar el archivo'
+            });
         }
     };
 
@@ -681,8 +716,33 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     };
 
     const handleAprobar = async () => {
-        if (!window.confirm('¿Aprobar esta incorporación? Aparecerá junto con las demás y contará para las métricas.')) return;
-        if (await cambiarAprobacion('Aprobado', '')) alert('Incorporación aprobada.');
+        const result = await Swal.fire({
+            title: '¿Aprobar incorporación?',
+            text: 'Aparecerá junto con las demás y contará para las métricas.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#16a34a',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sí, aprobar',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            focusCancel: true
+        });
+        if (!result.isConfirmed) return;
+        if (await cambiarAprobacion('Aprobado', '')) {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.onmouseenter = Swal.stopTimer;
+                    toast.onmouseleave = Swal.resumeTimer;
+                }
+            });
+            Toast.fire({ icon: 'success', title: 'Incorporación aprobada' });
+        }
     };
 
     const handleRechazar = async () => {
@@ -807,7 +867,19 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     };
 
     const handleFinalizar = async () => {
-        if (!window.confirm('¿Estás seguro de finalizar este checklist? Una vez finalizado no podrá ser editado y se guardará un PDF como registro documental.')) return;
+        const result = await Swal.fire({
+            title: '¿Finalizar checklist?',
+            text: 'Una vez finalizado no podrá ser editado y se guardará un PDF como registro documental.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d97706',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sí, finalizar',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            focusCancel: true
+        });
+        if (!result.isConfirmed) return;
         try {
             const digest = await getRequestDigest();
             const hoy = new Date().toISOString().split('T')[0];
