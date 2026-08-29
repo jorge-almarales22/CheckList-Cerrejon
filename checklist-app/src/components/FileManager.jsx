@@ -376,8 +376,8 @@ const FileManager = ({
             .slice(0, max) || 'SinNombre';
 
     // Sube archivos a la carpeta actual (sin limite de tamano ni compresion).
-    // Si es la primera subida y la carpeta de la tarea no existe en
-    // SharePoint, pregunta si desea crearla antes de subir.
+    // La carpeta se asegura automaticamente (ensureFolder idempotente) sin
+    // preguntar al usuario.
     const subirArchivos = async (files) => {
         if (!files || !files.length) return;
         if (!checklist?.Tipo || !checklist?.Name) {
@@ -387,38 +387,6 @@ const FileManager = ({
                 text: 'No se pudo determinar el checklist para guardar la evidencia.'
             });
             return;
-        }
-
-        // 1) Verificar si la carpeta de la tarea ya existe en SharePoint.
-        let carpetaExiste = false;
-        try {
-            const check = await fetch(`${SGIA_SITE_URL}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(carpetaActualUrl)}')`, {
-                headers: { "Accept": "application/json;odata=verbose" },
-                credentials: 'same-origin'
-            });
-            carpetaExiste = check.ok;
-        } catch {
-            // Si falla la verificacion, se asume que no existe y se pregunta.
-        }
-
-        // 2) Si no existe (primera subida): preguntar si crear la carpeta.
-        if (!carpetaExiste) {
-            const result = await Swal.fire({
-                icon: 'question',
-                title: 'Crear carpeta de entregables',
-                html: `
-                    <p class="text-sm text-gray-600 mb-3">
-                        Esta tarea aún no tiene su carpeta de entregables en el repositorio.
-                        ¿Deseas crearla para poder subir los documentos?
-                    </p>
-                `,
-                showCancelButton: true,
-                confirmButtonText: 'Sí, crear carpeta',
-                cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#d97706',
-                cancelButtonColor: '#64748b'
-            });
-            if (!result.isConfirmed) return;
         }
 
         setIsUploading(true);
@@ -558,10 +526,33 @@ const FileManager = ({
                 confirmButtonText: 'Ir al repositorio',
                 cancelButtonText: 'Entendido',
                 confirmButtonColor: '#d97706'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.open(repoUrl, '_blank');
+            }).then(async (result) => {
+                if (!result.isConfirmed) return;
+                // Validar si la carpeta de la tarea existe; si no, crearla
+                // automaticamente con loading antes de redirigir.
+                try {
+                    const check = await fetch(`${SGIA_SITE_URL}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(carpetaActualUrl)}')`, {
+                        headers: { "Accept": "application/json;odata=verbose" },
+                        credentials: 'same-origin'
+                    });
+                    if (!check.ok) {
+                        // No existe: loading + crear carpeta de entregables.
+                        Swal.fire({
+                            title: 'Creando carpeta de entregables...',
+                            html: 'Preparando el repositorio de esta tarea...',
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            showConfirmButton: false,
+                            didOpen: () => Swal.showLoading()
+                        });
+                        const digest = await getRequestDigest();
+                        await ensureFolder(carpetaActualUrl, digest);
+                        await Swal.close();
+                    }
+                } catch (err) {
+                    console.error('Error verificando/creando carpeta:', err);
                 }
+                window.open(repoUrl, '_blank');
             });
             return;
         }
