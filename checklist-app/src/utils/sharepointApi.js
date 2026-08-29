@@ -90,19 +90,19 @@ export const getEntregablesFolderUrl = (tipo, checklistName) => {
 // Alias historico: el codigo y los datos existentes hablan de "evidencias".
 export const getEvidenciasFolderUrl = getEntregablesFolderUrl;
 
-// Crea una carpeta (idempotente). Primero verifica si existe con GET (evita
-// el HTTP 400 en consola cuando la carpeta ya existe); solo crea si falta.
-// La ruta se DECODIFICA antes de enviarla a addUsingPath.
+// Crea una carpeta (idempotente). Verifica si existe listando las subcarpetas
+// del padre (devuelve 200 siempre que el padre exista, sin 404 en consola);
+// solo crea si falta. La ruta se DECODIFICA antes de enviarla a addUsingPath.
 // La biblioteca de entregables vive en el sitio raiz SGIA, no en el sitio "ac".
 export const ensureFolder = async (serverRelativeUrl, digest, siteUrl = SGIA_SITE_URL) => {
     const cleanPath = decodeURIComponent(serverRelativeUrl);
     try {
-        // 1) Verificar si ya existe (GET no requiere digest).
-        const check = await fetch(`${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(cleanPath)}')`, {
-            headers: { "Accept": "application/json;odata=verbose" },
-            credentials: 'same-origin'
-        });
-        if (check.ok) return true; // ya existe
+        // 1) Verificar si ya existe listando las subcarpetas del padre
+        //    (evita el GET directo que genera HTTP 404 en consola).
+        const nombre = cleanPath.substring(cleanPath.lastIndexOf('/') + 1);
+        const padre = cleanPath.substring(0, cleanPath.lastIndexOf('/'));
+        const subs = await listFolderSubfolders(padre, siteUrl);
+        if (subs.some(s => s.Name === nombre)) return true; // ya existe
 
         // 2) Crearla (solo si no existe).
         const res = await fetch(`${siteUrl}/_api/web/folders/addUsingPath(DecodedUrl='${cleanPath}')`, {

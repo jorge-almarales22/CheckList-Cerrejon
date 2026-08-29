@@ -13,7 +13,7 @@ import {
     moveFolder,
     downloadFileContent
 } from '../utils/sharepointApi';
-import { AC_HOST, SGIA_SITE_URL } from '../data/constants';
+import { AC_HOST } from '../data/constants';
 import Swal from 'sweetalert2';
 
 // ---------------------------------------------------------------------------
@@ -531,11 +531,13 @@ const FileManager = ({
                 // Validar si la carpeta de la tarea existe; si no, crearla
                 // automaticamente con loading antes de redirigir.
                 try {
-                    const check = await fetch(`${SGIA_SITE_URL}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(carpetaActualUrl)}')`, {
-                        headers: { "Accept": "application/json;odata=verbose" },
-                        credentials: 'same-origin'
-                    });
-                    if (!check.ok) {
+                    // Verificar existencia listando las subcarpetas del padre
+                    // (evita el GET directo que genera HTTP 404 en consola).
+                    const nombreCarpeta = carpetaActualUrl.substring(carpetaActualUrl.lastIndexOf('/') + 1);
+                    const padreUrl = carpetaActualUrl.substring(0, carpetaActualUrl.lastIndexOf('/'));
+                    const subs = await listFolderSubfolders(padreUrl);
+                    const existe = subs.some(s => s.Name === nombreCarpeta);
+                    if (!existe) {
                         // No existe: loading + crear carpeta de entregables.
                         Swal.fire({
                             title: 'Creando carpeta de entregables...',

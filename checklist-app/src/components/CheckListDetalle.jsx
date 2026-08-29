@@ -688,6 +688,52 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         }
     };
 
+    // "Ir a Repositorio" (boton de la tarjeta): si la carpeta de la tarea no
+    // existe, la crea automaticamente con loading y redirige. No pregunta.
+    const abrirRepositorioTarea = async (itemId) => {
+        if (!checklist?.Tipo || !checklist?.Name) return;
+        const raizUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
+        const subcarpeta = nombreSubcarpetaTarea(itemId);
+        const urlSubcarpeta = `${AC_HOST}${raizUrl}/${subcarpeta}`;
+        try {
+            // Verifica si la subcarpeta existe listando las subcarpetas de la raiz.
+            const subs = await listFolderSubfolders(raizUrl);
+            const existe = subs.some(s => s.Name === subcarpeta);
+            if (existe) {
+                window.open(urlSubcarpeta, '_blank');
+                return;
+            }
+        } catch (err) {
+            console.error('Error verificando carpeta de tarea:', err);
+            window.open(`${AC_HOST}${raizUrl}`, '_blank');
+            return;
+        }
+
+        // No existe: crear la carpeta automaticamente con loading y redirigir.
+        Swal.fire({
+            title: 'Creando carpeta para esta tarea de incorporación...',
+            html: 'Preparando el repositorio de entregables...',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => Swal.showLoading()
+        });
+        try {
+            const digest = await getRequestDigest();
+            await ensureFolder(`${raizUrl}/${subcarpeta}`, digest);
+            await Swal.close();
+            window.open(urlSubcarpeta, '_blank');
+        } catch (err) {
+            console.error('Error creando carpeta de tarea:', err);
+            await Swal.close();
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo crear la carpeta. Revisa la consola.'
+            });
+        }
+    };
+
     const handleStartEdit = (item) => {
         setEditingId(item.Id);
         setEditForm({ ...item });
@@ -2223,29 +2269,31 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                         {!isFinalizado && puedeGestionar && (
                                                             <button
                                                                 onClick={() => setFileManagerTarea(it.Id)}
-                                                                title="Abrir Gestor de Entregables"
+                                                                title="Adjuntar evidencias de esta tarea"
                                                                 className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-colors border border-amber-500/40"
                                                             >
                                                                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                                                                 </svg>
-                                                                Abrir Gestor
+                                                                Adjuntar evidencias
                                                             </button>
                                                         )}
-                                                        {/* "Ir a Repositorio" solo si la tarea ya tiene evidencias: si no
-                                                            existen, la carpeta en SharePoint tampoco existe. */}
-                                                        {evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0 && (
-                                                            <button
-                                                                onClick={() => manejarIrRepositorio(it.Id)}
-                                                                title="Abrir la carpeta de esta tarea en SharePoint"
-                                                                className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-colors ${theme==='dark'?'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700':'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}`}
-                                                            >
-                                                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                                </svg>
-                                                                Ir a Repositorio
-                                                            </button>
-                                                        )}
+                                                        {/* "Ir a Repositorio": si la tarea tiene evidencias (posiblemente en
+                                                            la raiz sin carpeta), usa el flujo que pregunta crear carpeta y
+                                                            mover evidencias. Si no tiene evidencias, crea la carpeta
+                                                            automaticamente (loading) y redirige. */}
+                                                        <button
+                                                            onClick={() => (evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0)
+                                                                ? manejarIrRepositorio(it.Id)
+                                                                : abrirRepositorioTarea(it.Id)}
+                                                            title="Abrir la carpeta de esta tarea en SharePoint"
+                                                            className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-colors ${theme==='dark'?'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700':'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}`}
+                                                        >
+                                                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                            </svg>
+                                                            Ir a Repositorio
+                                                        </button>
                                                     </span>
                                                     <div className="flex gap-2 items-center">
                                                         {evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0 && (
