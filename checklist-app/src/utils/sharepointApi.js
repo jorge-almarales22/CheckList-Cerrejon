@@ -90,24 +90,34 @@ export const getEntregablesFolderUrl = (tipo, checklistName) => {
 // Alias historico: el codigo y los datos existentes hablan de "evidencias".
 export const getEvidenciasFolderUrl = getEntregablesFolderUrl;
 
-// Crea una carpeta (idempotente). Si ya existe, SharePoint responde error y se ignora.
+// Crea una carpeta (idempotente). Si ya existe, SharePoint responde 400/409 y
+// se considera exito. La ruta se DECODIFICA antes de enviarla a addUsingPath
+// (SharePoint exige texto plano con "/" reales, no %2F ni %20).
 // La biblioteca de entregables vive en el sitio raiz SGIA, no en el sitio "ac".
 export const ensureFolder = async (serverRelativeUrl, digest, siteUrl = SGIA_SITE_URL) => {
+    const cleanPath = decodeURIComponent(serverRelativeUrl);
     try {
-        const res = await fetch(`${siteUrl}/_api/web/folders/addUsingPath(DecodedUrl='${encodeURIComponent(serverRelativeUrl)}')`, {
+        const res = await fetch(`${siteUrl}/_api/web/folders/addUsingPath(DecodedUrl='${cleanPath}')`, {
             method: 'POST',
-            headers: { "Accept": "application/json;odata=verbose", "X-RequestDigest": digest },
+            headers: {
+                "Accept": "application/json;odata=verbose",
+                "Content-Type": "application/json;odata=verbose",
+                "X-RequestDigest": digest
+            },
             credentials: 'same-origin'
         });
-        return res.ok;
+        // 200/201 = creada; 400/409 = ya existia (idempotente).
+        return res.ok || res.status === 400 || res.status === 409;
     } catch {
         return false;
     }
 };
 
 // Sube un archivo binario (ArrayBuffer/Uint8Array) a una carpeta del document library.
+// La ruta de la carpeta se DECODIFICA (slashes "/" reales) para evitar HTTP 400.
 export const uploadFileToFolder = async (folderUrl, fileName, body, digest, siteUrl = SGIA_SITE_URL) => {
-    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(folderUrl)}')/Files/add(url='${encodeURIComponent(fileName)}',overwrite=true)`;
+    const cleanFolderUrl = decodeURIComponent(folderUrl);
+    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${cleanFolderUrl}')/Files/add(url='${encodeURIComponent(fileName)}',overwrite=true)`;
     const res = await fetch(url, {
         method: 'POST',
         headers: {

@@ -439,13 +439,13 @@ const FileManager = ({
     };
 
     // Sube una carpeta completa (drag & drop) recorriendo su arbol con webkitGetAsEntry.
-    const subirCarpetaCompleta = async (entry, rutaRelativa) => {
+    // Las subcarpetas se crean UNA sola vez al entrar al directorio (no por
+    // archivo), evitando llamadas repetidas a addUsingPath.
+    const subirCarpetaCompleta = async (entry, rutaRelativa, digest) => {
         if (entry.isFile) {
             const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
             // Si la carpeta tiene subcarpetas, el archivo va en la subcarpeta correspondiente.
             if (rutaRelativa) {
-                const digest = await getRequestDigest();
-                await ensureFolder(`${carpetaActualUrl}/${rutaRelativa}`, digest);
                 const usuario = (currentUser || 'usuario').split('@')[0]
                     .replace(/[~"#%&*:<>?/\\{|}']/g, '')
                     .trim()
@@ -466,6 +466,10 @@ const FileManager = ({
                 await subirArchivos([file]);
             }
         } else if (entry.isDirectory) {
+            // Crear la subcarpeta UNA vez (idempotente) antes de procesar su contenido.
+            if (rutaRelativa) {
+                await ensureFolder(`${carpetaActualUrl}/${rutaRelativa}`, digest);
+            }
             const reader = entry.createReader();
             const entries = await new Promise((resolve) => {
                 const all = [];
@@ -483,7 +487,7 @@ const FileManager = ({
             });
             for (const child of entries) {
                 const childRuta = rutaRelativa ? `${rutaRelativa}/${entry.name}` : entry.name;
-                await subirCarpetaCompleta(child, childRuta);
+                await subirCarpetaCompleta(child, childRuta, digest);
             }
         }
     };
@@ -526,9 +530,11 @@ const FileManager = ({
             setIsUploading(true);
             setProgresoSubida('Procesando carpetas...');
             try {
+                // Un solo digest para toda la operacion (evita llamadas repetidas).
+                const digest = await getRequestDigest();
                 for (const item of items) {
                     const entry = item.webkitGetAsEntry();
-                    if (entry) await subirCarpetaCompleta(entry, '');
+                    if (entry) await subirCarpetaCompleta(entry, '', digest);
                 }
                 await refrescar();
             } catch (err) {
