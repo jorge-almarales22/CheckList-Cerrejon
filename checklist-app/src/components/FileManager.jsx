@@ -13,7 +13,7 @@ import {
     moveFolder,
     downloadFileContent
 } from '../utils/sharepointApi';
-import { AC_HOST } from '../data/constants';
+import { AC_HOST, SGIA_SITE_URL } from '../data/constants';
 import Swal from 'sweetalert2';
 
 // ---------------------------------------------------------------------------
@@ -376,9 +376,8 @@ const FileManager = ({
             .slice(0, max) || 'SinNombre';
 
     // Sube archivos a la carpeta actual (sin limite de tamano ni compresion).
-    // Se asegura la carpeta UNA vez antes del bucle (ensureFolder es
-    // idempotente: 400/409 = ya existe) para evitar HTTP 404 si la carpeta
-    // fisica no existe en SharePoint.
+    // Si es la primera subida y la carpeta de la tarea no existe en
+    // SharePoint, pregunta si desea crearla antes de subir.
     const subirArchivos = async (files) => {
         if (!files || !files.length) return;
         if (!checklist?.Tipo || !checklist?.Name) {
@@ -389,6 +388,39 @@ const FileManager = ({
             });
             return;
         }
+
+        // 1) Verificar si la carpeta de la tarea ya existe en SharePoint.
+        let carpetaExiste = false;
+        try {
+            const check = await fetch(`${SGIA_SITE_URL}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(carpetaActualUrl)}')`, {
+                headers: { "Accept": "application/json;odata=verbose" },
+                credentials: 'same-origin'
+            });
+            carpetaExiste = check.ok;
+        } catch {
+            // Si falla la verificacion, se asume que no existe y se pregunta.
+        }
+
+        // 2) Si no existe (primera subida): preguntar si crear la carpeta.
+        if (!carpetaExiste) {
+            const result = await Swal.fire({
+                icon: 'question',
+                title: 'Crear carpeta de entregables',
+                html: `
+                    <p class="text-sm text-gray-600 mb-3">
+                        Esta tarea aún no tiene su carpeta de entregables en el repositorio.
+                        ¿Deseas crearla para poder subir los documentos?
+                    </p>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Sí, crear carpeta',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#d97706',
+                cancelButtonColor: '#64748b'
+            });
+            if (!result.isConfirmed) return;
+        }
+
         setIsUploading(true);
         setProgresoSubida('Preparando archivos...');
         try {
