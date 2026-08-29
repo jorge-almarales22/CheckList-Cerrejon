@@ -7,8 +7,8 @@
     <link rel="shortcut icon" href="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/img/fabiconCerrejon.png" type="image/png">
     <link rel="apple-touch-icon" href="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/img/fabiconCerrejon.png">
     <title>Incorporaci&oacute;n de Activos</title>
-  <script type="module" crossorigin src="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/assets/index-Bpr8Pjpq.js"></script>
-  <link rel="stylesheet" crossorigin href="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/assets/index-5bm54k46.css">
+  <script type="module" crossorigin src="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/assets/index-C7hQDD3l.js"></script>
+  <link rel="stylesheet" crossorigin href="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/assets/index-7m4va6wi.css">
 </head>
 <body>
     <div id="root"></div>

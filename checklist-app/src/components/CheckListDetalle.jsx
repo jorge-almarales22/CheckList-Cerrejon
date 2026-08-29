@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { esPendiente, esRechazado, esHistorico, esHistoricoGestionado, marcarHistoricoGestionado, getEstadoTarea, getCorresponsable, puedeGestionarTarea, puedeAsignarCorresponsable, mismoUsuario } from '../utils/calculations';
 import { notificarTeams } from '../utils/notifications';
-import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, listFolderFilesRecursive, listFolderSubfolders, recycleFile, fetchJerarquiaOpciones, conValorActual, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
+import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, listFolderFilesRecursive, listFolderSubfolders, recycleFile, moveFile, fetchJerarquiaOpciones, conValorActual, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
 import { AC_HOST, TIPOS_CHECKLIST, getTipoChecklist } from '../data/constants';
 import PeoplePicker from './PeoplePicker';
@@ -86,6 +86,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     // Por defecto el contenedor esta contraido (muestra solo los primeros
     // archivos) para no saturar la vista con volumen alto de evidencias.
     const [expandidoMap, setExpandidoMap] = useState({});
+
+    // Modal de "Ir a Repositorio": cuando la subcarpeta de la tarea no existe
+    // en SharePoint, se pregunta si crearla. { itemId, moverLegacy } | null.
+    const [modalRepositorio, setModalRepositorio] = useState(null);
+    const [creandoCarpetaRepo, setCreandoCarpetaRepo] = useState(false);
 
     // Unidades de proceso: siguen saliendo de la lista EquiposAC.
     const [acData, setAcData] = useState({ unidades: [] });
@@ -526,6 +531,82 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     // de esta sesión (evidenciasItem) o de una anterior (evidenciasPresence).
     const tieneEvidencias = (itemId) =>
         (evidenciasItem[itemId] && evidenciasItem[itemId].length > 0) || !!evidenciasPresence[itemId];
+
+    // "Ir a Repositorio": valida si la subcarpeta fisica de la tarea existe en
+    // SharePoint. Si existe, la abre directo. Si no, muestra el modal para
+    // crearla (o abrir solo la raiz de la incorporacion).
+    const manejarIrRepositorio = async (itemId) => {
+        if (!checklist?.Tipo || !checklist?.Name) return;
+        const raizUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
+        const subcarpeta = nombreSubcarpetaTarea(itemId);
+        const urlSubcarpeta = `${AC_HOST}${raizUrl}/${subcarpeta}`;
+        try {
+            // Verifica si la subcarpeta existe listando las subcarpetas de la raiz.
+            const subs = await listFolderSubfolders(raizUrl);
+            const existe = subs.some(s => s.Name === subcarpeta);
+            if (existe) {
+                window.open(urlSubcarpeta, '_blank');
+                return;
+            }
+            // No existe: mostrar modal de confirmacion.
+            setModalRepositorio({ itemId, moverLegacy: false });
+        } catch (err) {
+            console.error('Error verificando carpeta de tarea:', err);
+            // Si falla la verificacion, abrir la raiz (mas seguro que un enlace roto).
+            window.open(`${AC_HOST}${raizUrl}`, '_blank');
+        }
+    };
+
+    // Crea la subcarpeta de la tarea (y opcionalmente mueve los legacy).
+    const crearCarpetaRepositorio = async () => {
+        const info = modalRepositorio;
+        if (!info || !checklist?.Tipo || !checklist?.Name) return;
+        setCreandoCarpetaRepo(true);
+        try {
+            const digest = await getRequestDigest();
+            const raizUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
+            const subcarpeta = nombreSubcarpetaTarea(info.itemId);
+            const urlSubcarpeta = `${raizUrl}/${subcarpeta}`;
+            // Crea la carpeta (idempotente).
+            await ensureFolder(urlSubcarpeta, digest);
+
+            // Opcional: mover los archivos legacy de la raiz (prefijo <orden>_)
+            // a la nueva subcarpeta.
+            if (info.moverLegacy) {
+                const orden = getOrdenTarea(info.itemId);
+                const filesRaiz = await listFolderFiles(raizUrl);
+                const legacy = filesRaiz.filter(f =>
+                    (orden && f.Name.startsWith(`${orden}_`)) || f.Name.startsWith(`Evidencia_${info.itemId}_`)
+                );
+                for (const f of legacy) {
+                    try {
+                        await moveFile(f.ServerRelativeUrl, urlSubcarpeta, digest);
+                    } catch (moveErr) {
+                        console.error(`Error moviendo legacy ${f.Name}:`, moveErr);
+                    }
+                }
+                // Refresca la lista local de evidencias de la tarea.
+                await cargarEvidencias(info.itemId);
+            }
+
+            setModalRepositorio(null);
+            // Abre la subcarpeta recien creada.
+            window.open(`${AC_HOST}${urlSubcarpeta}`, '_blank');
+        } catch (err) {
+            console.error('Error creando carpeta de tarea:', err);
+            alert('No se pudo crear la carpeta. Revisa la consola.');
+        } finally {
+            setCreandoCarpetaRepo(false);
+        }
+    };
+
+    // Abre solo la raiz de la incorporacion en SharePoint.
+    const abrirRaizRepositorio = () => {
+        if (!checklist?.Tipo || !checklist?.Name) return;
+        const raizUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
+        window.open(`${AC_HOST}${raizUrl}`, '_blank');
+        setModalRepositorio(null);
+    };
 
     const handleStartEdit = (item) => {
         setEditingId(item.Id);
@@ -2038,7 +2119,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                             existen, la carpeta en SharePoint tampoco existe. */}
                                                         {evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0 && (
                                                             <button
-                                                                onClick={() => window.open(`${AC_HOST}${getEvidenciasFolderUrl(checklist?.Tipo, checklist?.Name)}/${nombreSubcarpetaTarea(it.Id)}`, '_blank')}
+                                                                onClick={() => manejarIrRepositorio(it.Id)}
                                                                 title="Abrir la carpeta de esta tarea en SharePoint"
                                                                 className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-colors ${theme==='dark'?'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700':'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}`}
                                                             >
@@ -2534,6 +2615,56 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     />
                 );
             })()}
+
+            {/* Modal: la subcarpeta de la tarea no existe en SharePoint */}
+            {modalRepositorio && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]"
+                    onClick={() => !creandoCarpetaRepo && setModalRepositorio(null)}
+                >
+                    <div
+                        className={`border p-6 rounded-2xl max-w-md w-full shadow-2xl ${theme==='dark'?'bg-slate-800 border-white/20 text-white':'bg-white border-slate-200 text-slate-900'}`}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-medium text-amber-400 mb-3 flex items-center gap-2">
+                            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.492-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                            Carpeta de tarea no encontrada
+                        </h3>
+                        <p className="text-xs text-slate-400 font-semibold mb-4">
+                            Esta tarea tiene evidencias en la raíz de la incorporación pero aún no tiene su carpeta física creada. ¿Deseas crear la carpeta para esta tarea?
+                        </p>
+                        <label className={`flex items-start gap-2 text-[11px] font-semibold mb-4 p-2 rounded-lg border cursor-pointer ${theme==='dark'?'bg-slate-950/40 border-slate-700 text-slate-200':'bg-slate-100 border-slate-300 text-slate-700'}`}>
+                            <input
+                                type="checkbox"
+                                className="mt-0.5 accent-yellow-500"
+                                checked={!!modalRepositorio.moverLegacy}
+                                onChange={(e) => setModalRepositorio(prev => prev ? { ...prev, moverLegacy: e.target.checked } : prev)}
+                                disabled={creandoCarpetaRepo}
+                            />
+                            <span>Mover automáticamente los archivos legacy de esta tarea a la nueva carpeta</span>
+                        </label>
+                        <div className="flex flex-col gap-2">
+                            <button
+                                onClick={abrirRaizRepositorio}
+                                disabled={creandoCarpetaRepo}
+                                className={`w-full text-[11px] font-bold px-3 py-2 rounded-lg border transition-colors ${theme==='dark'?'bg-slate-700 hover:bg-slate-600 text-white border-slate-600':'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'}`}
+                            >
+                                Solo abrir raíz en SharePoint
+                            </button>
+                            <button
+                                onClick={crearCarpetaRepositorio}
+                                disabled={creandoCarpetaRepo}
+                                className="w-full flex items-center justify-center gap-2 text-[11px] font-bold px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white border border-amber-400/30 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                            >
+                                {creandoCarpetaRepo && (
+                                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                )}
+                                {creandoCarpetaRepo ? 'Creando carpeta...' : 'Crear carpeta'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

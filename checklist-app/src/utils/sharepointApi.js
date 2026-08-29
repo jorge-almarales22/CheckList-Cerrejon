@@ -223,6 +223,30 @@ export const renameFolder = async (folderRef, nuevoNombre, digest, siteUrl = SGI
     if (!res.ok) throw new Error(`HTTP ${res.status} renombrando carpeta`);
 };
 
+// Mueve un archivo a otra carpeta (misma biblioteca). carpetaDestinoUrl es la
+// ruta server-relative de la carpeta destino (sin el nombre del archivo).
+// Nota: se usa MoveToUsingPath(DecodedUrl='...') que acepta la ruta destino
+// DECODIFICADA (con "/" reales, no %2F). El metodo moveto(newurl=...) con
+// encodeURIComponent codificaba los slashes como %2F y SharePoint respondia
+// HTTP 400.
+export const moveFile = async (fileRef, carpetaDestinoUrl, digest, siteUrl = SGIA_SITE_URL) => {
+    const origen = decodeURIComponent(fileRef);
+    const nombre = origen.substring(origen.lastIndexOf('/') + 1);
+    const destino = `${decodeURIComponent(carpetaDestinoUrl)}/${nombre}`;
+    const url = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${origen}')/MoveToUsingPath(DecodedUrl='${destino}',Overwrite=@a1)?@a1=true`;
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+            "Accept": "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "X-RequestDigest": digest,
+            "IF-MATCH": "*"
+        },
+        credentials: 'same-origin'
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} moviendo archivo`);
+};
+
 // Descarga el contenido binario de un archivo (GET no requiere digest).
 // Devuelve un Blob listo para <a download>.
 export const downloadFileContent = async (fileRef, siteUrl = SGIA_SITE_URL) => {
