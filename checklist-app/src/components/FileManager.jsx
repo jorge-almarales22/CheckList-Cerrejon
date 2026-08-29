@@ -11,10 +11,8 @@ import {
     recycleFolder,
     renameFile,
     renameFolder,
-    downloadFileContent,
-    dataUrlToUint8Array
+    downloadFileContent
 } from '../utils/sharepointApi';
-import { comprimirImagen } from '../utils/imageCompression';
 import { AC_HOST } from '../data/constants';
 import Swal from 'sweetalert2';
 
@@ -356,7 +354,11 @@ const FileManager = ({
             await cargarCarpetaActual();
         } catch (err) {
             console.error('Error creando carpeta', err);
-            alert('No se pudo crear la carpeta.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo crear la carpeta.'
+            });
         }
     };
 
@@ -368,7 +370,7 @@ const FileManager = ({
             .trim()
             .slice(0, max) || 'SinNombre';
 
-    // Sube archivos a la carpeta actual (con compresion de imagenes y anti-colision).
+    // Sube archivos a la carpeta actual (sin limite de tamano ni compresion).
     // La carpeta actual ya existe en el gestor: NO se llama ensureFolder ni
     // addUsingPath aqui (evita el HTTP 400 repetido en el log).
     const subirArchivos = async (files) => {
@@ -399,26 +401,9 @@ const FileManager = ({
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 setProgresoSubida(`Subiendo ${file.name} (${i + 1}/${files.length})...`);
-                let body;
-                let ext;
-
-                if (file.type.startsWith('image/')) {
-                    const dataUrl = await comprimirImagen(file, 1024, 0.6);
-                    body = dataUrlToUint8Array(dataUrl);
-                    ext = 'jpg';
-                } else {
-                    const maxSize = 25 * 1024 * 1024;
-                    if (file.size > maxSize) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Archivo muy grande',
-                            text: `El archivo "${file.name}" supera el límite de 25MB.`
-                        });
-                        continue;
-                    }
-                    body = await file.arrayBuffer();
-                    ext = (file.name.split('.').pop() || 'dat').replace(/[^a-z0-9]/gi, '') || 'dat';
-                }
+                // Binario original: sin compresion ni redimension (calidad intacta).
+                const body = await file.arrayBuffer();
+                const ext = (file.name.split('.').pop() || 'dat').replace(/[^a-z0-9]/gi, '') || 'dat';
 
                 const nombreDoc = sanitizarNombre(file.name.replace(/\.[^.]+$/, ''), 60);
                 const base = `${orden}_${nombreDoc}_${usuario}`;
@@ -489,13 +474,8 @@ const FileManager = ({
                 const nombreDoc = sanitizarNombre(file.name.replace(/\.[^.]+$/, ''), 60);
                 const ext = (file.name.split('.').pop() || 'dat').replace(/[^a-z0-9]/gi, '') || 'dat';
                 const fileName = `${orden}_${nombreDoc}_${usuario}.${ext}`;
-                let body;
-                if (file.type.startsWith('image/')) {
-                    const dataUrl = await comprimirImagen(file, 1024, 0.6);
-                    body = dataUrlToUint8Array(dataUrl);
-                } else {
-                    body = await file.arrayBuffer();
-                }
+                // Binario original: sin compresion ni redimension.
+                const body = await file.arrayBuffer();
                 await uploadFileToFolder(`${carpetaActualUrl}/${rutaRelativa}`, fileName, body, digest);
             } else {
                 await subirArchivos([file]);
@@ -656,7 +636,11 @@ const FileManager = ({
             await refrescar();
         } catch (err) {
             console.error('Error renombrando', err);
-            alert('No se pudo renombrar. Revisa la consola.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al renombrar',
+                text: err.message || 'No se pudo renombrar. Revisa la consola.'
+            });
         }
     };
 
