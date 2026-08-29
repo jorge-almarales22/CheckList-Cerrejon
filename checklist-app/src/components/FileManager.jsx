@@ -376,8 +376,9 @@ const FileManager = ({
             .slice(0, max) || 'SinNombre';
 
     // Sube archivos a la carpeta actual (sin limite de tamano ni compresion).
-    // La carpeta actual ya existe en el gestor: NO se llama ensureFolder ni
-    // addUsingPath aqui (evita el HTTP 400 repetido en el log).
+    // Se asegura la carpeta UNA vez antes del bucle (ensureFolder es
+    // idempotente: 400/409 = ya existe) para evitar HTTP 404 si la carpeta
+    // fisica no existe en SharePoint.
     const subirArchivos = async (files) => {
         if (!files || !files.length) return;
         if (!checklist?.Tipo || !checklist?.Name) {
@@ -392,6 +393,8 @@ const FileManager = ({
         setProgresoSubida('Preparando archivos...');
         try {
             const digest = await getRequestDigest();
+            // Asegura que la carpeta actual exista (idempotente, sin errores).
+            await ensureFolder(carpetaActualUrl, digest);
 
             const usuario = (currentUser || 'usuario').split('@')[0]
                 .replace(/[~"#%&*:<>?/\\{|}']/g, '')
@@ -546,26 +549,44 @@ const FileManager = ({
         dragCounter.current = 0;
         setIsDragOver(false);
 
-        // 1) Archivos sueltos: extraer de dataTransfer.files (mas confiable).
-        const files = Array.from(e.dataTransfer?.files || []);
-        if (files.length > 0) {
-            await subirArchivos(files);
-            return;
+        // 1) Detectar si se arrastraron carpetas completas (directorios).
+        const items = Array.from(e.dataTransfer?.items || []);
+        let contieneDirectorios = false;
+        for (const item of items) {
+            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+            if (entry && entry.isDirectory) {
+                contieneDirectorios = true;
+                break;
+            }
         }
 
-        // 2) Carpetas completas: usar webkitGetAsEntry (recursivo).
-        const items = e.dataTransfer?.items;
-        if (items && items.length && items[0].webkitGetAsEntry) {
+        // 2) Si hay carpetas: subirlas completas (recursivo con subcarpetas).
+        if (contieneDirectorios) {
             setIsUploading(true);
             setProgresoSubida('Procesando carpetas...');
             try {
                 // Un solo digest para toda la operacion (evita llamadas repetidas).
                 const digest = await getRequestDigest();
                 for (const item of items) {
-                    const entry = item.webkitGetAsEntry();
+                    const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
                     if (entry) await subirCarpetaCompleta(entry, '', digest);
                 }
                 await refrescar();
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.onmouseenter = Swal.stopTimer;
+                        toast.onmouseleave = Swal.resumeTimer;
+                    }
+                });
+                Toast.fire({
+                    icon: 'success',
+                    title: 'Carpetas subidas correctamente'
+                });
             } catch (err) {
                 console.error('Error subiendo carpeta', err);
                 const Toast = Swal.mixin({
@@ -584,7 +605,13 @@ const FileManager = ({
                 setIsUploading(false);
                 setProgresoSubida('');
             }
+            return;
         }
+
+        // 3) Si son solo archivos individuales o multiples, subida normal.
+        const files = Array.from(e.dataTransfer?.files || []);
+        if (files.length === 0) return;
+        await subirArchivos(files);
     };
 
     // Abre un archivo en pestaña nueva (previsualizar en SharePoint).

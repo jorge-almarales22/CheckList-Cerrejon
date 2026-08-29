@@ -114,10 +114,11 @@ export const ensureFolder = async (serverRelativeUrl, digest, siteUrl = SGIA_SIT
 };
 
 // Sube un archivo binario (ArrayBuffer/Uint8Array) a una carpeta del document library.
-// La ruta de la carpeta se DECODIFICA (slashes "/" reales) para evitar HTTP 400.
+// La ruta de la carpeta se codifica con encodeURIComponent (slashes %2F),
+// consistente con listFolderFiles/listFolderSubfolders que SI funcionan.
+// Usar decodeURIComponent aqui causaba HTTP 404 (carpeta no encontrada).
 export const uploadFileToFolder = async (folderUrl, fileName, body, digest, siteUrl = SGIA_SITE_URL) => {
-    const cleanFolderUrl = decodeURIComponent(folderUrl);
-    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${cleanFolderUrl}')/Files/add(url='${encodeURIComponent(fileName)}',overwrite=true)`;
+    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURIComponent(folderUrl)}')/Files/add(url='${encodeURIComponent(fileName)}',overwrite=true)`;
     const res = await fetch(url, {
         method: 'POST',
         headers: {
