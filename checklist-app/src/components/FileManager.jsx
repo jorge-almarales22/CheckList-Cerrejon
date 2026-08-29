@@ -141,8 +141,6 @@ const tipoArchivo = (nombre) => {
     return 'otro';
 };
 
-const esImagen = (nombre) => tipoArchivo(nombre) === 'imagen';
-
 // Icono y color por tipo de archivo (para el grid agrupado).
 const infoTipo = (tipo) => {
     switch (tipo) {
@@ -597,6 +595,15 @@ const FileManager = ({
             const destinoUrl = carpetaDestinoMover
                 ? `${raizUrl}/${carpetaDestinoMover}`
                 : raizUrl;
+
+            // Validacion: el destino debe ser distinto de la carpeta actual
+            // del elemento (no tiene sentido "mover" a donde ya esta).
+            const carpetaActualEl = el.ServerRelativeUrl.substring(0, el.ServerRelativeUrl.lastIndexOf('/'));
+            if (carpetaActualEl === destinoUrl) {
+                alert('El elemento ya está en esa carpeta.');
+                return;
+            }
+
             if (el.tipo === 'carpeta') {
                 await moveFolder(el.ServerRelativeUrl, destinoUrl, digest);
             } else {
@@ -757,7 +764,6 @@ const FileManager = ({
     const renderElemento = (el) => {
         const esCarpeta = el.tipo === 'carpeta';
         const info = esCarpeta ? null : infoTipo(tipoArchivo(el.Name));
-        const esImg = esCarpeta ? false : esImagen(el.Name);
         return (
             <div
                 key={el.Id}
@@ -769,14 +775,9 @@ const FileManager = ({
                     <div className="flex items-center gap-2 min-w-0">
                         {esCarpeta ? (
                             <span className="text-amber-500 shrink-0">{Icono.folder('h-8 w-8')}</span>
-                        ) : esImg ? (
-                            <img
-                                src={`${AC_HOST}${el.ServerRelativeUrl}`}
-                                alt={el.Name}
-                                className="h-8 w-8 object-cover rounded"
-                                loading="lazy"
-                            />
                         ) : (
+                            // Icono generico segun extension (sin cargar el
+                            // contenido real del archivo: navegacion ligera).
                             <span className={`${info.color} shrink-0`}>{info.icono('h-8 w-8')}</span>
                         )}
                         <div className="min-w-0">

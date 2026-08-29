@@ -2036,6 +2036,16 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                                 Abrir Gestor
                                                             </button>
                                                         )}
+                                                        <button
+                                                            onClick={() => window.open(`${AC_HOST}${getEvidenciasFolderUrl(checklist?.Tipo, checklist?.Name)}/${nombreSubcarpetaTarea(it.Id)}`, '_blank')}
+                                                            title="Abrir la carpeta de esta tarea en SharePoint"
+                                                            className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-colors ${theme==='dark'?'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700':'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}`}
+                                                        >
+                                                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                            </svg>
+                                                            Ir a Repositorio
+                                                        </button>
                                                     </span>
                                                     <div className="flex gap-2 items-center">
                                                         {evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0 && (
@@ -2059,20 +2069,40 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                             {(!evidenciasItem[it.Id] || evidenciasItem[it.Id].length === 0) ? (
                                                                 <span className="text-slate-900 dark:text-slate-200 font-bold text-xs italic">Aún no se han cargado evidencias para esta tarea.</span>
                                                             ) : (
-                                                                evidenciasItem[it.Id].map(ev => (
-                                                                    <div key={ev.Id} className="relative group border border-slate-200 dark:border-slate-800 rounded-md p-1 bg-white dark:bg-slate-900 shadow-lg">
-                                                                        {ev.isImage ? (
-                                                                            <img src={ev.Data} className="h-16 w-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity" onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(evidenciasItem[it.Id].findIndex(e => e.Id === ev.Id)); }} />
-                                                                        ) : (
-                                                                            <div className="h-16 w-16 flex flex-col items-center justify-center text-[10px] font-bold text-slate-900 dark:text-slate-200 font-bold rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-center" onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(evidenciasItem[it.Id].findIndex(e => e.Id === ev.Id)); }}>
-                                                                                DOC
-                                                                            </div>
-                                                                        )}
-                                                                        {!isFinalizado && puedeGestionar && (
-                                                                            <button onClick={() => eliminarEvidencia(it.Id, ev)} className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-md">&times;</button>
-                                                                        )}
-                                                                    </div>
-                                                                ))
+                                                                evidenciasItem[it.Id].map(ev => {
+                                                                    // Icono generico segun la extension (sin cargar el contenido real).
+                                                                    const ext = (ev.Name || '').split('.').pop().toLowerCase();
+                                                                    const esImg = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
+                                                                    const esPdf = ext === 'pdf';
+                                                                    const esDoc = ['doc', 'docx', 'odt', 'rtf', 'txt'].includes(ext);
+                                                                    const esXls = ['xls', 'xlsx', 'csv'].includes(ext);
+                                                                    const colorIcono = esImg ? 'text-purple-500' : esPdf ? 'text-red-500' : esDoc ? 'text-blue-500' : esXls ? 'text-green-600' : 'text-slate-500';
+                                                                    const etiqueta = esImg ? 'IMG' : esPdf ? 'PDF' : esDoc ? 'DOC' : esXls ? 'XLS' : 'FILE';
+                                                                    return (
+                                                                        <div key={ev.Id} className="relative group border border-slate-200 dark:border-slate-800 rounded-md p-1.5 bg-white dark:bg-slate-900 shadow-lg w-[88px]">
+                                                                            <button
+                                                                                onClick={() => window.open(ev.Data, '_blank')}
+                                                                                title={`Abrir ${ev.Name}`}
+                                                                                className="w-full flex flex-col items-center gap-1 cursor-pointer"
+                                                                            >
+                                                                                <span className={`h-10 w-10 flex items-center justify-center rounded ${colorIcono} bg-slate-100 dark:bg-slate-800`}>
+                                                                                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                        {esImg ? (
+                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                                        ) : (
+                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                                        )}
+                                                                                    </svg>
+                                                                                </span>
+                                                                                <span className="text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">{etiqueta}</span>
+                                                                                <span className="text-[9px] font-bold text-slate-900 dark:text-slate-200 text-center break-all leading-tight line-clamp-2">{ev.Name}</span>
+                                                                            </button>
+                                                                            {!isFinalizado && puedeGestionar && (
+                                                                                <button onClick={() => eliminarEvidencia(it.Id, ev)} className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-md">&times;</button>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })
                                                             )}
                                                         </div>
                                                     )}
