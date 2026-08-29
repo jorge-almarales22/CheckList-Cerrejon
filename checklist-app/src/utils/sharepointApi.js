@@ -263,6 +263,31 @@ export const moveFile = async (fileRef, carpetaDestinoUrl, digest, siteUrl = SGI
     return true;
 };
 
+// Mueve una carpeta (con todo su contenido) a otra carpeta de la misma
+// biblioteca. Usa MoveToUsingPath con rutas decodificadas (slashes "/" reales,
+// no %2F) para evitar HTTP 400.
+export const moveFolder = async (folderRef, carpetaDestinoUrl, digest, siteUrl = SGIA_SITE_URL) => {
+    const origen = decodeURIComponent(folderRef);
+    const nombre = origen.substring(origen.lastIndexOf('/') + 1);
+    const destino = `${decodeURIComponent(carpetaDestinoUrl)}/${nombre}`;
+    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${origen}')/MoveToUsingPath(DecodedUrl='${destino}',Overwrite=@a1)?@a1=true`;
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+            "Accept": "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "X-RequestDigest": digest,
+            "IF-MATCH": "*"
+        },
+        credentials: 'same-origin'
+    });
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status} moviendo carpeta: ${errText}`);
+    }
+    return true;
+};
+
 // Descarga el contenido binario de un archivo (GET no requiere digest).
 // Devuelve un Blob listo para <a download>.
 export const downloadFileContent = async (fileRef, siteUrl = SGIA_SITE_URL) => {
