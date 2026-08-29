@@ -275,3 +275,10 @@ input:-webkit-autofill:active {
         margin-left: 1rem;
     }
 }
+
+/* SweetAlert2 siempre al frente de los modales de la app (FileManager usa
+   z-[9999]; los popovers z-1100). Sin esto, las confirmaciones quedan
+   detras del Gestor de Entregables y son invisibles. */
+.swal2-container {
+    z-index: 99999 !important;
+}

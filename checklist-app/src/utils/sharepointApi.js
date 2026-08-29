@@ -185,14 +185,13 @@ export const recycleFolder = async (folderRef, digest, siteUrl = SGIA_SITE_URL) 
 
 // Renombra un archivo dentro de su carpeta usando MoveTo (flag 1 = overwrite).
 // nuevoNombre debe incluir la extensión.
-// Nota: GetFileByServerRelativeUrl acepta slashes normales (encodeURI), pero
-// el parametro newurl de moveto debe estar COMPLETAMENTE URL-encoded (con %2F
-// para los slashes), segun la documentacion de SharePoint.
+// Nota: newurl debe ir con la ruta DECODIFICADA (slashes "/" limpios, no %2F)
+// para que SharePoint la interprete como ruta y no como nombre invalido.
 export const renameFile = async (fileRef, nuevoNombre, digest, siteUrl = SGIA_SITE_URL) => {
     const origen = decodeURIComponent(fileRef);
     const carpeta = origen.substring(0, origen.lastIndexOf('/'));
-    const destino = `${carpeta}/${nuevoNombre}`;
-    const url = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${encodeURI(origen)}')/moveto(newurl='${encodeURIComponent(destino)}',flags=1)`;
+    const destino = `${carpeta}/${nuevoNombre.trim()}`;
+    const url = `${siteUrl}/_api/web/GetFileByServerRelativeUrl('${origen}')/moveto(newurl='${destino}',flags=1)`;
     const res = await fetch(url, {
         method: 'POST',
         headers: {
@@ -202,15 +201,21 @@ export const renameFile = async (fileRef, nuevoNombre, digest, siteUrl = SGIA_SI
         },
         credentials: 'same-origin'
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status} renombrando archivo`);
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status} renombrando archivo: ${errText}`);
+    }
+    return true;
 };
 
 // Renombra una carpeta usando MoveTo (flag 1 = overwrite).
+// Nota: newurl debe ir con la ruta DECODIFICADA (slashes "/" limpios, no %2F)
+// para que SharePoint la interprete como ruta y no como nombre invalido.
 export const renameFolder = async (folderRef, nuevoNombre, digest, siteUrl = SGIA_SITE_URL) => {
     const origen = decodeURIComponent(folderRef);
     const padre = origen.substring(0, origen.lastIndexOf('/'));
-    const destino = `${padre}/${nuevoNombre}`;
-    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodeURI(origen)}')/moveto(newurl='${encodeURIComponent(destino)}',flags=1)`;
+    const destino = `${padre}/${nuevoNombre.trim()}`;
+    const url = `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${origen}')/moveto(newurl='${destino}',flags=1)`;
     const res = await fetch(url, {
         method: 'POST',
         headers: {
@@ -220,7 +225,11 @@ export const renameFolder = async (folderRef, nuevoNombre, digest, siteUrl = SGI
         },
         credentials: 'same-origin'
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status} renombrando carpeta`);
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status} renombrando carpeta: ${errText}`);
+    }
+    return true;
 };
 
 // Mueve un archivo a otra carpeta (misma biblioteca). carpetaDestinoUrl es la
