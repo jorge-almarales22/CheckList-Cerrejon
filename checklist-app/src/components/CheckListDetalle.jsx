@@ -82,6 +82,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     // null = cerrado. Se abre desde el boton "Abrir Gestor de Entregables".
     const [fileManagerTarea, setFileManagerTarea] = useState(null);
 
+    // Tareas con el contenedor de evidencias expandido (itemId -> bool).
+    // Por defecto el contenedor esta contraido (muestra solo los primeros
+    // archivos) para no saturar la vista con volumen alto de evidencias.
+    const [expandidoMap, setExpandidoMap] = useState({});
+
     // Unidades de proceso: siguen saliendo de la lista EquiposAC.
     const [acData, setAcData] = useState({ unidades: [] });
     const [acLoading, setAcLoading] = useState(true);
@@ -2062,33 +2067,44 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     {cargandoEvidencias[it.Id] ? (
                                                         <span className="text-yellow-500 text-xs italic block text-center">Consultando servidor...</span>
                                                     ) : (
-                                                        <div className="flex flex-wrap gap-3">
+                                                        <>
                                                             {(!evidenciasItem[it.Id] || evidenciasItem[it.Id].length === 0) ? (
                                                                 <span className="text-slate-900 dark:text-slate-200 font-bold text-xs italic">Aún no se han cargado evidencias para esta tarea.</span>
                                                             ) : (
-                                                                evidenciasItem[it.Id].map(ev => {
-                                                                    // Icono generico segun la extension (sin cargar el contenido real).
-                                                                    const ext = (ev.Name || '').split('.').pop().toLowerCase();
-                                                                    const esImg = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
-                                                                    const esPdf = ext === 'pdf';
-                                                                    const esDoc = ['doc', 'docx', 'odt', 'rtf', 'txt'].includes(ext);
-                                                                    const esXls = ['xls', 'xlsx', 'csv'].includes(ext);
-                                                                    const colorIcono = esImg ? 'text-purple-500' : esPdf ? 'text-red-500' : esDoc ? 'text-blue-500' : esXls ? 'text-green-600' : 'text-slate-500';
-                                                                    const etiqueta = esImg ? 'IMG' : esPdf ? 'PDF' : esDoc ? 'DOC' : esXls ? 'XLS' : 'FILE';
+                                                                (() => {
+                                                                    // Modo contraido por defecto: solo los primeros N archivos.
+                                                                    // Expandir una tarea no afecta a las demas (expandidoMap por itemId).
+                                                                    const LIMITE = 8;
+                                                                    const total = evidenciasItem[it.Id].length;
+                                                                    const expandido = !!expandidoMap[it.Id];
+                                                                    const visibles = expandido ? evidenciasItem[it.Id] : evidenciasItem[it.Id].slice(0, LIMITE);
+                                                                    const ocultos = total - visibles.length;
                                                                     return (
-                                                                        <div key={ev.Id} className="relative group border border-slate-200 dark:border-slate-800 rounded-md p-1.5 bg-white dark:bg-slate-900 shadow-lg w-[88px]">
-                                                                            <button
-                                                                                onClick={() => window.open(ev.Data, '_blank')}
-                                                                                title={`Abrir ${ev.Name}`}
-                                                                                className="w-full flex flex-col items-center gap-1 cursor-pointer"
-                                                                            >
-                                                                                <span className={`h-10 w-10 flex items-center justify-center rounded ${colorIcono} bg-slate-100 dark:bg-slate-800`}>
-                                                                                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                        {esImg ? (
-                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                                                        ) : (
-                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                                                        )}
+                                                                        <>
+                                                                            <div className={`flex flex-wrap gap-3 ${expandido ? '' : 'max-h-[140px] overflow-hidden'}`}>
+                                                                                {visibles.map(ev => {
+                                                                                    // Icono generico segun la extension (sin cargar el contenido real).
+                                                                                    const ext = (ev.Name || '').split('.').pop().toLowerCase();
+                                                                                    const esImg = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
+                                                                                    const esPdf = ext === 'pdf';
+                                                                                    const esDoc = ['doc', 'docx', 'odt', 'rtf', 'txt'].includes(ext);
+                                                                                    const esXls = ['xls', 'xlsx', 'csv'].includes(ext);
+                                                                                    const colorIcono = esImg ? 'text-purple-500' : esPdf ? 'text-red-500' : esDoc ? 'text-blue-500' : esXls ? 'text-green-600' : 'text-slate-500';
+                                                                                    const etiqueta = esImg ? 'IMG' : esPdf ? 'PDF' : esDoc ? 'DOC' : esXls ? 'XLS' : 'FILE';
+                                                                                    return (
+                                                                                        <div key={ev.Id} className="relative group border border-slate-200 dark:border-slate-800 rounded-md p-1.5 bg-white dark:bg-slate-900 shadow-lg w-[88px]">
+                                                                                            <button
+                                                                                                onClick={() => window.open(ev.Data, '_blank')}
+                                                                                                title={`Abrir ${ev.Name}`}
+                                                                                                className="w-full flex flex-col items-center gap-1 cursor-pointer"
+                                                                                            >
+                                                                                                <span className={`h-10 w-10 flex items-center justify-center rounded ${colorIcono} bg-slate-100 dark:bg-slate-800`}>
+                                                                                                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                        {esImg ? (
+                                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                                                        ) : (
+                                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                                                        )}
                                                                                     </svg>
                                                                                 </span>
                                                                                 <span className="text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">{etiqueta}</span>
@@ -2099,9 +2115,25 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                                             )}
                                                                         </div>
                                                                     );
-                                                                })
+                                                                })}
+                                                                            </div>
+                                                                            {ocultos > 0 && (
+                                                                                <button
+                                                                                    onClick={() => setExpandidoMap(prev => ({ ...prev, [it.Id]: !expandido }))}
+                                                                                    className={`w-full flex items-center justify-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${theme==='dark'?'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700':'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}`}
+                                                                                >
+                                                                                    {expandido ? (
+                                                                                        <>Ver menos ({total} archivos) <span className="text-[8px]">▲</span></>
+                                                                                    ) : (
+                                                                                        <>Ver todos ({total} archivos) <span className="text-[8px]">▼</span></>
+                                                                                    )}
+                                                                                </button>
+                                                                            )}
+                                                                        </>
+                                                                    );
+                                                                })()
                                                             )}
-                                                        </div>
+                                                        </>
                                                     )}
 
                                                     {!isFinalizado && puedeGestionar && (
