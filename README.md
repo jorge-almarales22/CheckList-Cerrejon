@@ -78,6 +78,17 @@ Cada tarea tiene un boton **"Adjuntar evidencias"** que abre el Gestor de Entreg
 
 La carpeta de la tarea se crea automaticamente (con loading "Creando carpeta de entregables...") la primera vez que se sube un archivo o al usar el boton "Ir a Repositorio" en una tarea sin evidencias.
 
+#### Drag & drop directo en la tarjeta de la tarea
+
+Ademas del gestor, cada tarjeta de tarea acepta **arrastrar y soltar archivos directamente** sobre su seccion "Evidencias Cargadas" (sin abrir el gestor), con la misma logica de validacion de carpetas:
+
+- **La subcarpeta de la tarea ya existe**: los archivos se suben directo ahi.
+- **No existe y la tarea no tiene evidencias**: la carpeta se crea automaticamente (loading) y los archivos se suben ahi.
+- **No existe y la tarea tiene evidencias** (posiblemente en la raiz sin carpeta): pregunta que hacer con los archivos arrastrados — **"Crear carpeta y mover"** (crea la carpeta, mueve los legacy y sube ahi), **"Solo subir a la raiz"** (sube a la raiz del checklist) o **"Cancelar"**.
+- **Carpetas completas arrastradas**: se muestra el aviso "Accion no soportada por aqui" con boton **"Ir al repositorio"**, que valida/crea la carpeta de la tarea (loading) y redirige a SharePoint.
+
+El dropzone de la tarjeta solo esta activo para usuarios que pueden gestionar la tarea y cuando el checklist no esta finalizado.
+
 #### Boton "Ir a Repositorio"
 
 El boton **"Ir a Repositorio"** de cada tarea abre la carpeta de la tarea en SharePoint en una pestana nueva. Su comportamiento depende del estado de la tarea:

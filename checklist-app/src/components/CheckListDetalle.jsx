@@ -88,6 +88,12 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     // archivos) para no saturar la vista con volumen alto de evidencias.
     const [expandidoMap, setExpandidoMap] = useState({});
 
+    // Tarea sobre la que se está arrastrando un archivo (highlight del dropzone
+    // directo en la tarjeta). null = ninguna.
+    const [dragOverTarea, setDragOverTarea] = useState(null);
+    // Contador dragenter/dragleave por tarea (anti-parpadeo del highlight).
+    const dragCounterRef = useRef({});
+
     // Unidades de proceso: siguen saliendo de la lista EquiposAC.
     const [acData, setAcData] = useState({ unidades: [] });
     const [acLoading, setAcLoading] = useState(true);
@@ -563,6 +569,251 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const tieneEvidencias = (itemId) =>
         (evidenciasItem[itemId] && evidenciasItem[itemId].length > 0) || !!evidenciasPresence[itemId];
 
+    // Sube archivos a la carpeta destino de una tarea (misma logica de nombres
+    // que el Gestor de Entregables: "<orden>_<nombreDoc>_<usuario>.<ext>").
+    // Se usa desde el drag & drop directo sobre la tarjeta de la tarea.
+    const subirArchivosTarea = async (itemId, files, carpetaDestinoUrl) => {
+        if (!files || !files.length) return;
+        if (!checklist?.Tipo || !checklist?.Name) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo determinar el checklist para guardar la evidencia.'
+            });
+            return;
+        }
+        try {
+            const digest = await getRequestDigest();
+            // Asegura que la carpeta destino exista (idempotente, sin errores).
+            await ensureFolder(carpetaDestinoUrl, digest);
+
+            const usuario = (currentUser || 'usuario').split('@')[0]
+                .replace(/[~"#%&*:<>?/\\{|}']/g, '')
+                .trim()
+                .replace(/\s+/g, '_')
+                .slice(0, 30) || 'usuario';
+
+            const existentes = await listFolderFiles(carpetaDestinoUrl);
+            const usados = new Set(existentes.map(f => f.Name.toLowerCase()));
+
+            const orden = getOrdenTarea(itemId) || '00';
+            let subidos = 0;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const body = await file.arrayBuffer();
+                const ext = (file.name.split('.').pop() || 'dat').replace(/[^a-z0-9]/gi, '') || 'dat';
+                const nombreDoc = sanitizarNombre(file.name.replace(/\.[^.]+$/, ''), 60);
+                const base = `${orden}_${nombreDoc}_${usuario}`;
+                let fileName = `${base}.${ext}`;
+                let n = 2;
+                while (usados.has(fileName.toLowerCase())) {
+                    fileName = `${base}_${n}.${ext}`;
+                    n++;
+                }
+                usados.add(fileName.toLowerCase());
+
+                await uploadFileToFolder(carpetaDestinoUrl, fileName, body, digest);
+                subidos++;
+            }
+
+            if (subidos > 0) {
+                await cargarEvidencias(itemId);
+                setEvidenciasPresence(prev => ({ ...prev, [itemId]: true }));
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.onmouseenter = Swal.stopTimer;
+                        toast.onmouseleave = Swal.resumeTimer;
+                    }
+                });
+                Toast.fire({
+                    icon: 'success',
+                    title: `${subidos} archivo${subidos !== 1 ? 's' : ''} subido${subidos !== 1 ? 's' : ''} correctamente`
+                });
+            }
+        } catch (err) {
+            console.error('Error subiendo archivos a la tarea', err);
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true
+            });
+            Toast.fire({
+                icon: 'error',
+                title: 'Error al subir archivos',
+                text: err.message || 'No se pudieron subir los archivos.'
+            });
+        }
+    };
+
+    // Handlers de drag & drop sobre la tarjeta de la tarea (contador por tarea
+    // para evitar el parpadeo del highlight, mismo patron que el gestor).
+    const handleDragEnterTarea = (e, itemId) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current[itemId] = (dragCounterRef.current[itemId] || 0) + 1;
+        if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+            setDragOverTarea(itemId);
+        }
+    };
+
+    const handleDragLeaveTarea = (e, itemId) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current[itemId] = (dragCounterRef.current[itemId] || 0) - 1;
+        if (dragCounterRef.current[itemId] <= 0) {
+            dragCounterRef.current[itemId] = 0;
+            setDragOverTarea(prev => (prev === itemId ? null : prev));
+        }
+    };
+
+    // Necesario para permitir el drop (sin preventDefault el navegador abre el archivo).
+    const handleDragOverTarea = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    // Drag & drop directo sobre la tarjeta de la tarea: sube archivos a la
+    // subcarpeta de la tarea (creandola si hace falta) con la misma logica de
+    // validacion que el Gestor de Entregables. Las carpetas completas se
+    // redirigen al repositorio en SharePoint.
+    const manejarDropTarea = async (e, it) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const itemId = it.Id;
+        dragCounterRef.current[itemId] = 0;
+        setDragOverTarea(null);
+
+        if (!checklist?.Tipo || !checklist?.Name) return;
+
+        // 1) Detectar si se arrastraron carpetas completas (directorios).
+        const items = Array.from(e.dataTransfer?.items || []);
+        let contieneDirectorios = false;
+        for (const item of items) {
+            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+            if (entry && entry.isDirectory) {
+                contieneDirectorios = true;
+                break;
+            }
+        }
+
+        // 2) Carpetas: aviso de accion no soportada + redirigir al repositorio
+        //    (valida/crea la carpeta de la tarea con loading antes de abrir).
+        if (contieneDirectorios) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Acción no soportada por aquí',
+                html: `
+                    <p class="text-sm text-gray-600 mb-3">
+                        Si deseas subir carpetas completas y subcarpetas, por favor dirígete directamente al repositorio en SharePoint, donde puedes arrastrarlas de golpe con total facilidad.
+                    </p>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Ir al repositorio',
+                cancelButtonText: 'Entendido',
+                confirmButtonColor: '#d97706'
+            }).then((result) => {
+                if (result.isConfirmed) abrirRepositorioTarea(itemId);
+            });
+            return;
+        }
+
+        // 3) Solo archivos individuales o multiples.
+        const files = Array.from(e.dataTransfer?.files || []);
+        if (files.length === 0) return;
+
+        const raizUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
+        const subcarpeta = nombreSubcarpetaTarea(itemId);
+        const urlSubcarpeta = `${raizUrl}/${subcarpeta}`;
+
+        // Verifica si la subcarpeta de la tarea existe listando las subcarpetas
+        // de la raiz (evita el GET directo que genera HTTP 404 en consola).
+        let existe = false;
+        try {
+            const subs = await listFolderSubfolders(raizUrl);
+            existe = subs.some(s => s.Name === subcarpeta);
+        } catch (err) {
+            console.error('Error verificando carpeta de tarea:', err);
+        }
+
+        // 3a) La carpeta ya existe: subida directa.
+        if (existe) {
+            await subirArchivosTarea(itemId, files, urlSubcarpeta);
+            return;
+        }
+
+        // 3b) No existe y la tarea NO tiene evidencias: crear la carpeta
+        //     automaticamente (loading) y subir ahi.
+        if (!tieneEvidencias(itemId)) {
+            Swal.fire({
+                title: 'Creando carpeta para esta tarea de incorporación...',
+                html: 'Preparando el repositorio de entregables...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading()
+            });
+            try {
+                const digest = await getRequestDigest();
+                await ensureFolder(urlSubcarpeta, digest);
+                await Swal.close();
+            } catch (err) {
+                console.error('Error creando carpeta de tarea:', err);
+                await Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudo crear la carpeta. Revisa la consola.'
+                });
+                return;
+            }
+            await subirArchivosTarea(itemId, files, urlSubcarpeta);
+            return;
+        }
+
+        // 3c) No existe y la tarea SI tiene evidencias: preguntar si crear la
+        //     carpeta y mover los legacy, subir solo a la raiz, o cancelar.
+        const result = await Swal.fire({
+            title: 'Carpeta de tarea no encontrada',
+            html: `
+                <p class="text-sm text-gray-600 mb-4">
+                    Esta tarea tiene evidencias en la raíz de la incorporación pero aún no tiene su carpeta física creada.
+                </p>
+                <p class="text-sm text-gray-600">
+                    ¿Qué deseas hacer con los ${files.length} archivo${files.length !== 1 ? 's' : ''} que estás arrastrando?
+                </p>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonText: 'Crear carpeta y mover',
+            denyButtonText: 'Solo subir a la raíz',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#d97706',
+            denyButtonColor: '#64748b',
+            cancelButtonColor: '#ef4444',
+            preConfirm: () => 'crear',
+            preDeny: () => 'raiz'
+        });
+
+        if (result.isDismissed) return; // Cancelar: no se sube nada.
+        if (result.value === 'crear') {
+            // Crea la carpeta y mueve los legacy (sin abrir pestana nueva),
+            // luego sube los archivos arrastrados a la subcarpeta.
+            await crearCarpetaRepositorio(itemId, true, false);
+            await subirArchivosTarea(itemId, files, urlSubcarpeta);
+        } else if (result.value === 'raiz') {
+            // Sube a la raiz del checklist (sin carpeta de tarea).
+            await subirArchivosTarea(itemId, files, raizUrl);
+        }
+    };
+
     // "Ir a Repositorio": valida si la subcarpeta fisica de la tarea existe en
     // SharePoint. Si existe, la abre directo. Si no, muestra SweetAlert2 para
     // crearla (o abrir solo la raiz de la incorporacion).
@@ -625,7 +876,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
     // Crea la subcarpeta de la tarea (y opcionalmente mueve los legacy) con
     // progreso en tiempo real via SweetAlert2.
-    const crearCarpetaRepositorio = async (itemId, moverLegacy) => {
+    const crearCarpetaRepositorio = async (itemId, moverLegacy, abrirPestana = true) => {
         if (!checklist?.Tipo || !checklist?.Name) return;
         try {
             const digest = await getRequestDigest();
@@ -676,8 +927,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 timer: 1800,
                 showConfirmButton: false
             });
-            // Abre la subcarpeta recien creada.
-            window.open(`${AC_HOST}${urlSubcarpeta}`, '_blank');
+            // Abre la subcarpeta recien creada (solo si se pidio; el drag & drop
+            // directo en la tarjeta no abre pestanas nuevas).
+            if (abrirPestana) window.open(`${AC_HOST}${urlSubcarpeta}`, '_blank');
         } catch (err) {
             console.error('Error creando carpeta de tarea:', err);
             Swal.fire({
@@ -2309,7 +2561,22 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     </div>
                                                 </div>
 
-                                                <div className={`space-y-3 p-3 rounded-lg border ${theme==='dark'?'bg-slate-950/40 border-slate-800':'bg-slate-100 border-slate-200'}`}>
+                                                <div
+                                                    className={`space-y-3 p-3 rounded-lg border transition-colors ${
+                                                        dragOverTarea === it.Id
+                                                            ? 'border-amber-500/70 bg-amber-500/10 ring-2 ring-amber-500/30'
+                                                            : theme==='dark'?'bg-slate-950/40 border-slate-800':'bg-slate-100 border-slate-200'
+                                                    }`}
+                                                    onDragEnter={!isFinalizado && puedeGestionar ? (e) => handleDragEnterTarea(e, it.Id) : undefined}
+                                                    onDragLeave={!isFinalizado && puedeGestionar ? (e) => handleDragLeaveTarea(e, it.Id) : undefined}
+                                                    onDragOver={!isFinalizado && puedeGestionar ? handleDragOverTarea : undefined}
+                                                    onDrop={!isFinalizado && puedeGestionar ? (e) => manejarDropTarea(e, it) : undefined}
+                                                >
+                                                    {dragOverTarea === it.Id && (
+                                                        <div className="pointer-events-none border-2 border-dashed rounded-lg p-4 text-center border-amber-500/60 text-amber-600 dark:text-yellow-400">
+                                                            <p className="pointer-events-none text-xs font-bold">Suelta los archivos o carpetas aquí</p>
+                                                        </div>
+                                                    )}
                                                     {cargandoEvidencias[it.Id] ? (
                                                         <span className="text-yellow-500 text-xs italic block text-center">Consultando servidor...</span>
                                                     ) : (
@@ -2385,7 +2652,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     {!isFinalizado && puedeGestionar && (
                                                         <div className={`pt-2 border-t ${theme==='dark'?'border-slate-800':'border-slate-200'}`}>
                                                             <p className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold text-center">
-                                                                Usa el botón "Gestor" para crear carpetas, subir archivos o carpetas completas, renombrar, mover y descargar.
+                                                                Arrastra archivos aquí para subirlos a esta tarea. Usa "Adjuntar evidencias" para crear carpetas, renombrar, mover y descargar, o "Ir a Repositorio" para abrir la carpeta en SharePoint.
                                                             </p>
                                                         </div>
                                                     )}
