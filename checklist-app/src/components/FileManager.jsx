@@ -272,7 +272,14 @@ const FileManager = ({
     // Al abrir el gestor (o cambiar de tarea) se carga la raiz y el legacy.
     // El reset de estado al abrir el modal es intencional (sincroniza el
     // estado interno con la apertura del gestor).
+    // IMPORTANTE: solo se ejecuta cuando CAMBIA la tarea abierta (itemId) o se
+    // ABRE el gestor. El polling de 20s del detalle actualiza `checklist` con
+    // una nueva referencia, pero eso NO debe resetear la navegacion del gestor.
+    const tareaAbiertaRef = useRef(null);
     useEffect(() => {
+        const clave = open ? itemId : null;
+        if (clave === tareaAbiertaRef.current) return; // misma tarea abierta: no resetear
+        tareaAbiertaRef.current = clave;
         if (open && checklist?.Tipo && checklist?.Name) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setRutaActual([]);
@@ -298,7 +305,7 @@ const FileManager = ({
             cargarLegacyRaiz();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, checklist, orden]);
+    }, [open, itemId]);
 
     // Recarga el contenido cada vez que cambia la ruta actual (navegacion
     // por carpetas o breadcrumb). Sin esto, entrar a una subcarpeta no
