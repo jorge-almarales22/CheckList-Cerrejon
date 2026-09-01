@@ -237,11 +237,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 SharePointId: row.Id
                             };
                         });
-                        fetchEvidencePresence(parsedData);
                     } else {
                         setChecklist({ ...parsedData, SharePointId: row.Id });
                         setGeneralComment(parsedData.ComentarioGeneral || '');
-                        fetchEvidencePresence(parsedData);
                     }
                 } else if (!isBackgroundPoll) {
                     setLoadError('No se encontró la incorporación solicitada o no está disponible.');
@@ -438,10 +436,12 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             });
 
             // Archivos dentro de cada subcarpeta (recursivo, a cualquier
-            // profundidad, en UNA sola llamada REST). La subcarpeta por
-            // defecto de una tarea empieza por su orden ("06_..."), asi se
-            // sabe a que tarea va.
-            for (const sub of subcarpetas) {
+            // profundidad, en UNA sola llamada REST por subcarpeta). La
+            // subcarpeta por defecto de una tarea empieza por su orden
+            // ("06_..."), asi se sabe a que tarea va. Las llamadas se
+            // paralelizan con Promise.all para no bloquear la carga de
+            // evidencias con N llamadas secuenciales.
+            await Promise.all(subcarpetas.map(async (sub) => {
                 const subNombre = sub.Name;
                 // Determinar a que tarea pertenece la subcarpeta por su prefijo de orden.
                 const matchOrden = subNombre.match(/^(\d+)_/);
@@ -461,7 +461,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
                     });
                 });
-            }
+            }));
         } catch (err) {
             console.error("Error cargando evidencias de carpeta (todas):", err);
         }

@@ -166,44 +166,24 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
         filtrarPorColumnas(lista, columnKey).map(chk => getColumnFilterValue(chk, columnKey))
     )].sort((a, b) => a.localeCompare(b, 'es'));
 
-    // Serializa todos los campos relevantes de un checklist a un texto plano para
-    // el buscador global. Incluye metadatos, tareas, responsables, comentarios,
-    // estado, aprobacion, etc. Asi una palabra como "taller" encuentra cualquier
-    // incorporacion que la contenga en cualquiera de sus campos.
+    // Serializa SOLO los campos visibles en la tabla actual a un texto plano
+    // para el buscador global. No busca dentro de las tareas ni comentarios:
+    // solo lo que se ve en las columnas (nombre, plan, completado, gerencia,
+    // superintendencia, tipo, equipos, fechas y creador). Asi una palabra como
+    // "taller" encuentra cualquier incorporacion que la tenga en la tabla,
+    // aunque este paginada (busca en toda la lista, no solo la pagina actual).
     const textoBuscable = (chk) => {
         const partes = [
             chk.Name,
-            chk.Tipo,
-            chk.Estado,
-            chk.CreadoPor,
-            chk.CreadoPorNombre,
-            chk.AprobacionComentario,
+            `${calcularEsperadoChecklist(chk)}%`,
+            `${calcularRealChecklist(chk)}%`,
             chk.Metadata?.gerencia,
             chk.Metadata?.superintendencia,
-            chk.Metadata?.unidad,
-            chk.Metadata?.proceso,
+            chk.Tipo,
+            (chk.Metadata?.equipos || []).filter(Boolean).join(', '),
             chk.Metadata?.fechaInicioDiligenciamiento,
             chk.Metadata?.fechaFinDiligenciamiento,
-            chk.Metadata?.comentarios,
-            chk.Metadata?.descripcion,
-            ...(chk.Metadata?.equipos || []),
-            ...(chk.Metadata?.fotos || []).map(f => f?.nombre || ''),
-            ...(chk.items || []).flatMap(it => [
-                it.Descripcion,
-                it.actividades,
-                it.Entregable,
-                it.NombreResponsable,
-                it.Corresponsable,
-                it.Estado,
-                it.Alerta,
-                it.Avance,
-                it.FechaBaselineInicio,
-                it.FechaBaselineFin,
-                it.FechaInicio,
-                it.FechaFin,
-                ...(it.HistorialComentarios || []).map(c => c?.texto || c?.comentario || ''),
-                ...(it.comentarios || [])
-            ])
+            chk.CreadoPorNombre || chk.CreadoPor || (esHistorico(chk) ? 'Históricos' : '-')
         ];
         return partes.filter(Boolean).join(' ').toLowerCase();
     };
@@ -262,34 +242,8 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
             {/* Filtros */}
             <div className={`${cardClass} border p-4 md:p-6 rounded-3xl mb-6`}>
                 <div className="flex flex-col md:flex-row md:flex-wrap gap-2 md:gap-3 w-full items-stretch md:items-center">
-                    {/* Crear nueva incorporación: cualquier usuario (queda pendiente de aprobación). */}
-                    <button
-                        onClick={() => setShowTemplateModal(true)}
-                        className="shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-extrabold bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 shadow transition-colors"
-                        title="Crear una nueva incorporación de activos"
-                    >
-                        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
-                        Crear Nueva Incorporación
-                    </button>
-                    {/* Bandeja de aprobaciones: visible para todos los usuarios. */}
-                    <button
-                        onClick={() => setVerSolicitudes(v => !v)}
-                        className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-extrabold border transition-colors ${verSolicitudes
-                            ? 'bg-amber-500 border-amber-600 text-black shadow'
-                            : (theme==='dark' ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25' : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100')}`}
-                        title="Ver las incorporaciones creadas que están pendientes de aprobación"
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                        {verSolicitudes ? 'Ver Aprobados' : 'Nuevas Solicitudes'}
-                        {numSolicitudes > 0 && (
-                            <span className={`ml-1 min-w-[20px] text-center px-1.5 py-0.5 rounded-full text-[10px] font-black ${verSolicitudes ? 'bg-black/80 text-amber-300' : 'bg-red-600 text-white'}`}>{numSolicitudes}</span>
-                        )}
-                    </button>
-                    <label className={`flex items-center gap-2 text-sm font-bold cursor-pointer border px-3 py-2 rounded-lg shrink-0 whitespace-nowrap ${theme==='dark'?'bg-slate-950/85 border-slate-800':'bg-slate-100 border-slate-300'}`}>
-                        <input type="checkbox" checked={filtroAlerta} onChange={(e) => setFiltroAlerta(e.target.checked)} className="accent-yellow-500" /> Solo con Alertas
-                    </label>
-                    {/* Buscador global: filtra por cualquier campo de la tabla inferior. */}
-                    <div className="relative flex-1 min-w-[220px] md:ml-auto">
+                    {/* Buscador global: filtra por los campos visibles en la tabla inferior. */}
+                    <div className="relative w-full md:w-72 shrink-0">
                         <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
                         </svg>
@@ -297,7 +251,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                             type="text"
                             value={busquedaGlobal}
                             onChange={(e) => setBusquedaGlobal(e.target.value)}
-                            placeholder="Buscar en todas las incorporaciones..."
+                            placeholder="Buscar en la tabla..."
                             className={`${inputClasses} w-full pl-9 pr-8`}
                         />
                         {busquedaGlobal && (
@@ -309,6 +263,35 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         )}
+                    </div>
+                    {/* Botones a la derecha del buscador. */}
+                    <div className="flex flex-col md:flex-row md:flex-wrap gap-2 md:gap-3 items-stretch md:items-center md:ml-auto">
+                        {/* Crear nueva incorporación: cualquier usuario (queda pendiente de aprobación). */}
+                        <button
+                            onClick={() => setShowTemplateModal(true)}
+                            className="shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-extrabold bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 shadow transition-colors"
+                            title="Crear una nueva incorporación de activos"
+                        >
+                            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
+                            Crear Nueva Incorporación
+                        </button>
+                        {/* Bandeja de aprobaciones: visible para todos los usuarios. */}
+                        <button
+                            onClick={() => setVerSolicitudes(v => !v)}
+                            className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-extrabold border transition-colors ${verSolicitudes
+                                ? 'bg-amber-500 border-amber-600 text-black shadow'
+                                : (theme==='dark' ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25' : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100')}`}
+                            title="Ver las incorporaciones creadas que están pendientes de aprobación"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                            {verSolicitudes ? 'Ver Aprobados' : 'Nuevas Solicitudes'}
+                            {numSolicitudes > 0 && (
+                                <span className={`ml-1 min-w-[20px] text-center px-1.5 py-0.5 rounded-full text-[10px] font-black ${verSolicitudes ? 'bg-black/80 text-amber-300' : 'bg-red-600 text-white'}`}>{numSolicitudes}</span>
+                            )}
+                        </button>
+                        <label className={`flex items-center gap-2 text-sm font-bold cursor-pointer border px-3 py-2 rounded-lg shrink-0 whitespace-nowrap ${theme==='dark'?'bg-slate-950/85 border-slate-800':'bg-slate-100 border-slate-300'}`}>
+                            <input type="checkbox" checked={filtroAlerta} onChange={(e) => setFiltroAlerta(e.target.checked)} className="accent-yellow-500" /> Solo con Alertas
+                        </label>
                     </div>
                 </div>
             </div>
