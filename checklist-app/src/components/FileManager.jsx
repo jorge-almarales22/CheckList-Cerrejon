@@ -183,6 +183,10 @@ const FileManager = ({
     // Ruta actual como arreglo de segmentos relativos a la raiz de la tarea.
     // [] = raiz (la subcarpeta por defecto de la tarea).
     const [rutaActual, setRutaActual] = useState([]);
+    // Nombre real de la carpeta raiz de la tarea. Puede ser el generado por el
+    // sistema ("05_Establecer Dossier...") o uno creado manualmente ("05_Dossier").
+    // Se resuelve al abrir buscando por prefijo "<orden>_" en la raiz del checklist.
+    const [raizNombre, setRaizNombre] = useState(nombreSubcarpetaTarea);
     const [carpetas, setCarpetas] = useState([]);
     const [archivos, setArchivos] = useState([]);
     const [legacyRaiz, setLegacyRaiz] = useState([]);
@@ -217,8 +221,8 @@ const FileManager = ({
 
     const raizUrl = useMemo(() => {
         if (!checklist?.Tipo || !checklist?.Name) return '';
-        return `${getEvidenciasFolderUrl(checklist.Tipo, checklist.Name)}/${nombreSubcarpetaTarea}`;
-    }, [checklist, nombreSubcarpetaTarea]);
+        return `${getEvidenciasFolderUrl(checklist.Tipo, checklist.Name)}/${raizNombre}`;
+    }, [checklist, raizNombre]);
 
     // URL server-relative de la carpeta actual (raiz + segmentos).
     const carpetaActualUrl = useMemo(() => {
@@ -269,7 +273,7 @@ const FileManager = ({
     // El reset de estado al abrir el modal es intencional (sincroniza el
     // estado interno con la apertura del gestor).
     useEffect(() => {
-        if (open && raizUrl) {
+        if (open && checklist?.Tipo && checklist?.Name) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setRutaActual([]);
             setBusqueda('');
@@ -277,11 +281,24 @@ const FileManager = ({
             setFiltroFecha('todos');
             setMenuAbierto(null);
             setModalAccion(null);
-            cargarCarpetaActual();
+            // Resuelve la carpeta real de la tarea por prefijo "<orden>_" (ej.
+            // "05_Dossier" creada manualmente). Si no existe, usa el nombre
+            // generado por defecto (se creara al subir el primer archivo).
+            (async () => {
+                try {
+                    const raizChecklist = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
+                    const subs = await listFolderSubfolders(raizChecklist);
+                    const real = subs.find(s => s.Name.startsWith(`${orden}_`));
+                    setRaizNombre(real ? real.Name : nombreSubcarpetaTarea);
+                } catch (err) {
+                    console.error('Error resolviendo carpeta raiz de la tarea:', err);
+                    setRaizNombre(nombreSubcarpetaTarea);
+                }
+            })();
             cargarLegacyRaiz();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, raizUrl]);
+    }, [open, checklist, orden]);
 
     // Recarga el contenido cada vez que cambia la ruta actual (navegacion
     // por carpetas o breadcrumb). Sin esto, entrar a una subcarpeta no
@@ -971,7 +988,7 @@ const FileManager = ({
                         <div>
                             <h2 className="text-lg font-bold leading-tight">Gestor de Entregables</h2>
                             <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
-                                Tarea {orden} · {nombreSubcarpetaTarea}
+                                Tarea {orden} · {raizNombre}
                             </p>
                         </div>
                     </div>
@@ -988,7 +1005,7 @@ const FileManager = ({
                     {/* Breadcrumb */}
                     <div className="flex items-center gap-1 flex-wrap text-xs font-bold">
                         <button onClick={navegarRaiz} className={`px-2 py-1 rounded transition-colors ${rutaActual.length === 0 ? (theme === 'dark' ? 'bg-yellow-500/15 text-yellow-400' : 'bg-yellow-500/15 text-amber-600') : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-                            {nombreSubcarpetaTarea}
+                            {raizNombre}
                         </button>
                         {rutaActual.map((seg, idx) => (
                             <React.Fragment key={idx}>
