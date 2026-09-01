@@ -398,8 +398,16 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     });
 
                     // Archivos de la raiz del checklist que pertenecen a esta tarea.
+                    // listFolderFiles es RECURSIVO: solo se consideran los
+                    // DIRECTOS de la raiz (sin '/' en la ruta relativa). Lo que
+                    // esta dentro de carpetas se representa por su carpeta.
                     const files = await listFolderFiles(folderUrl);
-                    const filesTarea = files.filter(f => archivoEsDeTarea(f.Name, itemId, orden));
+                    const prefijoRaiz = folderUrl + '/';
+                    const filesDirectosRaiz = files.filter(f => {
+                        const rel = f.ServerRelativeUrl.substring(prefijoRaiz.length);
+                        return rel.indexOf('/') === -1;
+                    });
+                    const filesTarea = filesDirectosRaiz.filter(f => archivoEsDeTarea(f.Name, itemId, orden));
                     filesTarea.forEach(pushFile);
                     archivosRaiz.push(...filesTarea.map(f => ({
                         tipo: 'archivo',
@@ -507,9 +515,18 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             items.forEach(it => { const o = ordenDe(it.Id); if (o) tareaPorOrden[o] = it; });
 
             // 1a) Archivos sueltos en la raiz del checklist (prefijo de orden de la tarea).
+            //     listFolderFiles es RECURSIVO (devuelve archivos de subcarpetas
+            //     tambien): solo se consideran los DIRECTOS de la raiz (sin '/'
+            //     en la ruta relativa). Lo que esta dentro de carpetas se
+            //     representa por su carpeta, no como archivo suelto.
+            const prefijoRaiz = folderUrl + '/';
+            const filesDirectosRaiz = files.filter(f => {
+                const rel = f.ServerRelativeUrl.substring(prefijoRaiz.length);
+                return rel.indexOf('/') === -1;
+            });
             items.forEach(it => {
                 const orden = ordenDe(it.Id);
-                const evs = files
+                const evs = filesDirectosRaiz
                     .filter(f => archivoEsDeTarea(f.Name, it.Id, orden))
                     .map(f => ({
                         tipo: 'archivo',
