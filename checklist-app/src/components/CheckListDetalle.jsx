@@ -94,6 +94,14 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     // Contador dragenter/dragleave por tarea (anti-parpadeo del highlight).
     const dragCounterRef = useRef({});
 
+    // Carpetas de cada tarea (itemId -> array de { Name, ServerRelativeUrl }).
+    // Se detectan por prefijo de orden ("01_", "01.", "01 ", "01-") en la raiz
+    // del checklist o dentro de la subcarpeta por defecto de la tarea.
+    const [carpetasTarea, setCarpetasTarea] = useState({});
+    // Archivos sueltos en la raiz de la tarea (itemId -> array). Solo los que
+    // estan directamente en la raiz, no dentro de subcarpetas.
+    const [archivosRaizTarea, setArchivosRaizTarea] = useState({});
+
     // Unidades de proceso: siguen saliendo de la lista EquiposAC.
     const [acData, setAcData] = useState({ unidades: [] });
     const [acLoading, setAcLoading] = useState(true);
@@ -337,10 +345,23 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const archivoEsDeTarea = (nombre, itemId, orden) =>
         (!!orden && nombre.startsWith(`${orden}_`)) || nombre.startsWith(`Evidencia_${itemId}_`);
 
+    // Extrae el numero de orden y el nombre de una carpeta/archivo con prefijo
+    // numerico flexible: "01_", "01.", "01 ", "01-", "01" (con o sin separador).
+    // Devuelve { orden: '01', resto: 'nombre' } o null si no tiene prefijo.
+    const extraerOrdenNombre = (nombre) => {
+        const m = (nombre || '').match(/^(\d{1,3})\s*[._\-\s]?\s*(.*)$/);
+        if (!m) return null;
+        const orden = String(parseInt(m[1], 10)).padStart(2, '0');
+        const resto = (m[2] || '').trim();
+        return { orden, resto };
+    };
+
     const cargarEvidencias = async (itemId) => {
         setCargandoEvidencias(prev => ({ ...prev, [itemId]: true }));
         try {
             const combined = [];
+            const carpetasDeTarea = [];
+            const archivosRaiz = [];
             // Legacy: evidencias en base64 dentro de la lista.
             try {
                 const res = await fetch(`${SITE_URL}/_api/web/lists/getbytitle('EvidenciasChecklist')/items?$filter=ID_Registro eq '${itemId}'&$select=Id,Data,Title`, {
@@ -374,14 +395,36 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                     // Archivos de la raiz del checklist que pertenecen a esta tarea.
                     const files = await listFolderFiles(folderUrl);
-                    files
-                        .filter(f => archivoEsDeTarea(f.Name, itemId, orden))
-                        .forEach(pushFile);
+                    const filesTarea = files.filter(f => archivoEsDeTarea(f.Name, itemId, orden));
+                    filesTarea.forEach(pushFile);
+                    archivosRaiz.push(...filesTarea.map(f => ({
+                        tipo: 'archivo',
+                        Id: `file_${f.ServerRelativeUrl}`,
+                        source: 'file',
+                        fileRef: f.ServerRelativeUrl,
+                        Name: f.Name,
+                        Data: `${AC_HOST}${f.ServerRelativeUrl}`,
+                        isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
+                    })));
+
+                    // Carpetas de la raiz del checklist que pertenecen a esta tarea
+                    // (prefijo de orden flexible: "01_", "01.", "01 ", "01-").
+                    const subcarpetas = await listFolderSubfolders(folderUrl);
+                    subcarpetas.forEach(sub => {
+                        const ex = extraerOrdenNombre(sub.Name);
+                        if (ex && ex.orden === (orden || '')) {
+                            carpetasDeTarea.push({
+                                tipo: 'carpeta',
+                                Id: `carpeta_${sub.ServerRelativeUrl}`,
+                                Name: sub.Name,
+                                ServerRelativeUrl: sub.ServerRelativeUrl
+                            });
+                        }
+                    });
 
                     // Archivos dentro de la subcarpeta por defecto de la tarea
                     // y de TODAS sus subcarpetas (recursivo, 1 sola llamada).
                     const subcarpetaTarea = nombreSubcarpetaTarea(itemId);
-                    const subcarpetas = await listFolderSubfolders(folderUrl);
                     const subTarea = subcarpetas.find(s => s.Name === subcarpetaTarea);
                     if (subTarea) {
                         const arbol = await listFolderFilesRecursive(subTarea.ServerRelativeUrl);
@@ -392,6 +435,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 console.error("Error cargando evidencias (carpeta)", error);
             }
             setEvidenciasItem(prev => ({ ...prev, [itemId]: combined }));
+            setCarpetasTarea(prev => ({ ...prev, [itemId]: carpetasDeTarea }));
+            setArchivosRaizTarea(prev => ({ ...prev, [itemId]: archivosRaiz }));
             setEvidenciasPresence(prev => ({ ...prev, [itemId]: combined.length > 0 }));
         } finally {
             setCargandoEvidencias(prev => ({ ...prev, [itemId]: false }));
@@ -414,17 +459,24 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         // 1. Archivos de la carpeta raiz + subcarpetas, agrupados por tarea.
         //    Tambien se guarda la lista de subcarpetas por tarea para el selector
         //    de carpeta destino en el cargue de evidencias.
+        const carpetasPorTarea = {}; // itemId -> [{ Name, ServerRelativeUrl }]
+        const archivosRaizPorTarea = {}; // itemId -> [archivos sueltos en la raiz de la tarea]
         try {
             const folderUrl = getEvidenciasFolderUrl(checklistData.Tipo, checklistData.Name);
             const files = await listFolderFiles(folderUrl);
             const subcarpetas = await listFolderSubfolders(folderUrl);
 
-            // Archivos de la raiz (formato viejo y nuevo sin subcarpeta).
+            // Mapa orden -> tarea para resolver carpetas/archivos por prefijo.
+            const tareaPorOrden = {};
+            items.forEach(it => { const o = ordenDe(it.Id); if (o) tareaPorOrden[o] = it; });
+
+            // 1a) Archivos sueltos en la raiz del checklist (prefijo de orden de la tarea).
             items.forEach(it => {
                 const orden = ordenDe(it.Id);
                 const evs = files
                     .filter(f => archivoEsDeTarea(f.Name, it.Id, orden))
                     .map(f => ({
+                        tipo: 'archivo',
                         Id: `file_${f.ServerRelativeUrl}`,
                         source: 'file',
                         fileRef: f.ServerRelativeUrl,
@@ -432,33 +484,69 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         Data: `${AC_HOST}${f.ServerRelativeUrl}`,
                         isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
                     }));
-                if (evs.length) map[it.Id] = evs;
+                if (evs.length) {
+                    map[it.Id] = evs;
+                    archivosRaizPorTarea[it.Id] = evs;
+                }
             });
 
-            // Archivos dentro de cada subcarpeta (recursivo, a cualquier
-            // profundidad, en UNA sola llamada REST por subcarpeta). La
-            // subcarpeta por defecto de una tarea empieza por su orden
-            // ("06_..."), asi se sabe a que tarea va. Las llamadas se
-            // paralelizan con Promise.all para no bloquear la carga de
-            // evidencias con N llamadas secuenciales.
+            // 1b) Carpetas de la raiz del checklist con prefijo de orden flexible
+            //     ("01_", "01.", "01 ", "01-") -> carpetas de la tarea.
+            subcarpetas.forEach(sub => {
+                const ex = extraerOrdenNombre(sub.Name);
+                if (!ex) return;
+                const tarea = tareaPorOrden[ex.orden];
+                if (!tarea) return;
+                (carpetasPorTarea[tarea.Id] = carpetasPorTarea[tarea.Id] || []).push({
+                    tipo: 'carpeta',
+                    Id: `carpeta_${sub.ServerRelativeUrl}`,
+                    Name: sub.Name,
+                    ServerRelativeUrl: sub.ServerRelativeUrl
+                });
+            });
+
+            // 1c) Para cada carpeta de tarea (prefijo de orden):
+            //     - Archivos DIRECTOS (raiz de la carpeta) -> archivos sueltos de la
+            //       tarea SOLO si es la subcarpeta por defecto creada por el sistema.
+            //     - Subcarpetas internas -> carpetas de la tarea.
+            //     Los archivos dentro de sub-subcarpetas NO se aplanan en la vista:
+            //     se representan por su carpeta (representacion real de lo cargado).
             await Promise.all(subcarpetas.map(async (sub) => {
-                const subNombre = sub.Name;
-                // Determinar a que tarea pertenece la subcarpeta por su prefijo de orden.
-                const matchOrden = subNombre.match(/^(\d+)_/);
-                const tareaDeSub = matchOrden
-                    ? items.find(it => ordenDe(it.Id) === String(parseInt(matchOrden[1], 10)).padStart(2, '0'))
-                    : null;
-                const arbol = await listFolderFilesRecursive(sub.ServerRelativeUrl);
-                arbol.forEach(f => {
-                    const orden = tareaDeSub ? ordenDe(tareaDeSub.Id) : null;
-                    const evs = (map[tareaDeSub?.Id] = map[tareaDeSub?.Id] || []);
-                    evs.push({
+                const ex = extraerOrdenNombre(sub.Name);
+                if (!ex) return;
+                const tarea = tareaPorOrden[ex.orden];
+                if (!tarea) return;
+                const esSubcarpetaPorDefecto = sub.Name === nombreSubcarpetaTarea(tarea.Id);
+                const [arbol, subSubs] = await Promise.all([
+                    listFolderFilesRecursive(sub.ServerRelativeUrl),
+                    listFolderSubfolders(sub.ServerRelativeUrl)
+                ]);
+                // Archivos directos de la carpeta de la tarea (sin subcarpetas intermedias).
+                const prefijo = sub.ServerRelativeUrl;
+                const directos = arbol.filter(f => {
+                    const rel = f.ServerRelativeUrl.substring(prefijo.length + 1);
+                    return rel.indexOf('/') === -1;
+                });
+                if (esSubcarpetaPorDefecto && directos.length) {
+                    const evs = directos.map(f => ({
+                        tipo: 'archivo',
                         Id: `file_${f.ServerRelativeUrl}`,
                         source: 'file',
                         fileRef: f.ServerRelativeUrl,
                         Name: f.Name,
                         Data: `${AC_HOST}${f.ServerRelativeUrl}`,
                         isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
+                    }));
+                    map[tarea.Id] = [...(map[tarea.Id] || []), ...evs];
+                    archivosRaizPorTarea[tarea.Id] = [...(archivosRaizPorTarea[tarea.Id] || []), ...evs];
+                }
+                // Subcarpetas internas de la carpeta de la tarea.
+                subSubs.forEach(ss => {
+                    (carpetasPorTarea[tarea.Id] = carpetasPorTarea[tarea.Id] || []).push({
+                        tipo: 'carpeta',
+                        Id: `carpeta_${ss.ServerRelativeUrl}`,
+                        Name: ss.Name,
+                        ServerRelativeUrl: ss.ServerRelativeUrl
                     });
                 });
             }));
@@ -498,6 +586,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         }
 
         setEvidenciasItem(prev => ({ ...prev, ...map }));
+        setCarpetasTarea(prev => ({ ...prev, ...carpetasPorTarea }));
+        setArchivosRaizTarea(prev => ({ ...prev, ...archivosRaizPorTarea }));
         const presence = {};
         items.forEach(it => { if (map[it.Id]?.length) presence[it.Id] = true; });
         legacyIds.forEach(id => { presence[id] = true; });
@@ -2510,16 +2600,19 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                 <div className="flex justify-between items-center mb-2">
                                                     <span className="text-slate-900 dark:text-slate-200 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
                                                         Evidencias Cargadas
-                                                        {(evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0) ? (
-                                                            <span className="bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/40 px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-normal uppercase flex items-center gap-1">
-                                                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                                                                Con Evidencias
-                                                            </span>
-                                                        ) : (
-                                                            <span className="bg-slate-400/10 text-slate-500 dark:text-slate-400 border border-slate-400/30 px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-normal uppercase">
-                                                                Sin Evidencias
-                                                            </span>
-                                                        )}
+                                                        {(() => {
+                                                            const totalEv = (carpetasTarea[it.Id]?.length || 0) + (archivosRaizTarea[it.Id]?.length || 0);
+                                                            return totalEv > 0 ? (
+                                                                <span className="bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/40 px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-normal uppercase flex items-center gap-1">
+                                                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                                                    Con Evidencias
+                                                                </span>
+                                                            ) : (
+                                                                <span className="bg-slate-400/10 text-slate-500 dark:text-slate-400 border border-slate-400/30 px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-normal uppercase">
+                                                                    Sin Evidencias
+                                                                </span>
+                                                            );
+                                                        })()}
                                                         {!isFinalizado && puedeGestionar && (
                                                             <button
                                                                 onClick={() => setFileManagerTarea(it.Id)}
@@ -2550,16 +2643,20 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                         </button>
                                                     </span>
                                                     <div className="flex gap-2 items-center">
-                                                        {evidenciasItem[it.Id] && evidenciasItem[it.Id].length > 0 && (
-                                                            <>
-                                                                <span className={`text-[10px] font-bold px-2 py-1 rounded border ${theme==='dark'?'bg-slate-950/60 text-slate-300 border-slate-700':'bg-white text-slate-600 border-slate-300'}`}>
-                                                                    {evidenciasItem[it.Id].length} archivo{evidenciasItem[it.Id].length !== 1 ? 's' : ''}
-                                                                </span>
-                                                                <button onClick={() => { setModalEvidences(evidenciasItem[it.Id]); setActiveEvidenciaIndex(0); }} className="text-[10px] bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-2 py-1 rounded border border-yellow-500/30 transition-colors shadow flex items-center gap-1 font-semibold">
-                                                                    Ver Visualizador
-                                                                </button>
-                                                            </>
-                                                        )}
+                                                        {(() => {
+                                                            const totalEv = (carpetasTarea[it.Id]?.length || 0) + (archivosRaizTarea[it.Id]?.length || 0);
+                                                            if (totalEv === 0) return null;
+                                                            return (
+                                                                <>
+                                                                    <span className={`text-[10px] font-bold px-2 py-1 rounded border ${theme==='dark'?'bg-slate-950/60 text-slate-300 border-slate-700':'bg-white text-slate-600 border-slate-300'}`}>
+                                                                        {totalEv} elemento{totalEv !== 1 ? 's' : ''}
+                                                                    </span>
+                                                                    <button onClick={() => { setModalEvidences(archivosRaizTarea[it.Id] || []); setActiveEvidenciaIndex(0); }} className="text-[10px] bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-2 py-1 rounded border border-yellow-500/30 transition-colors shadow flex items-center gap-1 font-semibold">
+                                                                        Ver Visualizador
+                                                                    </button>
+                                                                </>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 </div>
 
@@ -2582,73 +2679,92 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     {cargandoEvidencias[it.Id] ? (
                                                         <span className="text-yellow-500 text-xs italic block text-center">Consultando servidor...</span>
                                                     ) : (
-                                                        <>
-                                                            {(!evidenciasItem[it.Id] || evidenciasItem[it.Id].length === 0) ? (
-                                                                <span className="text-slate-900 dark:text-slate-200 font-bold text-xs italic">Aún no se han cargado evidencias para esta tarea.</span>
-                                                            ) : (
-                                                                (() => {
-                                                                    // Modo contraido por defecto: solo los primeros N archivos.
-                                                                    // Expandir una tarea no afecta a las demas (expandidoMap por itemId).
-                                                                    const LIMITE = 8;
-                                                                    const total = evidenciasItem[it.Id].length;
-                                                                    const expandido = !!expandidoMap[it.Id];
-                                                                    const visibles = expandido ? evidenciasItem[it.Id] : evidenciasItem[it.Id].slice(0, LIMITE);
-                                                                    const ocultos = total - visibles.length;
-                                                                    return (
-                                                                        <>
-                                                                            <div className={`flex flex-wrap gap-3 ${expandido ? '' : 'max-h-[140px] overflow-hidden'}`}>
-                                                                                {visibles.map(ev => {
-                                                                                    // Icono generico segun la extension (sin cargar el contenido real).
-                                                                                    const ext = (ev.Name || '').split('.').pop().toLowerCase();
-                                                                                    const esImg = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
-                                                                                    const esPdf = ext === 'pdf';
-                                                                                    const esDoc = ['doc', 'docx', 'odt', 'rtf', 'txt'].includes(ext);
-                                                                                    const esXls = ['xls', 'xlsx', 'csv'].includes(ext);
-                                                                                    const colorIcono = esImg ? 'text-purple-500' : esPdf ? 'text-red-500' : esDoc ? 'text-blue-500' : esXls ? 'text-green-600' : 'text-slate-500';
-                                                                                    const etiqueta = esImg ? 'IMG' : esPdf ? 'PDF' : esDoc ? 'DOC' : esXls ? 'XLS' : 'FILE';
-                                                                                    return (
-                                                                                        <div key={ev.Id} className="relative group border border-slate-200 dark:border-slate-800 rounded-md p-1.5 bg-white dark:bg-slate-900 shadow-lg w-[88px]">
-                                                                                            <button
-                                                                                                onClick={() => window.open(ev.Data, '_blank')}
-                                                                                                title={`Abrir ${ev.Name}`}
-                                                                                                className="w-full flex flex-col items-center gap-1 cursor-pointer"
-                                                                                            >
-                                                                                                <span className={`h-10 w-10 flex items-center justify-center rounded ${colorIcono} bg-slate-100 dark:bg-slate-800`}>
-                                                                                                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                                        {esImg ? (
-                                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                                                                        ) : (
-                                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                                                                        )}
-                                                                                    </svg>
-                                                                                </span>
-                                                                                <span className="text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">{etiqueta}</span>
-                                                                                <span className="text-[9px] font-bold text-slate-900 dark:text-slate-200 text-center break-all leading-tight line-clamp-2">{ev.Name}</span>
-                                                                            </button>
-                                                                            {!isFinalizado && puedeGestionar && (
-                                                                                <button onClick={() => eliminarEvidencia(it.Id, ev)} className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-md">&times;</button>
-                                                                            )}
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                                            </div>
-                                                                            {ocultos > 0 && (
-                                                                                <button
-                                                                                    onClick={() => setExpandidoMap(prev => ({ ...prev, [it.Id]: !expandido }))}
-                                                                                    className={`w-full flex items-center justify-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${theme==='dark'?'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700':'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}`}
-                                                                                >
-                                                                                    {expandido ? (
-                                                                                        <>Ver menos ({total} archivos) <span className="text-[8px]">▲</span></>
-                                                                                    ) : (
-                                                                                        <>Ver todos ({total} archivos) <span className="text-[8px]">▼</span></>
+                                                        (() => {
+                                                            // Representacion real de lo cargado en la tarea:
+                                                            // - Carpetas de la tarea (prefijo de orden flexible "01_", "01.", "01 ", "01-").
+                                                            // - Archivos sueltos en la raiz de la tarea (no dentro de subcarpetas).
+                                                            const carpetas = carpetasTarea[it.Id] || [];
+                                                            const archivosRaiz = archivosRaizTarea[it.Id] || [];
+                                                            const total = carpetas.length + archivosRaiz.length;
+                                                            if (total === 0) {
+                                                                return (
+                                                                    <span className="text-slate-900 dark:text-slate-200 font-bold text-xs italic">Aún no se han cargado evidencias para esta tarea.</span>
+                                                                );
+                                                            }
+                                                            const expandido = !!expandidoMap[it.Id];
+                                                            const LIMITE = 8;
+                                                            const visibles = expandido ? [...carpetas, ...archivosRaiz] : [...carpetas, ...archivosRaiz].slice(0, LIMITE);
+                                                            const ocultos = total - visibles.length;
+                                                            return (
+                                                                <>
+                                                                    <div className={`flex flex-wrap gap-3 ${expandido ? '' : 'max-h-[140px] overflow-hidden'}`}>
+                                                                        {visibles.map(el => {
+                                                                            if (el.tipo === 'carpeta') {
+                                                                                return (
+                                                                                    <div key={el.Id} className="relative group border border-amber-500/30 dark:border-amber-500/20 rounded-md p-1.5 bg-amber-500/5 dark:bg-amber-500/10 shadow-lg w-[110px]">
+                                                                                        <button
+                                                                                            onClick={() => setFileManagerTarea(it.Id)}
+                                                                                            title={`Abrir carpeta ${el.Name} en el gestor`}
+                                                                                            className="w-full flex flex-col items-center gap-1 cursor-pointer"
+                                                                                        >
+                                                                                            <span className="h-10 w-10 flex items-center justify-center rounded bg-amber-500/15 text-amber-600 dark:text-yellow-400">
+                                                                                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                                                                                            </span>
+                                                                                            <span className="text-[8px] font-black text-amber-600 dark:text-yellow-400 uppercase tracking-wider">CARPETA</span>
+                                                                                            <span className="text-[9px] font-bold text-slate-900 dark:text-slate-200 text-center break-all leading-tight line-clamp-2">{el.Name}</span>
+                                                                                        </button>
+                                                                                    </div>
+                                                                                );
+                                                                            }
+                                                                            // Archivo suelto en la raiz de la tarea.
+                                                                            const ext = (el.Name || '').split('.').pop().toLowerCase();
+                                                                            const esImg = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
+                                                                            const esPdf = ext === 'pdf';
+                                                                            const esDoc = ['doc', 'docx', 'odt', 'rtf', 'txt'].includes(ext);
+                                                                            const esXls = ['xls', 'xlsx', 'csv'].includes(ext);
+                                                                            const colorIcono = esImg ? 'text-purple-500' : esPdf ? 'text-red-500' : esDoc ? 'text-blue-500' : esXls ? 'text-green-600' : 'text-slate-500';
+                                                                            const etiqueta = esImg ? 'IMG' : esPdf ? 'PDF' : esDoc ? 'DOC' : esXls ? 'XLS' : 'FILE';
+                                                                            return (
+                                                                                <div key={el.Id} className="relative group border border-slate-200 dark:border-slate-800 rounded-md p-1.5 bg-white dark:bg-slate-900 shadow-lg w-[88px]">
+                                                                                    <button
+                                                                                        onClick={() => window.open(el.Data, '_blank')}
+                                                                                        title={`Abrir ${el.Name}`}
+                                                                                        className="w-full flex flex-col items-center gap-1 cursor-pointer"
+                                                                                    >
+                                                                                        <span className={`h-10 w-10 flex items-center justify-center rounded ${colorIcono} bg-slate-100 dark:bg-slate-800`}>
+                                                                                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                {esImg ? (
+                                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                                                ) : (
+                                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                                                )}
+                                                                                            </svg>
+                                                                                        </span>
+                                                                                        <span className="text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">{etiqueta}</span>
+                                                                                        <span className="text-[9px] font-bold text-slate-900 dark:text-slate-200 text-center break-all leading-tight line-clamp-2">{el.Name}</span>
+                                                                                    </button>
+                                                                                    {!isFinalizado && puedeGestionar && (
+                                                                                        <button onClick={() => eliminarEvidencia(it.Id, el)} className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-md">&times;</button>
                                                                                     )}
-                                                                                </button>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                    {ocultos > 0 && (
+                                                                        <button
+                                                                            onClick={() => setExpandidoMap(prev => ({ ...prev, [it.Id]: !expandido }))}
+                                                                            className={`w-full flex items-center justify-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${theme==='dark'?'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700':'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}`}
+                                                                        >
+                                                                            {expandido ? (
+                                                                                <>Ver menos ({total} elementos) <span className="text-[8px]">▲</span></>
+                                                                            ) : (
+                                                                                <>Ver todos ({total} elementos) <span className="text-[8px]">▼</span></>
                                                                             )}
-                                                                        </>
-                                                                    );
-                                                                })()
-                                                            )}
-                                                        </>
+                                                                        </button>
+                                                                    )}
+                                                                </>
+                                                            );
+                                                        })()
                                                     )}
 
                                                     {!isFinalizado && puedeGestionar && (

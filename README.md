@@ -78,6 +78,15 @@ Cada tarea tiene un boton **"Adjuntar evidencias"** que abre el Gestor de Entreg
 
 La carpeta de la tarea se crea automaticamente (con loading "Creando carpeta de entregables...") la primera vez que se sube un archivo o al usar el boton "Ir a Repositorio" en una tarea sin evidencias.
 
+#### Vista visual de evidencias en la tarjeta de la tarea
+
+La seccion "Evidencias Cargadas" de cada tarjeta muestra una **representacion real** de lo cargado en la tarea, sin cargar peso (solo nombres e iconos, sin miniaturas ni contenido):
+
+- **Carpetas de la tarea**: se detectan por prefijo de orden flexible (`01_`, `01.`, `01 `, `01-`) en la raiz del checklist o dentro de la subcarpeta por defecto. Se muestran como tiles ambar con icono de carpeta y su nombre. Al hacer clic se abre el **Gestor de Entregables** (FileManager) para navegar dentro.
+- **Archivos sueltos en la raiz de la tarea**: los que estan directamente en la raiz (no dentro de subcarpetas) se muestran como tiles de archivo con icono por extension. Al hacer clic se abren en pestana nueva (comportamiento actual).
+- Los archivos dentro de subcarpetas **no se aplanan** en la vista: se representan por su carpeta (representacion real de lo cargado). Para verlos, se abre la carpeta en el FileManager.
+- El contador muestra "X elementos" (carpetas + archivos raiz) y el badge "Con/Sin Evidencias" considera ambos.
+
 #### Drag & drop directo en la tarjeta de la tarea
 
 Ademas del gestor, cada tarjeta de tarea acepta **arrastrar y soltar archivos directamente** sobre su seccion "Evidencias Cargadas" (sin abrir el gestor), con la misma logica de validacion de carpetas:
