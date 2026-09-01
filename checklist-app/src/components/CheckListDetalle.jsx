@@ -908,20 +908,17 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         const subcarpeta = nombreSubcarpetaTarea(itemId);
         const urlSubcarpeta = `${raizUrl}/${subcarpeta}`;
 
-        // Verifica si la subcarpeta de la tarea existe listando las subcarpetas
-        // de la raiz (evita el GET directo que genera HTTP 404 en consola).
-        // Se detecta por prefijo "<orden>_" (ej. "05_Dossier"), no por nombre exacto.
-        let existe = false;
-        try {
-            const subs = await listFolderSubfolders(raizUrl);
-            existe = subs.some(s => s.Name.startsWith(`${getOrdenTarea(itemId) || '00'}_`));
-        } catch (err) {
-            console.error('Error verificando carpeta de tarea:', err);
-        }
+        // Busca la carpeta fisica de la tarea por prefijo "<orden>_" (ej.
+        // "05_Dossier" creada manualmente). Si existe, se sube ahi; si no,
+        // se usa el nombre generado por defecto (se creara al subir).
+        const carpetaExistente = await encontrarCarpetaTarea(itemId, raizUrl);
+        const carpetaDestino = carpetaExistente
+            ? carpetaExistente.ServerRelativeUrl
+            : urlSubcarpeta;
 
-        // 3a) La carpeta ya existe: subida directa.
-        if (existe) {
-            await subirArchivosTarea(itemId, files, urlSubcarpeta);
+        // 3a) La carpeta ya existe: subida directa a la carpeta real.
+        if (carpetaExistente) {
+            await subirArchivosTarea(itemId, files, carpetaDestino);
             return;
         }
 
@@ -938,7 +935,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             });
             try {
                 const digest = await getRequestDigest();
-                await ensureFolder(urlSubcarpeta, digest);
+                await ensureFolder(carpetaDestino, digest);
                 await Swal.close();
             } catch (err) {
                 console.error('Error creando carpeta de tarea:', err);
@@ -950,7 +947,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 });
                 return;
             }
-            await subirArchivosTarea(itemId, files, urlSubcarpeta);
+            await subirArchivosTarea(itemId, files, carpetaDestino);
             return;
         }
 
@@ -982,9 +979,14 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         if (result.isDismissed) return; // Cancelar: no se sube nada.
         if (result.value === 'crear') {
             // Crea la carpeta y mueve los legacy (sin abrir pestana nueva),
-            // luego sube los archivos arrastrados a la subcarpeta.
+            // luego sube los archivos arrastrados a la carpeta de la tarea
+            // (real si ya existia, o la recien creada).
             await crearCarpetaRepositorio(itemId, true, false);
-            await subirArchivosTarea(itemId, files, urlSubcarpeta);
+            const carpetaTrasCrear = await encontrarCarpetaTarea(itemId, raizUrl);
+            const destinoFinal = carpetaTrasCrear
+                ? carpetaTrasCrear.ServerRelativeUrl
+                : urlSubcarpeta;
+            await subirArchivosTarea(itemId, files, destinoFinal);
         } else if (result.value === 'raiz') {
             // Sube a la raiz del checklist (sin carpeta de tarea).
             await subirArchivosTarea(itemId, files, raizUrl);
