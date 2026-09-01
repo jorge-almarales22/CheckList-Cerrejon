@@ -703,8 +703,10 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             }
         }
 
-        // 2) Carpetas: aviso de accion no soportada + redirigir al repositorio
-        //    (valida/crea la carpeta de la tarea con loading antes de abrir).
+        // 2) Carpetas: aviso de accion no soportada + redirigir al repositorio.
+        //    Al confirmar, crea la carpeta de la tarea (si no existe) y mueve
+        //    automaticamente los documentos que esten sueltos en la raiz del
+        //    checklist hacia esa carpeta nueva, con progreso en tiempo real.
         if (contieneDirectorios) {
             Swal.fire({
                 icon: 'info',
@@ -719,7 +721,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 cancelButtonText: 'Entendido',
                 confirmButtonColor: '#d97706'
             }).then((result) => {
-                if (result.isConfirmed) abrirRepositorioTarea(itemId);
+                if (result.isConfirmed) crearCarpetaRepositorio(itemId, true);
             });
             return;
         }
