@@ -340,6 +340,22 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         return `${orden}_${descripcion}`;
     };
 
+    // Busca la carpeta fisica de la tarea entre las subcarpetas de la raiz del
+    // checklist. La carpeta puede llamarse "<orden>_<descripcion>" (generada por
+    // el sistema) o simplemente "<orden>_<otro nombre>" (ej. "05_Dossier" creada
+    // manualmente). Se detecta por el prefijo "<orden>_" (guion bajo), no por
+    // comparacion exacta del nombre. Devuelve la subcarpeta o null.
+    const encontrarCarpetaTarea = async (itemId, raizUrl) => {
+        const orden = getOrdenTarea(itemId) || '00';
+        try {
+            const subs = await listFolderSubfolders(raizUrl);
+            return subs.find(s => s.Name.startsWith(`${orden}_`)) || null;
+        } catch (err) {
+            console.error('Error buscando carpeta de tarea:', err);
+            return null;
+        }
+    };
+
     // Un archivo pertenece a la tarea si empieza por su numero de orden ("06_...")
     // o por el formato anterior basado en el Id ("Evidencia_<id>_...").
     const archivoEsDeTarea = (nombre, itemId, orden) =>
@@ -425,7 +441,6 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     // no se muestran: la subcarpeta por defecto es la raiz de la
                     // tarea y las demas padres aportan sus internas via 1c.
                     const subcarpetas = await listFolderSubfolders(folderUrl);
-                    const subcarpetaTarea = nombreSubcarpetaTarea(itemId);
                     subcarpetas.forEach(sub => {
                         const ex = extraerOrdenNombre(sub.Name);
                         if (!ex || ex.orden !== (orden || '')) return;
@@ -440,7 +455,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                     // Archivos dentro de la subcarpeta por defecto de la tarea
                     // (recursivo) + subcarpetas internas con conteo.
-                    const subTarea = subcarpetas.find(s => s.Name === subcarpetaTarea);
+                    // La subcarpeta por defecto se detecta por prefijo "<orden>_"
+                    // (ej. "05_Dossier" creada manualmente), no por nombre exacto.
+                    const subTarea = subcarpetas.find(s => s.Name.startsWith(`${orden}_`));
                     if (subTarea) {
                         const [arbol, subSubs] = await Promise.all([
                             listFolderFilesRecursive(subTarea.ServerRelativeUrl),
@@ -576,7 +593,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 if (!ex || !ex.esPadre) return; // solo carpetas padre
                 const tarea = tareaPorOrden[ex.orden];
                 if (!tarea) return;
-                const esSubcarpetaPorDefecto = sub.Name === nombreSubcarpetaTarea(tarea.Id);
+                // La subcarpeta por defecto se detecta por prefijo "<orden>_"
+                // (ej. "05_Dossier" creada manualmente), no por nombre exacto.
+                const esSubcarpetaPorDefecto = sub.Name.startsWith(`${ex.orden}_`);
                 const [arbol, subSubs] = await Promise.all([
                     listFolderFilesRecursive(sub.ServerRelativeUrl),
                     listFolderSubfolders(sub.ServerRelativeUrl)
@@ -891,10 +910,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
         // Verifica si la subcarpeta de la tarea existe listando las subcarpetas
         // de la raiz (evita el GET directo que genera HTTP 404 en consola).
+        // Se detecta por prefijo "<orden>_" (ej. "05_Dossier"), no por nombre exacto.
         let existe = false;
         try {
             const subs = await listFolderSubfolders(raizUrl);
-            existe = subs.some(s => s.Name === subcarpeta);
+            existe = subs.some(s => s.Name.startsWith(`${getOrdenTarea(itemId) || '00'}_`));
         } catch (err) {
             console.error('Error verificando carpeta de tarea:', err);
         }
@@ -980,11 +1000,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         const subcarpeta = nombreSubcarpetaTarea(itemId);
         const urlSubcarpeta = `${AC_HOST}${raizUrl}/${subcarpeta}`;
         try {
-            // Verifica si la subcarpeta existe listando las subcarpetas de la raiz.
-            const subs = await listFolderSubfolders(raizUrl);
-            const existe = subs.some(s => s.Name === subcarpeta);
-            if (existe) {
-                window.open(urlSubcarpeta, '_blank');
+            // Busca la carpeta fisica de la tarea por prefijo "<orden>_" (asi
+            // detecta "05_Dossier" aunque el nombre generado sea otro).
+            const carpeta = await encontrarCarpetaTarea(itemId, raizUrl);
+            if (carpeta) {
+                window.open(`${AC_HOST}${carpeta.ServerRelativeUrl}`, '_blank');
                 return;
             }
         } catch (err) {
@@ -1032,7 +1052,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     };
 
     // Crea la subcarpeta de la tarea (y opcionalmente mueve los legacy) con
-    // progreso en tiempo real via SweetAlert2.
+    // progreso en tiempo real via SweetAlert2. Si ya existe una carpeta con
+    // prefijo "<orden>_" (ej. "05_Dossier"), la usa en vez de crear otra.
     const crearCarpetaRepositorio = async (itemId, moverLegacy, abrirPestana = true) => {
         if (!checklist?.Tipo || !checklist?.Name) return;
         try {
@@ -1040,11 +1061,18 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             const raizUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
             const subcarpeta = nombreSubcarpetaTarea(itemId);
             const urlSubcarpeta = `${raizUrl}/${subcarpeta}`;
-            // Crea la carpeta (idempotente).
-            await ensureFolder(urlSubcarpeta, digest);
+            // Busca una carpeta existente con prefijo "<orden>_" (ej. "05_Dossier").
+            const carpetaExistente = await encontrarCarpetaTarea(itemId, raizUrl);
+            const carpetaDestino = carpetaExistente
+                ? carpetaExistente.ServerRelativeUrl
+                : urlSubcarpeta;
+            // Crea la carpeta solo si no existe (idempotente).
+            if (!carpetaExistente) {
+                await ensureFolder(urlSubcarpeta, digest);
+            }
 
             // Opcional: mover los archivos legacy de la raiz (prefijo <orden>_)
-            // a la nueva subcarpeta, con progreso en tiempo real.
+            // a la carpeta de la tarea, con progreso en tiempo real.
             if (moverLegacy) {
                 const orden = getOrdenTarea(itemId);
                 const filesRaiz = await listFolderFiles(raizUrl);
@@ -1066,7 +1094,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     const cont = Swal.getHtmlContainer();
                     if (cont) cont.textContent = `Moviendo archivo ${i + 1} de ${total}...`;
                     try {
-                        await moveFile(f.ServerRelativeUrl, urlSubcarpeta, digest);
+                        await moveFile(f.ServerRelativeUrl, carpetaDestino, digest);
                     } catch (moveErr) {
                         // No detener el proceso si un archivo falla.
                         console.error(`Error moviendo legacy ${f.Name}:`, moveErr);
@@ -1084,9 +1112,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 timer: 1800,
                 showConfirmButton: false
             });
-            // Abre la subcarpeta recien creada (solo si se pidio; el drag & drop
+            // Abre la carpeta de la tarea (solo si se pidio; el drag & drop
             // directo en la tarjeta no abre pestanas nuevas).
-            if (abrirPestana) window.open(`${AC_HOST}${urlSubcarpeta}`, '_blank');
+            if (abrirPestana) window.open(`${AC_HOST}${carpetaDestino}`, '_blank');
         } catch (err) {
             console.error('Error creando carpeta de tarea:', err);
             Swal.fire({
@@ -1105,11 +1133,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         const subcarpeta = nombreSubcarpetaTarea(itemId);
         const urlSubcarpeta = `${AC_HOST}${raizUrl}/${subcarpeta}`;
         try {
-            // Verifica si la subcarpeta existe listando las subcarpetas de la raiz.
-            const subs = await listFolderSubfolders(raizUrl);
-            const existe = subs.some(s => s.Name === subcarpeta);
-            if (existe) {
-                window.open(urlSubcarpeta, '_blank');
+            // Busca la carpeta fisica de la tarea por prefijo "<orden>_" (asi
+            // detecta "05_Dossier" aunque el nombre generado sea otro).
+            const carpeta = await encontrarCarpetaTarea(itemId, raizUrl);
+            if (carpeta) {
+                window.open(`${AC_HOST}${carpeta.ServerRelativeUrl}`, '_blank');
                 return;
             }
         } catch (err) {
