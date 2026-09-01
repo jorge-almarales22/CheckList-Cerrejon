@@ -29,4 +29,12 @@ const assetNames = await readdir(distAssetsPath);
 const bundles = assetNames.filter(name => /\.(?:js|css)$/i.test(name));
 await Promise.all(bundles.map(name => cp(resolve(distAssetsPath, name), resolve(exportAssetsPath, name))));
 
+// version.json: el cliente lo consulta (cache: 'no-store') para detectar
+// nuevas versiones desplegadas y ofrecer una recarga limpia.
+try {
+    await cp(resolve(distPath, 'version.json'), resolve(exportPath, 'version.json'));
+} catch (err) {
+    console.warn('version.json no encontrado, omitiendo copia:', err.message);
+}
+
 console.log(`SharePoint export generated at ${exportPath}`);

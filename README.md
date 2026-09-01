@@ -129,6 +129,16 @@ El usuario puede crear checklists, diligenciar tareas, adjuntar evidencias (via 
 
 Las confirmaciones, toasts y progresos usan **SweetAlert2** (`sweetalert2`): eliminacion de evidencias con confirmacion + toast de exito, aprobacion/finalizacion con confirmacion, migracion de evidencias legacy con progreso en tiempo real, y avisos de acciones no soportadas (como arrastrar carpetas completas). No quedan `window.confirm` ni `alert()` nativos en la aplicacion.
 
+## Deteccion de nuevas versiones y actualizacion automatica
+
+Para evitar que los usuarios con versiones viejas en cache sigan viendo errores tras un despliegue, la aplicacion detecta nuevas versiones y ofrece una recarga limpia:
+
+- **Generador de version en el build**: cada `npm run build` ejecuta `scripts/generate-version.mjs`, que crea `dist/version.json` con `{"version": "<timestamp>"}`. `scripts/export-build.mjs` lo copia a `export/version.json` junto al resto del despliegue.
+- **Verificador en el cliente** (`src/utils/versionChecker.js`): al cargar la app (y cada 5 minutos, y cuando la pestana recupera el foco) hace `fetch('./version.json?t=' + Date.now(), { cache: 'no-store' })` y compara con la version guardada en `localStorage` (`app_version`) la primera vez que cargo.
+- **Modal de actualizacion**: si la version del servidor difiere de la local, `App.jsx` muestra un modal SweetAlert2 persistente ("¡Nueva versión disponible!") con el boton **"Actualizar ahora"**, que guarda la version nueva y fuerza una recarga limpia con un timestamp en la URL (`?v=<timestamp>`) para saltar la cache.
+
+Si `version.json` no existe (dev o despliegues viejos), la verificacion se ignora silenciosamente sin romper la app.
+
 La tabla de incorporaciones incluye filtros multi-seleccion por columna en `NOM. CHK.`, `PLAN (ESP.)`, `COMPL. (REAL)`, `GER.`, `SUPT.`, `TIPO INCORP.` y `CREAD. POR`. Cada filtro ofrece busqueda, checkboxes, `Todos`, `Ninguno`, `Limpiar` y `Aplicar`. Las selecciones se aplican al pulsar `Aplicar` o al hacer clic fuera del menu; `Limpiar` elimina la seleccion y cierra el menu. Los encabezados usan abreviaciones compactas para mantenerse en una sola fila.
 
 El detalle de un checklist incluye filtros internos sobre sus tareas: buscador general (descripcion, responsable, tarea), responsable, estado (terminadas, faltantes, en rojo), rango de avance esperado, rango de avance real y la casilla `Solo en Alerta`. Estos filtros son independientes de los filtros de la tabla principal y no los afectan.

@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import { SITE_URL } from './data/constants';
+import { iniciarVerificadorVersion } from './utils/versionChecker';
 
 const App = () => {
     const [user, setUser] = useState(null);
     const [userName, setUserName] = useState('');
     const [role, setRole] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    // Deteccion de nuevas versiones: consulta version.json (sin cache) al
+    // cargar, cada 5 minutos y cuando la pestana recupera el foco. Si hay una
+    // version nueva desplegada, muestra un modal SweetAlert2 para recargar
+    // limpio (evita problemas de cache en usuarios con versiones viejas).
+    useEffect(() => {
+        const detener = iniciarVerificadorVersion();
+        return () => detener();
+    }, []);
 
     useEffect(() => {
         const initUser = async () => {
