@@ -139,7 +139,9 @@ Para evitar que los usuarios con versiones viejas en cache sigan viendo errores 
 
 Si `version.json` no existe (dev o despliegues viejos), la verificacion se ignora silenciosamente sin romper la app.
 
-La tabla de incorporaciones incluye filtros multi-seleccion por columna en `NOM. CHK.`, `PLAN (ESP.)`, `COMPL. (REAL)`, `GER.`, `SUPT.`, `TIPO INCORP.` y `CREAD. POR`. Cada filtro ofrece busqueda, checkboxes, `Todos`, `Ninguno`, `Limpiar` y `Aplicar`. Las selecciones se aplican al pulsar `Aplicar` o al hacer clic fuera del menu; `Limpiar` elimina la seleccion y cierra el menu. Los encabezados usan abreviaciones compactas para mantenerse en una sola fila.
+La tabla de incorporaciones incluye un **buscador global** en el panel de botones (a la derecha de "Crear Nueva Incorporación", "Nuevas Solicitudes" y "Solo con Alertas"). Busca en **todos los campos** de cada incorporacion: nombre, tipo, estado, creador, gerencia, superintendencia, unidad, proceso, equipos, fechas, comentarios, descripcion y todas las tareas (descripcion, entregable, responsables, corresponsables, avances, fechas y comentarios). Al escribir una palabra (ej. "taller"), la tabla se filtra automaticamente en tiempo real mostrando solo las incorporaciones que la contienen en cualquier campo.
+
+Ademas, la tabla incluye filtros multi-seleccion por columna en `NOM. CHK.`, `PLAN (ESP.)`, `COMPL. (REAL)`, `GER.`, `SUPT.`, `TIPO INCORP.` y `CREAD. POR`. Cada filtro ofrece busqueda, checkboxes, `Todos`, `Ninguno`, `Limpiar` y `Aplicar`. Las selecciones se aplican al pulsar `Aplicar` o al hacer clic fuera del menu; `Limpiar` elimina la seleccion y cierra el menu. Los encabezados usan abreviaciones compactas para mantenerse en una sola fila.
 
 El detalle de un checklist incluye filtros internos sobre sus tareas: buscador general (descripcion, responsable, tarea), responsable, estado (terminadas, faltantes, en rojo), rango de avance esperado, rango de avance real y la casilla `Solo en Alerta`. Estos filtros son independientes de los filtros de la tabla principal y no los afectan.
 

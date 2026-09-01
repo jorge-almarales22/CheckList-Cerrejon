@@ -56,6 +56,9 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
     const [filtroAlerta, setFiltroAlerta] = useState(false);
     const [columnFilters, setColumnFilters] = useState({});
     const [verSolicitudes, setVerSolicitudes] = useState(false); // ver la bandeja de aprobaciones
+    // Buscador global: filtra por cualquier campo del checklist (nombre, gerencia,
+    // superintendencia, tipo, creador, equipos, tareas, comentarios, etc.).
+    const [busquedaGlobal, setBusquedaGlobal] = useState('');
 
     // Eliminación de un checklist (solo administradores).
     const [checklistAEliminar, setChecklistAEliminar] = useState(null);
@@ -116,7 +119,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
         return () => clearInterval(interval);
     }, [role, currentUser]);
 
-    useEffect(() => { setCurrentPage(1); }, [filtroAlerta, columnFilters, verSolicitudes]);
+    useEffect(() => { setCurrentPage(1); }, [filtroAlerta, columnFilters, verSolicitudes, busquedaGlobal]);
 
     // Borrado definitivo del registro en SharePoint. Solo lo alcanzan los admins y
     // exige escribir el nombre exacto del checklist en el modal de confirmación.
@@ -163,9 +166,54 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
         filtrarPorColumnas(lista, columnKey).map(chk => getColumnFilterValue(chk, columnKey))
     )].sort((a, b) => a.localeCompare(b, 'es'));
 
+    // Serializa todos los campos relevantes de un checklist a un texto plano para
+    // el buscador global. Incluye metadatos, tareas, responsables, comentarios,
+    // estado, aprobacion, etc. Asi una palabra como "taller" encuentra cualquier
+    // incorporacion que la contenga en cualquiera de sus campos.
+    const textoBuscable = (chk) => {
+        const partes = [
+            chk.Name,
+            chk.Tipo,
+            chk.Estado,
+            chk.CreadoPor,
+            chk.CreadoPorNombre,
+            chk.AprobacionComentario,
+            chk.Metadata?.gerencia,
+            chk.Metadata?.superintendencia,
+            chk.Metadata?.unidad,
+            chk.Metadata?.proceso,
+            chk.Metadata?.fechaInicioDiligenciamiento,
+            chk.Metadata?.fechaFinDiligenciamiento,
+            chk.Metadata?.comentarios,
+            chk.Metadata?.descripcion,
+            ...(chk.Metadata?.equipos || []),
+            ...(chk.Metadata?.fotos || []).map(f => f?.nombre || ''),
+            ...(chk.items || []).flatMap(it => [
+                it.Descripcion,
+                it.actividades,
+                it.Entregable,
+                it.NombreResponsable,
+                it.Corresponsable,
+                it.Estado,
+                it.Alerta,
+                it.Avance,
+                it.FechaBaselineInicio,
+                it.FechaBaselineFin,
+                it.FechaInicio,
+                it.FechaFin,
+                ...(it.HistorialComentarios || []).map(c => c?.texto || c?.comentario || ''),
+                ...(it.comentarios || [])
+            ])
+        ];
+        return partes.filter(Boolean).join(' ').toLowerCase();
+    };
+
     const aplicarFiltros = (lista) => {
         let r = filtrarPorColumnas(lista);
         if (filtroAlerta) r = r.filter(chk => chk.items && chk.items.some(it => it.Alerta === "Si"));
+        // Buscador global: filtra por cualquier campo (textoBuscable).
+        const q = busquedaGlobal.trim().toLowerCase();
+        if (q) r = r.filter(chk => textoBuscable(chk).includes(q));
         return r;
     };
 
@@ -240,6 +288,28 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                     <label className={`flex items-center gap-2 text-sm font-bold cursor-pointer border px-3 py-2 rounded-lg shrink-0 whitespace-nowrap ${theme==='dark'?'bg-slate-950/85 border-slate-800':'bg-slate-100 border-slate-300'}`}>
                         <input type="checkbox" checked={filtroAlerta} onChange={(e) => setFiltroAlerta(e.target.checked)} className="accent-yellow-500" /> Solo con Alertas
                     </label>
+                    {/* Buscador global: filtra por cualquier campo de la tabla inferior. */}
+                    <div className="relative flex-1 min-w-[220px] md:ml-auto">
+                        <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+                        </svg>
+                        <input
+                            type="text"
+                            value={busquedaGlobal}
+                            onChange={(e) => setBusquedaGlobal(e.target.value)}
+                            placeholder="Buscar en todas las incorporaciones..."
+                            className={`${inputClasses} w-full pl-9 pr-8`}
+                        />
+                        {busquedaGlobal && (
+                            <button
+                                onClick={() => setBusquedaGlobal('')}
+                                title="Limpiar búsqueda"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
