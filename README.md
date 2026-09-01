@@ -82,7 +82,7 @@ La carpeta de la tarea se crea automaticamente (con loading "Creando carpeta de 
 
 La seccion "Evidencias Cargadas" de cada tarjeta muestra una **representacion real** de lo cargado en la tarea, sin cargar peso (solo nombres e iconos, sin miniaturas ni contenido):
 
-- **Carpetas de la tarea**: se detectan por prefijo de orden flexible (`01_`, `01.`, `01 `, `01-`) en la raiz del checklist o dentro de la subcarpeta por defecto. Se muestran como tiles ambar con icono de carpeta y su nombre. Al hacer clic se abre el **Gestor de Entregables** (FileManager) para navegar dentro.
+- **Carpetas de la tarea**: se detectan por prefijo de orden. Solo las carpetas con `<orden>_` (guion bajo, ej. `01_`, `12_`) son **carpetas padre** (la subcarpeta por defecto de la tarea es su raiz y no se muestra como tile). Las carpetas con `<orden>.`, `<orden> ` o `<orden>-` (sin guion bajo) son **carpetas internas** y se muestran como tiles ambar con icono de carpeta y su nombre (indicando cuantas subcarpetas contienen). Al hacer clic se abre el **Gestor de Entregables** (FileManager) para navegar dentro.
 - **Archivos sueltos en la raiz de la tarea**: los que estan directamente en la raiz (no dentro de subcarpetas) se muestran como tiles de archivo con icono por extension. Al hacer clic se abren en pestana nueva (comportamiento actual).
 - Los archivos dentro de subcarpetas **no se aplanan** en la vista: se representan por su carpeta (representacion real de lo cargado). Para verlos, se abre la carpeta en el FileManager.
 - El contador muestra "X elementos" (carpetas + archivos raiz) y el badge "Con/Sin Evidencias" considera ambos.

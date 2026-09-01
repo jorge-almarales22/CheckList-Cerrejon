@@ -347,13 +347,17 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
     // Extrae el numero de orden y el nombre de una carpeta/archivo con prefijo
     // numerico flexible: "01_", "01.", "01 ", "01-", "01" (con o sin separador).
-    // Devuelve { orden: '01', resto: 'nombre' } o null si no tiene prefijo.
+    // Devuelve { orden: '01', resto: 'nombre', esPadre: bool } o null si no tiene
+    // prefijo. esPadre = true SOLO si el separador es guion bajo ("01_"), que es
+    // la convencion de las carpetas padre de tarea. "01.", "01 ", "01-" son
+    // carpetas internas (esPadre = false).
     const extraerOrdenNombre = (nombre) => {
-        const m = (nombre || '').match(/^(\d{1,3})\s*[._\-\s]?\s*(.*)$/);
+        const m = (nombre || '').match(/^(\d{1,3})\s*([._\-\s]?)\s*(.*)$/);
         if (!m) return null;
         const orden = String(parseInt(m[1], 10)).padStart(2, '0');
-        const resto = (m[2] || '').trim();
-        return { orden, resto };
+        const separador = m[2] || '';
+        const resto = (m[3] || '').trim();
+        return { orden, resto, esPadre: separador === '_' };
     };
 
     const cargarEvidencias = async (itemId) => {
@@ -407,28 +411,60 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
                     })));
 
-                    // Carpetas de la raiz del checklist que pertenecen a esta tarea
-                    // (prefijo de orden flexible: "01_", "01.", "01 ", "01-").
+                    // Carpetas de la raiz del checklist que pertenecen a esta tarea.
+                    // Solo las carpetas INTERNAS (sin guion bajo: "01.", "01 ",
+                    // "01-") se muestran como tiles. Las carpetas PADRE ("01_")
+                    // no se muestran: la subcarpeta por defecto es la raiz de la
+                    // tarea y las demas padres aportan sus internas via 1c.
                     const subcarpetas = await listFolderSubfolders(folderUrl);
+                    const subcarpetaTarea = nombreSubcarpetaTarea(itemId);
                     subcarpetas.forEach(sub => {
                         const ex = extraerOrdenNombre(sub.Name);
-                        if (ex && ex.orden === (orden || '')) {
-                            carpetasDeTarea.push({
-                                tipo: 'carpeta',
-                                Id: `carpeta_${sub.ServerRelativeUrl}`,
-                                Name: sub.Name,
-                                ServerRelativeUrl: sub.ServerRelativeUrl
-                            });
-                        }
+                        if (!ex || ex.orden !== (orden || '')) return;
+                        if (ex.esPadre) return; // carpetas padre: no se muestran
+                        carpetasDeTarea.push({
+                            tipo: 'carpeta',
+                            Id: `carpeta_${sub.ServerRelativeUrl}`,
+                            Name: sub.Name,
+                            ServerRelativeUrl: sub.ServerRelativeUrl
+                        });
                     });
 
                     // Archivos dentro de la subcarpeta por defecto de la tarea
-                    // y de TODAS sus subcarpetas (recursivo, 1 sola llamada).
-                    const subcarpetaTarea = nombreSubcarpetaTarea(itemId);
+                    // (recursivo) + subcarpetas internas con conteo.
                     const subTarea = subcarpetas.find(s => s.Name === subcarpetaTarea);
                     if (subTarea) {
-                        const arbol = await listFolderFilesRecursive(subTarea.ServerRelativeUrl);
-                        arbol.forEach(pushFile);
+                        const [arbol, subSubs] = await Promise.all([
+                            listFolderFilesRecursive(subTarea.ServerRelativeUrl),
+                            listFolderSubfolders(subTarea.ServerRelativeUrl)
+                        ]);
+                        // Archivos directos de la subcarpeta por defecto -> archivos raiz.
+                        const prefijo = subTarea.ServerRelativeUrl;
+                        const directos = arbol.filter(f => {
+                            const rel = f.ServerRelativeUrl.substring(prefijo.length + 1);
+                            return rel.indexOf('/') === -1;
+                        });
+                        directos.forEach(pushFile);
+                        archivosRaiz.push(...directos.map(f => ({
+                            tipo: 'archivo',
+                            Id: `file_${f.ServerRelativeUrl}`,
+                            source: 'file',
+                            fileRef: f.ServerRelativeUrl,
+                            Name: f.Name,
+                            Data: `${AC_HOST}${f.ServerRelativeUrl}`,
+                            isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
+                        })));
+                        // Subcarpetas internas con conteo de subcarpetas.
+                        const conteos = await Promise.all(subSubs.map(ss => listFolderSubfolders(ss.ServerRelativeUrl)));
+                        subSubs.forEach((ss, i) => {
+                            carpetasDeTarea.push({
+                                tipo: 'carpeta',
+                                Id: `carpeta_${ss.ServerRelativeUrl}`,
+                                Name: ss.Name,
+                                ServerRelativeUrl: ss.ServerRelativeUrl,
+                                numSubcarpetas: conteos[i]?.length || 0
+                            });
+                        });
                     }
                 }
             } catch (error) {
@@ -490,13 +526,19 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 }
             });
 
-            // 1b) Carpetas de la raiz del checklist con prefijo de orden flexible
-            //     ("01_", "01.", "01 ", "01-") -> carpetas de la tarea.
+            // 1b) Carpetas de la raiz del checklist:
+            //     - Con "<orden>_" (guion bajo, esPadre=true): son carpetas PADRE.
+            //       La subcarpeta por defecto de la tarea ES la raiz de la tarea
+            //       y NO se muestra como tile. Las demas carpetas padre tampoco
+            //       se muestran (son padres; sus internas salen via 1c).
+            //     - Con "<orden>." / "<orden> " / "<orden>-" (sin guion bajo):
+            //       son carpetas INTERNAS sueltas en la raiz -> se muestran.
             subcarpetas.forEach(sub => {
                 const ex = extraerOrdenNombre(sub.Name);
                 if (!ex) return;
                 const tarea = tareaPorOrden[ex.orden];
                 if (!tarea) return;
+                if (ex.esPadre) return; // carpetas padre: no se muestran como tiles
                 (carpetasPorTarea[tarea.Id] = carpetasPorTarea[tarea.Id] || []).push({
                     tipo: 'carpeta',
                     Id: `carpeta_${sub.ServerRelativeUrl}`,
@@ -505,15 +547,16 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 });
             });
 
-            // 1c) Para cada carpeta de tarea (prefijo de orden):
-            //     - Archivos DIRECTOS (raiz de la carpeta) -> archivos sueltos de la
-            //       tarea SOLO si es la subcarpeta por defecto creada por el sistema.
-            //     - Subcarpetas internas -> carpetas de la tarea.
-            //     Los archivos dentro de sub-subcarpetas NO se aplanan en la vista:
-            //     se representan por su carpeta (representacion real de lo cargado).
+            // 1c) Para cada carpeta PADRE ("<orden>_" en la raiz):
+            //     - La subcarpeta por defecto de la tarea: sus archivos DIRECTOS
+            //       son los archivos raiz de la tarea; sus subcarpetas internas
+            //       son los tiles de carpeta.
+            //     - Otras carpetas padre: solo aportan sus subcarpetas internas.
+            //     Los archivos dentro de sub-subcarpetas NO se aplanan: se
+            //     representan por su carpeta (representacion real de lo cargado).
             await Promise.all(subcarpetas.map(async (sub) => {
                 const ex = extraerOrdenNombre(sub.Name);
-                if (!ex) return;
+                if (!ex || !ex.esPadre) return; // solo carpetas padre
                 const tarea = tareaPorOrden[ex.orden];
                 if (!tarea) return;
                 const esSubcarpetaPorDefecto = sub.Name === nombreSubcarpetaTarea(tarea.Id);
@@ -521,32 +564,37 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     listFolderFilesRecursive(sub.ServerRelativeUrl),
                     listFolderSubfolders(sub.ServerRelativeUrl)
                 ]);
-                // Archivos directos de la carpeta de la tarea (sin subcarpetas intermedias).
-                const prefijo = sub.ServerRelativeUrl;
-                const directos = arbol.filter(f => {
-                    const rel = f.ServerRelativeUrl.substring(prefijo.length + 1);
-                    return rel.indexOf('/') === -1;
-                });
-                if (esSubcarpetaPorDefecto && directos.length) {
-                    const evs = directos.map(f => ({
-                        tipo: 'archivo',
-                        Id: `file_${f.ServerRelativeUrl}`,
-                        source: 'file',
-                        fileRef: f.ServerRelativeUrl,
-                        Name: f.Name,
-                        Data: `${AC_HOST}${f.ServerRelativeUrl}`,
-                        isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
-                    }));
-                    map[tarea.Id] = [...(map[tarea.Id] || []), ...evs];
-                    archivosRaizPorTarea[tarea.Id] = [...(archivosRaizPorTarea[tarea.Id] || []), ...evs];
+                // Archivos directos de la subcarpeta por defecto -> archivos raiz.
+                if (esSubcarpetaPorDefecto) {
+                    const prefijo = sub.ServerRelativeUrl;
+                    const directos = arbol.filter(f => {
+                        const rel = f.ServerRelativeUrl.substring(prefijo.length + 1);
+                        return rel.indexOf('/') === -1;
+                    });
+                    if (directos.length) {
+                        const evs = directos.map(f => ({
+                            tipo: 'archivo',
+                            Id: `file_${f.ServerRelativeUrl}`,
+                            source: 'file',
+                            fileRef: f.ServerRelativeUrl,
+                            Name: f.Name,
+                            Data: `${AC_HOST}${f.ServerRelativeUrl}`,
+                            isImage: /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(f.Name)
+                        }));
+                        map[tarea.Id] = [...(map[tarea.Id] || []), ...evs];
+                        archivosRaizPorTarea[tarea.Id] = [...(archivosRaizPorTarea[tarea.Id] || []), ...evs];
+                    }
                 }
-                // Subcarpetas internas de la carpeta de la tarea.
-                subSubs.forEach(ss => {
+                // Subcarpetas internas de la carpeta padre, con conteo de
+                // subcarpetas (paralelo, solo metadata ligera).
+                const conteos = await Promise.all(subSubs.map(ss => listFolderSubfolders(ss.ServerRelativeUrl)));
+                subSubs.forEach((ss, i) => {
                     (carpetasPorTarea[tarea.Id] = carpetasPorTarea[tarea.Id] || []).push({
                         tipo: 'carpeta',
                         Id: `carpeta_${ss.ServerRelativeUrl}`,
                         Name: ss.Name,
-                        ServerRelativeUrl: ss.ServerRelativeUrl
+                        ServerRelativeUrl: ss.ServerRelativeUrl,
+                        numSubcarpetas: conteos[i]?.length || 0
                     });
                 });
             }));
@@ -2712,6 +2760,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                                                             </span>
                                                                                             <span className="text-[8px] font-black text-amber-600 dark:text-yellow-400 uppercase tracking-wider">CARPETA</span>
                                                                                             <span className="text-[9px] font-bold text-slate-900 dark:text-slate-200 text-center break-all leading-tight line-clamp-2">{el.Name}</span>
+                                                                                            {el.numSubcarpetas > 0 && (
+                                                                                                <span className="text-[8px] font-bold text-amber-600 dark:text-yellow-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
+                                                                                                    {el.numSubcarpetas} subcarpeta{el.numSubcarpetas !== 1 ? 's' : ''}
+                                                                                                </span>
+                                                                                            )}
                                                                                         </button>
                                                                                     </div>
                                                                                 );
