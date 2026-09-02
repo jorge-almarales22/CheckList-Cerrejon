@@ -1,9 +1,84 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { calcularCumplimiento, calcularRealChecklist, calcularEsperadoChecklist } from '../utils/calculations';
+import { SITE_URL } from '../data/constants';
+import { getRequestDigest } from '../utils/sharepointApi';
+
+// Formatea un correo a nombre legible: "silvia.rosas@cerrejon.com" -> "Silvia Rosas".
+// Elimina el dominio (desde el @) y pone la primera letra de cada parte en mayuscula.
+const formatearCorreoANombre = (email) => {
+    const local = (email || '').split('@')[0]; // parte antes del @
+    return local
+        .split(/[._-]+/) // separa por punto, guion bajo o guion
+        .filter(Boolean)
+        .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+        .join(' ');
+};
+
+// Limpia el nombre del directorio: "Zuleta, Dilson (Hambings SAS - CO)" -> "Zuleta, Dilson".
+// Elimina todo lo que este entre parentesis (incluidos los parentesis).
+const limpiarNombreDirectorio = (displayName) => {
+    return (displayName || '')
+        .replace(/\s*\(.*?\)\s*/g, '') // elimina "(Hambings SAS - CO)" y espacios alrededor
+        .trim();
+};
 
 const DashboardCharts = ({ items, checklist, theme, layout }) => {
     const [showAllResp, setShowAllResp] = useState(false);
+    // Cache de nombres reales por correo (evita re-consultar el directorio).
+    const [nombresDirectorio, setNombresDirectorio] = useState({});
+
+    // Busca el nombre real de cada responsable en el directorio (por correo).
+    // Si no lo encuentra, usa el correo formateado ("silvia.rosas@..." -> "Silvia Rosas").
+    useEffect(() => {
+        if (!items || items.length === 0) return;
+        const activos = items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
+        const correos = [...new Set(activos.map(it => it.NombreResponsable || it.nombreResponsable || '').filter(n => n.includes('@')))];
+        if (correos.length === 0) return;
+        let cancelado = false;
+        (async () => {
+            const nuevos = {};
+            for (const correo of correos) {
+                if (cancelado) return;
+                try {
+                    const digest = await getRequestDigest();
+                    const response = await fetch(`${SITE_URL}/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.clientPeoplePickerSearchUser`, {
+                        method: 'POST',
+                        headers: {
+                            "Accept": "application/json;odata=verbose",
+                            "Content-Type": "application/json;odata=verbose",
+                            "X-RequestDigest": digest
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({
+                            queryParams: {
+                                __metadata: { type: "SP.UI.ApplicationPages.ClientPeoplePickerQueryParameters" },
+                                AllowEmailAddresses: true,
+                                AllowMultipleEntities: false,
+                                AllUrlZones: false,
+                                MaximumEntitySuggestions: 1,
+                                PrincipalSource: 15,
+                                PrincipalType: 1,
+                                QueryString: correo
+                            }
+                        })
+                    });
+                    const data = await response.json();
+                    const parsed = JSON.parse(data.d.ClientPeoplePickerSearchUser);
+                    if (parsed && parsed.length > 0) {
+                        const nombreLimpio = limpiarNombreDirectorio(parsed[0].DisplayText);
+                        if (nombreLimpio) nuevos[correo] = nombreLimpio;
+                    }
+                } catch (err) {
+                    console.warn(`No se pudo buscar el nombre de ${correo}:`, err);
+                }
+            }
+            if (!cancelado && Object.keys(nuevos).length > 0) {
+                setNombresDirectorio(prev => ({ ...prev, ...nuevos }));
+            }
+        })();
+        return () => { cancelado = true; };
+    }, [items]);
 
     if (!items || items.length === 0) return null;
     const activos = items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
@@ -34,8 +109,15 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
     });
     const dataChart = Object.keys(respMap).map(k => ({
         name: k,
-        avg: Math.round(respMap[k].total / respMap[k].count)
+        avg: Math.round(respMap[k].total / respMap[k].count * 10) / 10 // 1 decimal
     })).sort((a, b) => b.avg - a.avg);
+
+    // Nombre visible: el del directorio si existe, si no el correo formateado.
+    const nombreVisible = (name) => {
+        if (nombresDirectorio[name]) return nombresDirectorio[name];
+        if (name.includes('@')) return formatearCorreoANombre(name);
+        return name;
+    };
 
     const isDark = theme === 'dark';
     const cardBg = isDark
@@ -59,12 +141,12 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
     const cxy = svgBox / 2;
 
     const Barra = ({ d }) => (
-        <div className="flex items-center gap-3 text-xs">
-            <div className={`w-[120px] truncate text-right font-bold ${textColor}`} title={d.name}>{d.name}</div>
-            <div className={`flex-1 h-5 rounded-full overflow-hidden relative border ${barBg}`}>
+        <div className="flex items-center gap-2 text-xs">
+            <div className={`w-[140px] truncate text-right font-bold ${textColor}`} title={d.name}>{nombreVisible(d.name)}</div>
+            <div className={`flex-1 h-3 rounded-full overflow-hidden relative border ${barBg}`}>
                 <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-1000" style={{ width: `${d.avg}%` }}></div>
             </div>
-            <div className={`w-[38px] font-bold ${textColor}`}>{d.avg}%</div>
+            <div className={`w-[44px] font-bold ${textColor}`}>{d.avg.toFixed(1)}%</div>
         </div>
     );
 
@@ -77,7 +159,7 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
                 <circle cx={cxy} cy={cxy} r={rEsp} fill="transparent" stroke="#3b82f6" strokeWidth="9" strokeDasharray={circEsp} strokeDashoffset={offEsp} className="transition-all duration-1000 ease-out" strokeLinecap="round" />
             </svg>
             <div className="absolute flex flex-col items-center justify-center text-center">
-                <span className={`${esLateral ? 'text-xl' : 'text-2xl'} font-black ${textColor}`}>{avanceGeneral}%</span>
+                <span className={`${esLateral ? 'text-xl' : 'text-2xl'} font-black ${textColor}`}>{avanceGeneral.toFixed(1)}%</span>
                 <span className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${textColor}`}>Real</span>
             </div>
         </div>
@@ -87,11 +169,11 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
         <div className="flex gap-4 mt-3 text-[11px] font-bold flex-wrap justify-center">
             <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
-                <span className={textColor}>Real: {avanceGeneral}%</span>
+                <span className={textColor}>Real: {avanceGeneral.toFixed(1)}%</span>
             </div>
             <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded-full bg-blue-500 inline-block"></span>
-                <span className={textColor}>Esperado: {avanceEsperado}%</span>
+                <span className={textColor}>Esperado: {avanceEsperado.toFixed(1)}%</span>
             </div>
         </div>
     );
