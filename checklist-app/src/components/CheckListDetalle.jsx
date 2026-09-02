@@ -356,19 +356,23 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         }
     };
 
-    // Un archivo pertenece a la tarea si empieza por su numero de orden ("06_...")
-    // o por el formato anterior basado en el Id ("Evidencia_<id>_...").
-    const archivoEsDeTarea = (nombre, itemId, orden) =>
-        (!!orden && nombre.startsWith(`${orden}_`)) || nombre.startsWith(`Evidencia_${itemId}_`);
+    // Un archivo pertenece a la tarea si empieza por su numero de orden con
+    // separador flexible ("06_", "06.", "06 ", "06-", "06:") o por el formato
+    // anterior basado en el Id ("Evidencia_<id>_...").
+    const archivoEsDeTarea = (nombre, itemId, orden) => {
+        if (!orden) return nombre.startsWith(`Evidencia_${itemId}_`);
+        const ex = extraerOrdenNombre(nombre);
+        return (ex && ex.orden === orden) || nombre.startsWith(`Evidencia_${itemId}_`);
+    };
 
     // Extrae el numero de orden y el nombre de una carpeta/archivo con prefijo
-    // numerico flexible: "01_", "01.", "01 ", "01-", "01" (con o sin separador).
-    // Devuelve { orden: '01', resto: 'nombre', esPadre: bool } o null si no tiene
-    // prefijo. esPadre = true SOLO si el separador es guion bajo ("01_"), que es
-    // la convencion de las carpetas padre de tarea. "01.", "01 ", "01-" son
-    // carpetas internas (esPadre = false).
+    // numerico flexible: "01_", "01.", "01 ", "01-", "01:", "01" (con o sin
+    // separador). Devuelve { orden: '01', resto: 'nombre', esPadre: bool } o
+    // null si no tiene prefijo. esPadre = true SOLO si el separador es guion
+    // bajo ("01_"), que es la convencion de las carpetas padre de tarea.
+    // "01.", "01 ", "01-", "01:" son carpetas internas (esPadre = false).
     const extraerOrdenNombre = (nombre) => {
-        const m = (nombre || '').match(/^(\d{1,3})\s*([._\-\s]?)\s*(.*)$/);
+        const m = (nombre || '').match(/^(\d{1,3})\s*([._\-\s:]?)\s*(.*)$/);
         if (!m) return null;
         const orden = String(parseInt(m[1], 10)).padStart(2, '0');
         const separador = m[2] || '';
