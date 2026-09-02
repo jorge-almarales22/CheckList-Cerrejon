@@ -45,7 +45,8 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
     });
     const dataChart = Object.keys(respMap).map(k => ({
         name: k,
-        avg: Math.round(respMap[k].total / respMap[k].count * 10) / 10 // 1 decimal
+        avg: Math.round(respMap[k].total / respMap[k].count * 10) / 10, // 1 decimal
+        count: respMap[k].count // numero de tareas del responsable
     })).sort((a, b) => b.avg - a.avg);
 
     // Nombre visible: formatea el correo ("silvia.rosas@cerrejon.com" -> "Silvia Rosas").
@@ -78,11 +79,14 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
 
     const Barra = ({ d }) => (
         <div className="flex items-center gap-2 text-xs">
-            <div className={`w-[140px] truncate text-left font-bold ${textColor}`} title={d.name}>{nombreVisible(d.name)}</div>
+            <div className={`w-[130px] truncate text-left font-bold ${textColor}`} title={d.name}>{nombreVisible(d.name)}</div>
             <div className={`flex-1 h-3 rounded-full overflow-hidden relative border ${barBg}`}>
                 <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-1000" style={{ width: `${d.avg}%` }}></div>
             </div>
-            <div className={`w-[44px] font-bold ${textColor}`}>{d.avg.toFixed(1)}%</div>
+            <div className={`w-[44px] font-bold text-right ${textColor}`}>{d.avg.toFixed(1)}%</div>
+            <div className={`w-[52px] text-center font-bold rounded-md px-1 py-0.5 ${isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-700'}`} title={`${d.count} tarea${d.count !== 1 ? 's' : ''}`}>
+                {d.count} tarea{d.count !== 1 ? 's' : ''}
+            </div>
         </div>
     );
 
