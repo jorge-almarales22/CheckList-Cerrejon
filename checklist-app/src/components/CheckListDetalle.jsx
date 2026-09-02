@@ -1829,7 +1829,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         if (omitir !== 'alerta' && filterAlertaOnly) {
             resultado = resultado.filter(it => it.Alerta === 'Si');
         }
-        const tareaTerminada = (it) => parseInt(it.Avance || it.avance || 0) === 100 && !!evidenciasPresence[it.Id];
+        const tareaTerminada = (it) => parseInt(it.Avance || it.avance || 0) === 100;
         if (omitir !== 'estado' && filterEstadoTarea.size > 0) {
             resultado = resultado.filter(it => {
                 if (filterEstadoTarea.has('terminadas') && tareaTerminada(it)) return true;
@@ -1878,7 +1878,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const opcionesResponsable = [...new Set([MIS_TAREAS, ...responsablesDisponibles, ...filterResponsable])];
 
     const poolEstado = aplicarFiltros(listadoOrdenado, 'estado');
-    const tareaTerminadaPool = (it) => parseInt(it.Avance || it.avance || 0) === 100 && !!evidenciasPresence[it.Id];
+    const tareaTerminadaPool = (it) => parseInt(it.Avance || it.avance || 0) === 100;
     const estadosDisponibles = [];
     if (poolEstado.some(tareaTerminadaPool)) estadosDisponibles.push('terminadas');
     if (poolEstado.some(it => !tareaTerminadaPool(it))) estadosDisponibles.push('faltantes');
