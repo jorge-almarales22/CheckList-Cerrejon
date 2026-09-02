@@ -159,7 +159,7 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
                 {/* flex-1 para que la tarjeta llegue hasta abajo (al nivel de los metadatos). */}
                 <div className={`${cardBg} border p-4 rounded-2xl flex flex-col flex-1 min-h-0`}>
                     <div className="flex items-center justify-between mb-3 gap-2 shrink-0">
-                        <h3 className={`text-[11px] font-black uppercase tracking-wider ${labelColor}`}>Promedio por Responsable</h3>
+                        <h3 className={`text-[11px] font-black uppercase tracking-wider text-center flex-1 ${labelColor}`}>Avance por Responsable</h3>
                         {hayMas && (
                             <button onClick={() => setShowAllResp(true)} className="text-[10px] font-bold bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-700 dark:text-yellow-400 px-2 py-1 rounded border border-yellow-500/30 transition-colors whitespace-nowrap">
                                 Ver más ({dataChart.length})
@@ -176,7 +176,7 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
                     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-[fadeIn_0.2s_ease-out]" onClick={() => setShowAllResp(false)}>
                         <div className={`${isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-300'} border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col`} onClick={(e) => e.stopPropagation()}>
                             <div className={`flex justify-between items-center p-4 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-                                <h3 className={`text-sm font-black uppercase tracking-wider ${labelColor}`}>Promedio por Responsable ({dataChart.length})</h3>
+                                <h3 className={`text-sm font-black uppercase tracking-wider text-center flex-1 ${labelColor}`}>Avance por Responsable ({dataChart.length})</h3>
                                 <button onClick={() => setShowAllResp(false)} className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded-xl border border-red-400/40 shadow transition-colors">
                                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
                                     Cerrar
@@ -202,7 +202,7 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
                 <Leyenda />
             </div>
             <div className={`md:col-span-2 ${cardBg} backdrop-blur-2xl p-6 rounded-3xl border`}>
-                <h3 className={`text-xs font-bold uppercase tracking-wider mb-6 ${labelColor}`}>{"Promedio por Responsable (Activos)"}</h3>
+                <h3 className={`text-xs font-bold uppercase tracking-wider mb-6 text-center ${labelColor}`}>{"Avance por Responsable (Activos)"}</h3>
                 <div className="max-h-[200px] overflow-y-auto pr-2">
                     <TablaResponsables />
                 </div>
