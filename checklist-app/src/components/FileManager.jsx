@@ -291,12 +291,24 @@ const FileManager = ({
             // Resuelve la carpeta real de la tarea por prefijo "<orden>_" (ej.
             // "05_Dossier" creada manualmente). Si no existe, usa el nombre
             // generado por defecto (se creara al subir el primer archivo).
+            // Despues de resolver, carga el contenido de la carpeta REAL.
             (async () => {
                 try {
                     const raizChecklist = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
                     const subs = await listFolderSubfolders(raizChecklist);
                     const real = subs.find(s => s.Name.startsWith(`${orden}_`));
-                    setRaizNombre(real ? real.Name : nombreSubcarpetaTarea);
+                    const nombreFinal = real ? real.Name : nombreSubcarpetaTarea;
+                    setRaizNombre(nombreFinal);
+                    // Carga el contenido de la carpeta real (evita la condicion
+                    // de carrera que mostraba 'Esta carpeta esta vacia').
+                    const urlReal = `${raizChecklist}/${nombreFinal}`;
+                    const [subsReal, filesReal] = await Promise.all([
+                        listFolderSubfolders(urlReal),
+                        listFolderFiles(urlReal)
+                    ]);
+                    setCarpetas(subsReal.map(s => ({ ...s, tipo: 'carpeta', Id: `carpeta_${s.ServerRelativeUrl}` })));
+                    setArchivos(filesReal.map(f => ({ ...f, tipo: 'archivo', Id: `archivo_${f.ServerRelativeUrl}` })));
+                    setCargando(false);
                 } catch (err) {
                     console.error('Error resolviendo carpeta raiz de la tarea:', err);
                     setRaizNombre(nombreSubcarpetaTarea);
