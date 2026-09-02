@@ -78,14 +78,39 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
     const cxy = svgBox / 2;
 
     const Barra = ({ d }) => (
-        <div className="flex items-center gap-2 text-xs">
-            <div className={`w-[130px] truncate text-left font-bold ${textColor}`} title={d.name}>{nombreVisible(d.name)}</div>
-            <div className={`flex-1 h-3 rounded-full overflow-hidden relative border ${barBg}`}>
-                <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-1000" style={{ width: `${d.avg}%` }}></div>
+        <div className="grid grid-cols-12 items-center gap-2 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0">
+            {/* Responsable */}
+            <div className="col-span-5 truncate text-left font-bold text-xs" title={d.name}>
+                <span className={textColor}>{nombreVisible(d.name)}</span>
             </div>
-            <div className={`w-[44px] font-bold text-right ${textColor}`}>{d.avg.toFixed(1)}%</div>
-            <div className={`w-[52px] text-center font-bold rounded-md px-1 py-0.5 ${isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-700'}`} title={`${d.count} tarea${d.count !== 1 ? 's' : ''}`}>
-                {d.count} tarea{d.count !== 1 ? 's' : ''}
+            {/* Barra + % */}
+            <div className="col-span-5 flex items-center gap-2">
+                <div className={`flex-1 h-2.5 rounded-full overflow-hidden relative border ${barBg}`}>
+                    <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-1000" style={{ width: `${d.avg}%` }}></div>
+                </div>
+                <span className={`w-[44px] font-bold text-right text-xs ${textColor}`}>{d.avg.toFixed(1)}%</span>
+            </div>
+            {/* # Tareas (solo numero, sin repetir 'tareas') */}
+            <div className="col-span-2 flex justify-center">
+                <span className={`px-2 py-0.5 rounded-md text-xs font-semibold ${isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-700'}`} title={`${d.count} tarea${d.count !== 1 ? 's' : ''}`}>
+                    {d.count}
+                </span>
+            </div>
+        </div>
+    );
+
+    // Tabla profesional: header + filas con columnas consistentes.
+    const TablaResponsables = () => (
+        <div>
+            {/* Header */}
+            <div className="grid grid-cols-12 items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
+                <div className="col-span-5 text-xs font-semibold uppercase tracking-wider text-slate-400">Responsable</div>
+                <div className="col-span-5 text-xs font-semibold uppercase tracking-wider text-slate-400">Avance</div>
+                <div className="col-span-2 text-xs font-semibold uppercase tracking-wider text-slate-400 text-center">Tareas</div>
+            </div>
+            {/* Filas */}
+            <div>
+                {dataChart.map((d, i) => <Barra key={i} d={d} />)}
             </div>
         </div>
     );
@@ -142,8 +167,8 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
                         )}
                     </div>
                     {/* Área que crece y hace scroll interno si no caben todos los responsables. */}
-                    <div className="space-y-2.5 flex-1 min-h-0 overflow-y-auto pr-1">
-                        {dataChart.map((d, i) => <Barra key={i} d={d} />)}
+                    <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+                        <TablaResponsables />
                     </div>
                 </div>
 
@@ -157,8 +182,8 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
                                     Cerrar
                                 </button>
                             </div>
-                            <div className="p-5 space-y-3 overflow-y-auto">
-                                {dataChart.map((d, i) => <Barra key={i} d={d} />)}
+                            <div className="p-5 overflow-y-auto">
+                                <TablaResponsables />
                             </div>
                         </div>
                     </div>,
@@ -178,8 +203,8 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
             </div>
             <div className={`md:col-span-2 ${cardBg} backdrop-blur-2xl p-6 rounded-3xl border`}>
                 <h3 className={`text-xs font-bold uppercase tracking-wider mb-6 ${labelColor}`}>{"Promedio por Responsable (Activos)"}</h3>
-                <div className="space-y-4 max-h-[200px] overflow-y-auto pr-2">
-                    {dataChart.map((d, i) => <Barra key={i} d={d} />)}
+                <div className="max-h-[200px] overflow-y-auto pr-2">
+                    <TablaResponsables />
                 </div>
             </div>
         </div>
