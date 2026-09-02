@@ -1,8 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { calcularCumplimiento, calcularRealChecklist, calcularEsperadoChecklist } from '../utils/calculations';
-import { SITE_URL } from '../data/constants';
-import { getRequestDigest } from '../utils/sharepointApi';
 
 // Formatea un correo a nombre legible: "silvia.rosas@cerrejon.com" -> "Silvia Rosas".
 // Elimina el dominio (desde el @) y pone la primera letra de cada parte en mayuscula.
@@ -15,70 +13,8 @@ const formatearCorreoANombre = (email) => {
         .join(' ');
 };
 
-// Limpia el nombre del directorio: "Zuleta, Dilson (Hambings SAS - CO)" -> "Zuleta, Dilson".
-// Elimina todo lo que este entre parentesis (incluidos los parentesis).
-const limpiarNombreDirectorio = (displayName) => {
-    return (displayName || '')
-        .replace(/\s*\(.*?\)\s*/g, '') // elimina "(Hambings SAS - CO)" y espacios alrededor
-        .trim();
-};
-
 const DashboardCharts = ({ items, checklist, theme, layout }) => {
     const [showAllResp, setShowAllResp] = useState(false);
-    // Cache de nombres reales por correo (evita re-consultar el directorio).
-    const [nombresDirectorio, setNombresDirectorio] = useState({});
-
-    // Busca el nombre real de cada responsable en el directorio (por correo).
-    // Si no lo encuentra, usa el correo formateado ("silvia.rosas@..." -> "Silvia Rosas").
-    useEffect(() => {
-        if (!items || items.length === 0) return;
-        const activos = items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
-        const correos = [...new Set(activos.map(it => it.NombreResponsable || it.nombreResponsable || '').filter(n => n.includes('@')))];
-        if (correos.length === 0) return;
-        let cancelado = false;
-        (async () => {
-            const nuevos = {};
-            for (const correo of correos) {
-                if (cancelado) return;
-                try {
-                    const digest = await getRequestDigest();
-                    const response = await fetch(`${SITE_URL}/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.clientPeoplePickerSearchUser`, {
-                        method: 'POST',
-                        headers: {
-                            "Accept": "application/json;odata=verbose",
-                            "Content-Type": "application/json;odata=verbose",
-                            "X-RequestDigest": digest
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({
-                            queryParams: {
-                                __metadata: { type: "SP.UI.ApplicationPages.ClientPeoplePickerQueryParameters" },
-                                AllowEmailAddresses: true,
-                                AllowMultipleEntities: false,
-                                AllUrlZones: false,
-                                MaximumEntitySuggestions: 1,
-                                PrincipalSource: 15,
-                                PrincipalType: 1,
-                                QueryString: correo
-                            }
-                        })
-                    });
-                    const data = await response.json();
-                    const parsed = JSON.parse(data.d.ClientPeoplePickerSearchUser);
-                    if (parsed && parsed.length > 0) {
-                        const nombreLimpio = limpiarNombreDirectorio(parsed[0].DisplayText);
-                        if (nombreLimpio) nuevos[correo] = nombreLimpio;
-                    }
-                } catch (err) {
-                    console.warn(`No se pudo buscar el nombre de ${correo}:`, err);
-                }
-            }
-            if (!cancelado && Object.keys(nuevos).length > 0) {
-                setNombresDirectorio(prev => ({ ...prev, ...nuevos }));
-            }
-        })();
-        return () => { cancelado = true; };
-    }, [items]);
 
     if (!items || items.length === 0) return null;
     const activos = items.filter(it => (it.Estado || it.estado) !== 'Inactivo');
@@ -112,9 +48,9 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
         avg: Math.round(respMap[k].total / respMap[k].count * 10) / 10 // 1 decimal
     })).sort((a, b) => b.avg - a.avg);
 
-    // Nombre visible: el del directorio si existe, si no el correo formateado.
+    // Nombre visible: formatea el correo ("silvia.rosas@cerrejon.com" -> "Silvia Rosas").
+    // Si no es un correo, usa el nombre tal cual.
     const nombreVisible = (name) => {
-        if (nombresDirectorio[name]) return nombresDirectorio[name];
         if (name.includes('@')) return formatearCorreoANombre(name);
         return name;
     };
@@ -142,7 +78,7 @@ const DashboardCharts = ({ items, checklist, theme, layout }) => {
 
     const Barra = ({ d }) => (
         <div className="flex items-center gap-2 text-xs">
-            <div className={`w-[140px] truncate text-right font-bold ${textColor}`} title={d.name}>{nombreVisible(d.name)}</div>
+            <div className={`w-[140px] truncate text-left font-bold ${textColor}`} title={d.name}>{nombreVisible(d.name)}</div>
             <div className={`flex-1 h-3 rounded-full overflow-hidden relative border ${barBg}`}>
                 <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-1000" style={{ width: `${d.avg}%` }}></div>
             </div>
