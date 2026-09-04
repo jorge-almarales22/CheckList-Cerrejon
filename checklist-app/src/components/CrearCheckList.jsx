@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { CHECKLIST_PROYECTOS_ITEMS, CHECKLIST_COMPRA_INSTALADA, CHECKLIST_EQUIPOS_NUEVOS_USADOS_ENSAMBLE, PREDEFINED_ITEMS } from '../data/constants';
-import { getRequestDigest, saveToSPList, fetchJerarquiaOpciones, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
+import { getRequestDigest, saveToSPList, fetchJerarquiaOpciones, etiquetaGerencia, JERARQUIA_VACIA, ensureFolder, getEvidenciasFolderUrl } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
 import PeoplePicker from './PeoplePicker';
 
@@ -269,6 +269,16 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                 Title: newChecklistId,
                 Data: JSON.stringify(checklistData)
             }, digest);
+
+            // Crea la carpeta raiz de la incorporacion en la biblioteca de
+            // entregables, segun el tipo: /Entregables/{Tipo}/{Nombre}/.
+            // Si falla, no bloquea el guardado (se creara bajo demanda).
+            try {
+                const folderUrl = getEvidenciasFolderUrl(checklistData.Tipo, checklistData.Name);
+                await ensureFolder(folderUrl, digest);
+            } catch (folderErr) {
+                console.error('Error creando carpeta raiz de la incorporacion:', folderErr);
+            }
 
             alert('Tu incorporación fue enviada y quedó PENDIENTE de aprobación. Un administrador la revisará antes de que aparezca en el panel.');
             onAtras();

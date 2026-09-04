@@ -1584,10 +1584,38 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
     // Abre en una pestaña nueva la carpeta raiz de la incorporacion en la
     // biblioteca de Entregables (Documentos compartidos del sitio raiz SGIA).
-    const abrirCarpetaEntregables = () => {
+    // Si la carpeta no existe (incorporaciones creadas antes de la creacion
+    // automatica), la crea con loading antes de abrir.
+    const abrirCarpetaEntregables = async () => {
         if (!checklist?.Tipo || !checklist?.Name) return;
         const folderUrl = getEvidenciasFolderUrl(checklist.Tipo, checklist.Name);
-        window.open(`${AC_HOST}${folderUrl}`, '_blank');
+        try {
+            // Verifica si la carpeta existe listando las subcarpetas del padre
+            // (evita el GET directo que genera HTTP 404 en consola).
+            const padre = folderUrl.substring(0, folderUrl.lastIndexOf('/'));
+            const nombre = folderUrl.substring(folderUrl.lastIndexOf('/') + 1);
+            const subs = await listFolderSubfolders(padre);
+            const existe = subs.some(s => s.Name === nombre);
+            if (!existe) {
+                // No existe: crear con loading y luego abrir.
+                Swal.fire({
+                    title: 'Creando carpeta de entregables...',
+                    html: 'Preparando el repositorio de esta incorporación...',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => Swal.showLoading()
+                });
+                const digest = await getRequestDigest();
+                await ensureFolder(folderUrl, digest);
+                await Swal.close();
+            }
+            window.open(`${AC_HOST}${folderUrl}`, '_blank');
+        } catch (err) {
+            console.error('Error verificando/creando carpeta de entregables:', err);
+            // Si falla, intentar abrir igual (puede que ya exista).
+            window.open(`${AC_HOST}${folderUrl}`, '_blank');
+        }
     };
 
     const handleSaveMetadata = async () => {
