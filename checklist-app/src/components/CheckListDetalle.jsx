@@ -1193,10 +1193,10 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     };
 
     // ---- Flujo de aprobacion (solo admins) ----
-    const cambiarAprobacion = async (nuevoEstado, comentario = '', extra = {}) => {
+    const cambiarAprobacion = async (nuevoEstado, comentario = '') => {
         try {
             const digest = await getRequestDigest();
-            const actualizado = { ...checklist, ...extra, EstadoAprobacion: nuevoEstado, AprobacionComentario: comentario };
+            const actualizado = { ...checklist, EstadoAprobacion: nuevoEstado, AprobacionComentario: comentario };
             await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, { Data: JSON.stringify(actualizado) }, digest);
             setChecklist(actualizado);
             return true;
@@ -1221,7 +1221,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             focusCancel: true
         });
         if (!result.isConfirmed) return;
-        if (await cambiarAprobacion('Aprobado', '', { CreadorEsAdmin: true })) {
+        if (await cambiarAprobacion('Aprobado', '')) {
             const Toast = Swal.mixin({
                 toast: true,
                 position: 'top-end',
@@ -1254,7 +1254,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         });
         if (!result.isConfirmed) return;
         const comentario = (result.value || '').trim();
-        if (await cambiarAprobacion('Pendiente', comentario, { CreadorEsAdmin: true })) {
+        if (await cambiarAprobacion('Pendiente', comentario)) {
             Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: 'Incorporación devuelta a pendiente' });
         }
     };
@@ -1996,6 +1996,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         ? 'Un administrador marcó esta incorporación con observaciones. Corrígelas para que pueda ser aprobada.'
                                         : 'Esta incorporación no aparece en el panel ni cuenta para las métricas hasta que un administrador la apruebe.'}
                                 </p>
+                                {!isAdmin && esAdminDelChecklist(checklist, currentUser) && (
+                                    <p className="mt-2 text-xs md:text-sm font-bold text-slate-900 dark:text-slate-100">
+                                        Como creador puedes seguir editándola: tareas, responsables y datos generales.
+                                    </p>
+                                )}
                                 {checklist.AprobacionComentario && (
                                     <p className={`mt-2 text-sm font-bold rounded-lg px-3 py-2 border ${esRechazado(checklist) ? 'text-red-700 dark:text-red-300 bg-red-500/10 border-red-500/30' : 'text-amber-800 dark:text-amber-300 bg-amber-500/10 border-amber-500/30'}`}>
                                         Motivo: {checklist.AprobacionComentario}
