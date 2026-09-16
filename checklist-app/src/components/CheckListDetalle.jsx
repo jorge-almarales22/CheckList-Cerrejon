@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { esPendiente, esRechazado, esHistorico, esHistoricoGestionado, marcarHistoricoGestionado, getEstadoTarea, getCorresponsable, puedeGestionarTarea, puedeAsignarCorresponsable, mismoUsuario } from '../utils/calculations';
+import { esAprobado, esPendiente, esRechazado, esAdminDelChecklist, esHistorico, esHistoricoGestionado, marcarHistoricoGestionado, getEstadoTarea, getCorresponsable, puedeGestionarTarea, puedeAsignarCorresponsable, mismoUsuario } from '../utils/calculations';
 import { notificarTeams } from '../utils/notifications';
 import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, listFolderFilesRecursive, listFolderSubfolders, recycleFile, moveFile, fetchJerarquiaOpciones, conValorActual, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
@@ -110,6 +110,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [jerarquiaLoading, setJerarquiaLoading] = useState(true);
 
     const isAdmin = role === 'Administrador';
+    // Gestiona tareas, responsables y metadatos: admin global o creador del checklist.
+    // Aprobar, devolver y corregir tipo siguen siendo solo del admin global.
+    const puedeAdministrar = isAdmin || esAdminDelChecklist(checklist, currentUser);
 
     // Correccion del tipo de checklist (solo admin). Ver handleConfirmCambioTipo.
     const [tipoObjetivo, setTipoObjetivo] = useState(null);
@@ -1190,10 +1193,10 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     };
 
     // ---- Flujo de aprobacion (solo admins) ----
-    const cambiarAprobacion = async (nuevoEstado, comentario = '') => {
+    const cambiarAprobacion = async (nuevoEstado, comentario = '', extra = {}) => {
         try {
             const digest = await getRequestDigest();
-            const actualizado = { ...checklist, EstadoAprobacion: nuevoEstado, AprobacionComentario: comentario };
+            const actualizado = { ...checklist, ...extra, EstadoAprobacion: nuevoEstado, AprobacionComentario: comentario };
             await updateSPListItem('DB_CHECKLIST_APP', checklist.SharePointId, { Data: JSON.stringify(actualizado) }, digest);
             setChecklist(actualizado);
             return true;
@@ -1218,7 +1221,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             focusCancel: true
         });
         if (!result.isConfirmed) return;
-        if (await cambiarAprobacion('Aprobado', '')) {
+        if (await cambiarAprobacion('Aprobado', '', { CreadorEsAdmin: true })) {
             const Toast = Swal.mixin({
                 toast: true,
                 position: 'top-end',
@@ -1231,6 +1234,28 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 }
             });
             Toast.fire({ icon: 'success', title: 'Incorporación aprobada' });
+        }
+    };
+
+    const handleDevolverPendiente = async () => {
+        const result = await Swal.fire({
+            title: '¿Devolver a pendiente?',
+            text: 'Dejará de aparecer con las aprobadas y de contar para las métricas hasta que se apruebe de nuevo. El creador podrá seguir gestionándola.',
+            icon: 'warning',
+            input: 'textarea',
+            inputPlaceholder: 'Motivo (opcional): qué falta o qué hay que corregir',
+            showCancelButton: true,
+            confirmButtonColor: '#d97706',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sí, devolver',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            focusCancel: true
+        });
+        if (!result.isConfirmed) return;
+        const comentario = (result.value || '').trim();
+        if (await cambiarAprobacion('Pendiente', comentario, { CreadorEsAdmin: true })) {
+            Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: 'Incorporación devuelta a pendiente' });
         }
     };
 
@@ -1971,8 +1996,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         ? 'Un administrador marcó esta incorporación con observaciones. Corrígelas para que pueda ser aprobada.'
                                         : 'Esta incorporación no aparece en el panel ni cuenta para las métricas hasta que un administrador la apruebe.'}
                                 </p>
-                                {esRechazado(checklist) && checklist.AprobacionComentario && (
-                                    <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                                {checklist.AprobacionComentario && (
+                                    <p className={`mt-2 text-sm font-bold rounded-lg px-3 py-2 border ${esRechazado(checklist) ? 'text-red-700 dark:text-red-300 bg-red-500/10 border-red-500/30' : 'text-amber-800 dark:text-amber-300 bg-amber-500/10 border-amber-500/30'}`}>
                                         Motivo: {checklist.AprobacionComentario}
                                     </p>
                                 )}
@@ -2002,6 +2027,32 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                             </div>
                         )}
                     </div>
+                </div>
+            )}
+
+            {/* Incorporación aprobada: el admin global puede devolverla a pendiente y el
+                creador ve que administra este checklist. */}
+            {esAprobado(checklist) && (isAdmin || esAdminDelChecklist(checklist, currentUser)) && (
+                <div className={`mb-6 rounded-2xl border p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 ${theme === 'dark' ? 'bg-green-950/30 border-green-500/40' : 'bg-green-50 border-green-300'}`}>
+                    <div className="flex items-start gap-3 min-w-0">
+                        <span className="shrink-0 w-9 h-9 rounded-full bg-green-600 flex items-center justify-center">
+                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                        </span>
+                        <div className="min-w-0">
+                            <h3 className="text-base font-medium text-green-800 dark:text-green-300">Incorporación aprobada</h3>
+                            <p className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                {esAdminDelChecklist(checklist, currentUser)
+                                    ? 'Eres administrador de esta incorporación: puedes crear y editar tareas, asignar responsables y editar sus datos.'
+                                    : 'Si algo quedó faltando o está mal, devuélvela a pendiente para que el creador lo corrija.'}
+                            </p>
+                        </div>
+                    </div>
+                    {isAdmin && (
+                        <button onClick={handleDevolverPendiente} className="shrink-0 bg-amber-500 hover:bg-amber-400 text-black font-bold py-2 px-5 rounded-lg text-sm transition-colors shadow border border-amber-600/30 flex items-center gap-2 whitespace-nowrap">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 10h10a5 5 0 015 5v2M3 10l5-5M3 10l5 5" /></svg>
+                            Devolver a pendiente
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -2083,7 +2134,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
                                 Ir a Entregables
                             </button>
-                            {isAdmin && !isFinalizado && (
+                            {puedeAdministrar && !isFinalizado && (
                                 !isEditingMetadata ? (
                                     <button onClick={handleStartEditMetadata} className="bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 text-xs font-bold px-3 py-1 rounded border border-amber-500/30 transition-colors">
                                         Editar Metadatos
@@ -2430,7 +2481,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         <label htmlFor="detAlertCheckbox" className="text-xs font-bold text-slate-900 dark:text-slate-200 cursor-pointer">Solo en Alerta</label>
                     </div>
                 </div>
-                {!isFinalizado && isAdmin && (
+                {!isFinalizado && puedeAdministrar && (
                     <button onClick={() => setShowAddTaskForm(!showAddTaskForm)} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-lg border border-blue-400/40 transition-colors shadow whitespace-nowrap">
                         {showAddTaskForm ? "Cancelar Nueva" : "Agregar Nueva Tarea"}
                     </button>
@@ -2481,8 +2532,8 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     const currentItem = isEditing ? editForm : it;
                     // Responsable y corresponsable diligencian la tarea por igual; nombrar
                     // al corresponsable queda reservado al responsable y al administrador.
-                    const puedeGestionar = puedeGestionarTarea(it, currentUser, isAdmin);
-                    const puedeCambiarCorresponsable = puedeAsignarCorresponsable(it, currentUser, isAdmin);
+                    const puedeGestionar = puedeGestionarTarea(it, currentUser, puedeAdministrar);
+                    const puedeCambiarCorresponsable = puedeAsignarCorresponsable(it, currentUser, puedeAdministrar);
                     const corresponsable = getCorresponsable(it);
                     const isInactive = (it.Estado || it.estado) === 'Inactivo';
                     const showAlert = it.Alerta === "Si";
@@ -2511,7 +2562,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         }`}>
                                             #{numeroTarea(it)}
                                         </span>
-                                        {isEditing && isAdmin ? (
+                                        {isEditing && puedeAdministrar ? (
                                             <textarea className={`${inputClasses} text-sm font-semibold`} rows="2" value={currentItem.Descripcion} onChange={e => setEditForm({ ...editForm, Descripcion: e.target.value })} />
                                         ) : (
                                             <div className="flex flex-col flex-1">
@@ -2540,7 +2591,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     <div className={`grid grid-cols-2 lg:grid-cols-6 gap-6 mt-4 text-sm ${isInactive ? 'opacity-70' : ''}`}>
                                         <div className="col-span-1">
                                             <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>{"Responsable"}</span>
-                                            {isEditing && isAdmin ? (
+                                            {isEditing && puedeAdministrar ? (
                                                 <PeoplePicker
                                                     className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none"
                                                     value={currentItem.NombreResponsable || ''}
@@ -2606,7 +2657,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                                         <div className="col-span-1">
                                             <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>{"Entregable"}</span>
-                                            {isEditing && isAdmin ? (
+                                            {isEditing && puedeAdministrar ? (
                                                 <input type="text" className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={currentItem.Entregable || ''} onChange={e => setEditForm({ ...editForm, Entregable: e.target.value })} />
                                             ) : (
                                                 <span className={`font-semibold text-xs break-words ${isInactive ? (theme === 'dark' ? 'text-slate-300' : 'text-slate-700') : ''}`}>{it.Entregable || '-'}</span>
@@ -2615,7 +2666,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
 
                                         <div className="col-span-1 md:col-span-2 lg:col-span-1">
                                             <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>Fechas Plan</span>
-                                            {isEditing && isAdmin ? (
+                                            {isEditing && puedeAdministrar ? (
                                                 <div className="flex flex-col gap-1.5 mt-1">
                                                     <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-500">I:</span><input type="date" className="bg-transparent border-none text-xs w-full" value={currentItem.FechaBaselineInicio ? currentItem.FechaBaselineInicio.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, FechaBaselineInicio: e.target.value })} /></div>
                                                     <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-500">F:</span><input type="date" className="bg-transparent border-none text-xs w-full" value={currentItem.FechaBaselineFin ? currentItem.FechaBaselineFin.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, FechaBaselineFin: e.target.value })} /></div>
@@ -2915,7 +2966,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         <div className="col-span-1 lg:col-span-6 mt-5 pt-4 border-t border-slate-200 dark:border-slate-800">
                                             <div className="flex justify-between items-center mb-3">
                                                 <span className="text-slate-900 dark:text-slate-200 text-[10px] font-bold uppercase tracking-wider">Historial de Comentarios</span>
-                                                {!isFinalizado && isAdmin && !isEditing && (
+                                                {!isFinalizado && puedeAdministrar && !isEditing && (
                                                     <button onClick={() => toggleAlert(it)} className={`text-[10px] font-bold px-2 py-1 rounded border shadow-sm ${showAlert ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-200 border-slate-300 dark:border-slate-700'} transition-colors`}>
                                                         {showAlert ? 'Quitar Alerta' : 'Marcar Alerta'}
                                                     </button>
@@ -2985,7 +3036,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     ) : (
                                         puedeGestionar && <button onClick={() => handleStartEdit(it)} className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Editar</button>
                                     )}
-                                    {!isInactive && !isFinalizado && isAdmin && (
+                                    {!isInactive && !isFinalizado && puedeAdministrar && (
                                         <button
                                             onClick={() => openInactivateModal(it.Id)}
                                             className="bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-355 border border-red-500/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm"
@@ -3017,7 +3068,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 <h3 className={`text-xl font-medium mb-4 flex items-center gap-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-amber-700'}`}>
                     <svg className="w-6 h-6 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg> Comentario General del Checklist
                 </h3>
-                {(!isFinalizado && isAdmin) ? (
+                {(!isFinalizado && puedeAdministrar) ? (
                     <div className="space-y-3">
                         <textarea
                             className={`${inputClasses} text-sm`}
@@ -3277,7 +3328,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
             {fileManagerTarea && (() => {
                 const tareaFM = (checklist?.items || []).find(t => t.Id === fileManagerTarea);
                 const puedeGestionarFM = tareaFM
-                    ? puedeGestionarTarea(tareaFM, currentUser, isAdmin)
+                    ? puedeGestionarTarea(tareaFM, currentUser, puedeAdministrar)
                     : false;
                 return (
                     <FileManager

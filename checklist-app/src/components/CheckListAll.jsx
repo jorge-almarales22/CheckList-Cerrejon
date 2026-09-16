@@ -174,6 +174,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
     // aunque este paginada (busca en toda la lista, no solo la pagina actual).
     const textoBuscable = (chk) => {
         const partes = [
+            chk.ID_x002d_checklist,
             chk.Name,
             `${calcularEsperadoChecklist(chk)}%`,
             `${calcularRealChecklist(chk)}%`,
@@ -308,7 +309,8 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                         <table className="checklist-table w-full text-left border-separate border-spacing-0">
                             <thead className={`sticky top-0 z-20 -mt-px shadow-[0_2px_0_0_rgba(0,0,0,0.08),0_4px_8px_-2px_rgba(0,0,0,0.18)] ${theme==='dark'?'bg-slate-900':'bg-slate-100'}`}>
                                 <tr className={`${theme==='dark'?'text-white':'text-slate-900'} text-xs uppercase font-extrabold tracking-wider`}>
-                                    <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[0])} extraClass="rounded-tl-3xl" />
+                                    <th className="compact-table-header rounded-tl-3xl p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 whitespace-nowrap">ID</th>
+                                    <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[0])} />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[1])} />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[2])} />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[3])} visibilityClass="hidden lg:table-cell" />
@@ -343,6 +345,7 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                             onDoubleClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)}
                                             title="Doble clic para abrir"
                                         >
+                                            <td className="p-2 md:p-3 text-xs font-bold text-slate-900 dark:text-slate-200 whitespace-nowrap align-top">{chk.ID_x002d_checklist || '-'}</td>
                                             <td className="p-2 md:p-3 font-bold break-words min-w-[180px] max-w-[400px] align-top" title={chk.Name}>
                                                 <div className="flex flex-wrap gap-1 mb-1">
                                                     {rechazado && <span className="bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-black">NO APROBADO</span>}

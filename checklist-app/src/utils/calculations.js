@@ -70,6 +70,11 @@ export const esAprobado = (chk) => getEstadoAprobacion(chk) === 'Aprobado';
 export const esPendiente = (chk) => getEstadoAprobacion(chk) === 'Pendiente';
 export const esRechazado = (chk) => getEstadoAprobacion(chk) === 'Rechazado';
 
+// El creador administra SOLO su checklist una vez aprobado. La bandera se conserva
+// si luego se devuelve a pendiente, para que pueda corregir lo que falte.
+export const esAdminDelChecklist = (chk, user) =>
+    mismoUsuario(chk?.CreadoPor, user) && (esAprobado(chk) || chk?.CreadorEsAdmin === true);
+
 // El avance ESPERADO se mide contra el plan, por eso se usan las fechas baseline.
 // Si una tarea no tiene baseline, se cae a las fechas reales.
 const getInicioPlan = (it) => it.FechaBaselineInicio || it.fechaBaselineInicio || it.FechaInicio || it.fechaInicio;
