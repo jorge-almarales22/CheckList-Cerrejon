@@ -28,7 +28,7 @@ const Dashboard = ({ user, userName, role, onLogout }) => {
         }
         window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
         setView(newView);
-        setSelectedChecklistId(newView === 'checklist_detalle' ? id : null);
+        setSelectedChecklistId(id);
     };
 
     useEffect(() => {
