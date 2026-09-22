@@ -4,6 +4,7 @@ import { esAprobado, esPendiente, esRechazado, esAdminDelChecklist, esHistorico,
 import { notificarTeams } from '../utils/notifications';
 import { getRequestDigest, updateSPListItem, deleteSPListItem, getEvidenciasFolderUrl, ensureFolder, uploadFileToFolder, listFolderFiles, listFolderFilesRecursive, listFolderSubfolders, recycleFile, moveFile, fetchJerarquiaOpciones, conValorActual, etiquetaGerencia, JERARQUIA_VACIA } from '../utils/sharepointApi';
 import { comprimirImagen } from '../utils/imageCompression';
+import { useFiltroPersistente } from '../utils/filtrosPersistentes';
 import { AC_HOST, TIPOS_CHECKLIST, getTipoChecklist } from '../data/constants';
 import PeoplePicker from './PeoplePicker';
 import DashboardCharts from './DashboardCharts';
@@ -45,12 +46,15 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectComment, setRejectComment] = useState('');
 
-    const [filterResponsable, setFilterResponsable] = useState(new Set());
-    const [filterAlertaOnly, setFilterAlertaOnly] = useState(false);
-    const [filterEstadoTarea, setFilterEstadoTarea] = useState(new Set()); // 'terminadas', 'faltantes', 'en_rojo'
-    const [filterAvanceEsperado, setFilterAvanceEsperado] = useState(new Set()); // rango id
-    const [filterAvanceReal, setFilterAvanceReal] = useState(new Set());
-    const [busquedaGeneral, setBusquedaGeneral] = useState('');
+    // Los filtros de tareas se recuerdan entre visitas, pero por checklist: un
+    // responsable filtrado aqui no existe necesariamente en otra incorporacion,
+    // asi que una clave compartida dejaria la siguiente en blanco.
+    const [filterResponsable, setFilterResponsable] = useFiltroPersistente(`detalle.${checklistId}.responsable`, new Set());
+    const [filterAlertaOnly, setFilterAlertaOnly] = useFiltroPersistente(`detalle.${checklistId}.alerta`, false);
+    const [filterEstadoTarea, setFilterEstadoTarea] = useFiltroPersistente(`detalle.${checklistId}.estado`, new Set()); // 'terminadas', 'faltantes', 'en_rojo'
+    const [filterAvanceEsperado, setFilterAvanceEsperado] = useFiltroPersistente(`detalle.${checklistId}.esperado`, new Set()); // rango id
+    const [filterAvanceReal, setFilterAvanceReal] = useFiltroPersistente(`detalle.${checklistId}.real`, new Set());
+    const [busquedaGeneral, setBusquedaGeneral] = useFiltroPersistente(`detalle.${checklistId}.busqueda`, '');
     const [fotoActivaIdx, setFotoActivaIdx] = useState(0); // carrusel de fotos del equipo
     // Visor de fotos a pantalla completa: { fotos: [...], idx } o null si esta cerrado.
     // Guarda la lista y no solo el indice porque tambien se abre desde el modo
@@ -87,6 +91,12 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
     // Por defecto el contenedor esta contraido (muestra solo los primeros
     // archivos) para no saturar la vista con volumen alto de evidencias.
     const [expandidoMap, setExpandidoMap] = useState({});
+
+    // Evidencias e historial de comentarios arrancan plegados (itemId -> bool).
+    // Un checklist tipico tiene 40+ tareas: mostrarlos siempre hacia que cada
+    // tarjeta midiera varias pantallas. El estado se resume en un badge.
+    const [evidenciasAbiertas, setEvidenciasAbiertas] = useState({});
+    const [comentariosAbiertos, setComentariosAbiertos] = useState({});
 
     // Tarea sobre la que se está arrastrando un archivo (highlight del dropzone
     // directo en la tarjeta). null = ninguna.
@@ -1951,6 +1961,20 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
         .map(r => r.id);
     const opcionesReal = [...new Set([...rangosRealDisponibles, ...filterAvanceReal])];
 
+    // Los filtros sobreviven a la recarga, asi que hace falta una salida visible
+    // para no dejar la lista de tareas vacia sin explicacion.
+    const hayFiltrosActivos = filterResponsable.size > 0 || filterEstadoTarea.size > 0
+        || filterAvanceEsperado.size > 0 || filterAvanceReal.size > 0
+        || filterAlertaOnly || busquedaGeneral.trim() !== '';
+    const limpiarFiltros = () => {
+        setFilterResponsable(new Set());
+        setFilterEstadoTarea(new Set());
+        setFilterAvanceEsperado(new Set());
+        setFilterAvanceReal(new Set());
+        setFilterAlertaOnly(false);
+        setBusquedaGeneral('');
+    };
+
     return (
         <div className="max-w-[95%] mx-auto animate-[fadeIn_0.3s_ease-out]">
             <div className={`${cardClass} border p-4 md:p-6 rounded-3xl mb-6 flex justify-between items-start gap-3`}>
@@ -2485,6 +2509,18 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                         <input type="checkbox" id="detAlertCheckbox" checked={filterAlertaOnly} onChange={(e) => setFilterAlertaOnly(e.target.checked)} className="accent-yellow-500 cursor-pointer h-4 w-4" />
                         <label htmlFor="detAlertCheckbox" className="text-xs font-bold text-slate-900 dark:text-slate-200 cursor-pointer">Solo en Alerta</label>
                     </div>
+                    {hayFiltrosActivos && (
+                        <div className="flex items-center mt-4 md:mt-0">
+                            <button
+                                onClick={limpiarFiltros}
+                                title="Quitar todos los filtros aplicados a las tareas"
+                                className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg border transition-colors whitespace-nowrap ${theme === 'dark' ? 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'}`}
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                                Limpiar filtros
+                            </button>
+                        </div>
+                    )}
                 </div>
                 {!isFinalizado && puedeAdministrar && (
                     <button onClick={() => setShowAddTaskForm(!showAddTaskForm)} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-lg border border-blue-400/40 transition-colors shadow whitespace-nowrap">
@@ -2531,7 +2567,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                 </div>
             )}
 
-            <div className="space-y-4 mb-8">
+            <div className="space-y-2 mb-8">
                 {itemsFiltrados.map((it) => {
                     const isEditing = editingId === it.Id;
                     const currentItem = isEditing ? editForm : it;
@@ -2544,22 +2580,26 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                     const showAlert = it.Alerta === "Si";
                     const estadoTarea = getEstadoTarea(it);
                     const evidenciasOk = tieneEvidencias(it.Id);
+                    const totalEvidencias = (carpetasTarea[it.Id]?.length || 0) + (archivosRaizTarea[it.Id]?.length || 0);
+                    const evidenciasAbierta = !!evidenciasAbiertas[it.Id];
+                    const comentarios = it.HistorialComentarios || [];
+                    const comentariosAbierto = !!comentariosAbiertos[it.Id];
 
                     return (
                         <div 
                             key={it.Id} 
-                            className={`p-5 rounded-2xl border transition-all ${
-                                isInactive 
-                                    ? (theme === 'dark' ? 'border-dashed border-slate-700 bg-slate-950/70 shadow-sm' : 'border-dashed border-slate-300 bg-slate-100/95 shadow-sm') 
-                                    : showAlert ? 'bg-red-900/60 backdrop-blur-2xl border-red-500/80 shadow-[0_0_20px_rgba(239,68,68,0.4)]' 
+                            className={`p-3 rounded-xl border transition-all ${
+                                isInactive
+                                    ? (theme === 'dark' ? 'border-dashed border-slate-700 bg-slate-950/70 shadow-sm' : 'border-dashed border-slate-300 bg-slate-100/95 shadow-sm')
+                                    : showAlert ? 'bg-red-900/60 backdrop-blur-2xl border-red-500/80 shadow-[0_0_20px_rgba(239,68,68,0.4)]'
                                     : theme === 'dark' ? 'bg-slate-900/80 border-slate-800' : 'bg-slate-50/50 border-slate-200'
                             }`}
                         >
-                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-stretch gap-4">
+                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-stretch gap-3">
                                 
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-start gap-3 mb-2 border-b border-slate-200 dark:border-slate-800 pb-3">
-                                        <span className={`text-xs font-bold px-2.5 py-1 rounded-md mt-0.5 shadow-inner ${
+                                    <div className="flex items-start gap-2 mb-1.5 border-b border-slate-200 dark:border-slate-800 pb-1.5">
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded mt-px shadow-inner shrink-0 ${
                                             isInactive 
                                                 ? (theme === 'dark' ? 'bg-slate-800 text-slate-200 font-bold' : 'bg-slate-200 text-slate-900 font-bold') 
                                                 : showAlert ? 'bg-red-500 text-white' 
@@ -2571,16 +2611,16 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                             <textarea className={`${inputClasses} text-sm font-semibold`} rows="2" value={currentItem.Descripcion} onChange={e => setEditForm({ ...editForm, Descripcion: e.target.value })} />
                                         ) : (
                                             <div className="flex flex-col flex-1">
-                                                <h4 className={`text-lg font-bold leading-snug break-words text-[15px] ${
-                                                    isInactive 
-                                                        ? (theme === 'dark' ? 'text-slate-400 line-through decoration-slate-500/80' : 'text-slate-700 line-through decoration-slate-500') 
-                                                        : showAlert ? 'text-red-200' 
+                                                <h4 className={`text-[13px] font-bold leading-snug break-words ${
+                                                    isInactive
+                                                        ? (theme === 'dark' ? 'text-slate-400 line-through decoration-slate-500/80' : 'text-slate-700 line-through decoration-slate-500')
+                                                        : showAlert ? 'text-red-200'
                                                         : theme==='dark'?'text-yellow-400':'text-slate-900'
                                                 }`}>
                                                     {it.Descripcion}
                                                 </h4>
                                                 {isInactive && (
-                                                    <div className={`text-xs font-bold mt-2 flex flex-wrap items-center gap-1 ${
+                                                    <div className={`text-[10px] font-bold mt-1 flex flex-wrap items-center gap-1 ${
                                                         theme === 'dark' ? 'text-red-400' : 'text-red-650'
                                                     }`} style={{ color: theme === 'light' ? '#b91c1c' : undefined }}>
                                                         <span>&#9888;</span>
@@ -2593,9 +2633,9 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         )}
                                     </div>
 
-                                    <div className={`grid grid-cols-2 lg:grid-cols-6 gap-6 mt-4 text-sm ${isInactive ? 'opacity-70' : ''}`}>
+                                    <div className={`grid grid-cols-2 lg:grid-cols-6 gap-x-4 gap-y-2 mt-2 text-xs ${isInactive ? 'opacity-70' : ''}`}>
                                         <div className="col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>{"Responsable"}</span>
+                                            <span className={`block text-[9px] font-bold uppercase tracking-wider mb-0.5 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>{"Responsable"}</span>
                                             {isEditing && puedeAdministrar ? (
                                                 <PeoplePicker
                                                     className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none"
@@ -2606,17 +2646,17 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                 <div className="flex items-center gap-2">
                                                     <img
                                                         src={`https://glencore.sharepoint.com/_layouts/15/userphoto.aspx?size=S&accountname=${it.NombreResponsable}`}
-                                                        className="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-700 object-cover bg-gray-700"
+                                                        className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-700 object-cover bg-gray-700 shrink-0"
                                                         onError={(e) => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E"; }}
                                                     />
-                                                    <span className={`font-semibold text-xs break-all ${isInactive ? (theme === 'dark' ? 'text-slate-300' : 'text-slate-700') : ''}`}>{it.NombreResponsable}</span>
+                                                    <span className={`font-semibold text-[11px] break-all leading-tight ${isInactive ? (theme === 'dark' ? 'text-slate-300' : 'text-slate-700') : ''}`}>{it.NombreResponsable}</span>
                                                 </div>
                                             )}
 
                                             {/* Corresponsable: apoya al responsable diligenciando la tarea. No
                                                 sustituye al responsable en las gráficas ni en los reportes. */}
-                                            <div className="mt-3 pt-2 border-t border-dashed border-slate-300 dark:border-slate-700">
-                                                <span className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-slate-900 dark:text-slate-200">
+                                            <div className="mt-1.5 pt-1.5 border-t border-dashed border-slate-300 dark:border-slate-700">
+                                                <span className="block text-[9px] font-bold uppercase tracking-wider mb-0.5 text-slate-900 dark:text-slate-200">
                                                     Corresponsable
                                                 </span>
                                                 {isEditing && puedeCambiarCorresponsable ? (
@@ -2645,15 +2685,15 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     <div className="flex items-center gap-2">
                                                         <img
                                                             src={`https://glencore.sharepoint.com/_layouts/15/userphoto.aspx?size=S&accountname=${corresponsable}`}
-                                                            className="w-6 h-6 rounded-full border border-slate-300 dark:border-slate-700 object-cover bg-gray-700"
+                                                            className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-700 object-cover bg-gray-700 shrink-0"
                                                             onError={(e) => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E"; }}
                                                         />
-                                                        <span className="font-semibold text-xs break-all text-slate-600 dark:text-slate-300" title={`${corresponsable} gestiona esta tarea en apoyo al responsable`}>
+                                                        <span className="font-semibold text-[11px] break-all leading-tight text-slate-600 dark:text-slate-300" title={`${corresponsable} gestiona esta tarea en apoyo al responsable`}>
                                                             {corresponsable}
                                                         </span>
                                                     </div>
                                                 ) : (
-                                                    <span className="text-xs font-semibold italic text-slate-500 dark:text-slate-400">
+                                                    <span className="text-[11px] font-semibold italic text-slate-500 dark:text-slate-400">
                                                         Sin asignar
                                                     </span>
                                                 )}
@@ -2661,40 +2701,40 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         </div>
 
                                         <div className="col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>{"Entregable"}</span>
+                                            <span className={`block text-[9px] font-bold uppercase tracking-wider mb-0.5 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>{"Entregable"}</span>
                                             {isEditing && puedeAdministrar ? (
                                                 <input type="text" className="bg-transparent border-b border-slate-300 focus:border-yellow-500 text-xs w-full outline-none" value={currentItem.Entregable || ''} onChange={e => setEditForm({ ...editForm, Entregable: e.target.value })} />
                                             ) : (
-                                                <span className={`font-semibold text-xs break-words ${isInactive ? (theme === 'dark' ? 'text-slate-300' : 'text-slate-700') : ''}`}>{it.Entregable || '-'}</span>
+                                                <span className={`font-semibold text-[11px] leading-tight break-words ${isInactive ? (theme === 'dark' ? 'text-slate-300' : 'text-slate-700') : ''}`}>{it.Entregable || '-'}</span>
                                             )}
                                         </div>
 
                                         <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>Fechas Plan</span>
+                                            <span className={`block text-[9px] font-bold uppercase tracking-wider mb-0.5 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>Fechas Plan</span>
                                             {isEditing && puedeAdministrar ? (
                                                 <div className="flex flex-col gap-1.5 mt-1">
                                                     <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-500">I:</span><input type="date" className="bg-transparent border-none text-xs w-full" value={currentItem.FechaBaselineInicio ? currentItem.FechaBaselineInicio.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, FechaBaselineInicio: e.target.value })} /></div>
                                                     <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-blue-500">F:</span><input type="date" className="bg-transparent border-none text-xs w-full" value={currentItem.FechaBaselineFin ? currentItem.FechaBaselineFin.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, FechaBaselineFin: e.target.value })} /></div>
                                                 </div>
                                             ) : (
-                                                <div className={`p-2 rounded border shadow-inner ${theme==='dark'?'bg-slate-950 border-slate-800':'bg-slate-100 border-slate-200 text-slate-900'}`}>
-                                                    <span className="font-semibold block text-[11px]"><span className="text-blue-500 dark:text-blue-300 font-bold w-4 inline-block">I:</span> {it.FechaBaselineInicio || '-'}</span>
-                                                    <span className="font-semibold block text-[11px] mt-1"><span className="text-blue-500 dark:text-blue-300 font-bold w-4 inline-block">F:</span> {it.FechaBaselineFin || '-'}</span>
+                                                <div className={`px-2 py-1 rounded border shadow-inner ${theme==='dark'?'bg-slate-950 border-slate-800':'bg-slate-100 border-slate-200 text-slate-900'}`}>
+                                                    <span className="font-semibold block text-[10px] leading-tight"><span className="text-blue-500 dark:text-blue-300 font-bold w-3 inline-block">I:</span> {it.FechaBaselineInicio || '-'}</span>
+                                                    <span className="font-semibold block text-[10px] leading-tight mt-0.5"><span className="text-blue-500 dark:text-blue-300 font-bold w-3 inline-block">F:</span> {it.FechaBaselineFin || '-'}</span>
                                                 </div>
                                             )}
                                         </div>
 
                                         <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>Fechas Reales</span>
+                                            <span className={`block text-[9px] font-bold uppercase tracking-wider mb-0.5 ${isInactive ? 'text-slate-900 dark:text-slate-200' : 'text-slate-900 dark:text-slate-200'}`}>Fechas Reales</span>
                                             {isEditing ? (
                                                 <div className="flex flex-col gap-1.5 mt-1">
                                                     <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-500">I:</span><input type="date" className="bg-transparent border-none text-xs w-full" value={currentItem.FechaInicio ? currentItem.FechaInicio.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, FechaInicio: e.target.value })} /></div>
                                                     <div className="flex items-center gap-1.5 text-xs"><span className="w-4 font-bold text-yellow-500">F:</span><input type="date" className="bg-transparent border-none text-xs w-full" value={currentItem.FechaFin ? currentItem.FechaFin.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, FechaFin: e.target.value })} /></div>
                                                 </div>
                                             ) : (
-                                                <div className={`p-2 rounded border shadow-inner ${theme==='dark'?'bg-slate-950 border-slate-800':'bg-slate-105 border-slate-200 text-slate-900 bg-slate-100'}`}>
-                                                    <span className="font-semibold block text-[11px]"><span className="text-yellow-600 dark:text-yellow-400 font-bold w-4 inline-block">I:</span> {it.FechaInicio ? it.FechaInicio.substring(0, 10) : '-'}</span>
-                                                    <span className="font-semibold block text-[11px] mt-1"><span className="text-yellow-600 dark:text-yellow-400 font-bold w-4 inline-block">F:</span> {it.FechaFin ? it.FechaFin.substring(0, 10) : '-'}</span>
+                                                <div className={`px-2 py-1 rounded border shadow-inner ${theme==='dark'?'bg-slate-950 border-slate-800':'bg-slate-105 border-slate-200 text-slate-900 bg-slate-100'}`}>
+                                                    <span className="font-semibold block text-[10px] leading-tight"><span className="text-yellow-600 dark:text-yellow-400 font-bold w-3 inline-block">I:</span> {it.FechaInicio ? it.FechaInicio.substring(0, 10) : '-'}</span>
+                                                    <span className="font-semibold block text-[10px] leading-tight mt-0.5"><span className="text-yellow-600 dark:text-yellow-400 font-bold w-3 inline-block">F:</span> {it.FechaFin ? it.FechaFin.substring(0, 10) : '-'}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -2710,7 +2750,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     : 'Sin avance esperado ni real: el plan de esta tarea todavía no arranca.';
                                             return (
                                                 <div className="col-span-1">
-                                                    <span className="block text-[10px] font-bold uppercase tracking-wider mb-1 text-slate-900 dark:text-slate-200 flex items-center gap-1">
+                                                    <span className="block text-[9px] font-bold uppercase tracking-wider mb-0.5 text-slate-900 dark:text-slate-200 flex items-center gap-1">
                                                         Avance Esperado
                                                         {(atrasada || sinPlan) && (
                                                             <span title={tituloAlerta} className="inline-flex items-center text-red-600 dark:text-red-400">
@@ -2718,7 +2758,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                             </span>
                                                         )}
                                                     </span>
-                                                    <span className={`font-black text-2xl drop-shadow ${(atrasada || sinPlan) ? 'text-red-600 dark:text-red-400' : 'text-green-500'}`}>{espTarea}%</span>
+                                                    <span className={`font-black text-lg leading-none drop-shadow ${(atrasada || sinPlan) ? 'text-red-600 dark:text-red-400' : 'text-green-500'}`}>{espTarea}%</span>
                                                     {sinPlan && (
                                                         <span className="block text-[10px] font-bold text-red-600 dark:text-red-400 mt-1 leading-tight">
                                                             {sinFechaEntrega ? 'Sin fecha de entrega' : 'Plan sin iniciar'}
@@ -2729,7 +2769,7 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         })()}
 
                                         <div className="col-span-1">
-                                            <span className={`block text-[10px] font-bold uppercase tracking-wider mb-1 text-slate-900 dark:text-slate-200 flex items-center gap-1`}>
+                                            <span className={`block text-[9px] font-bold uppercase tracking-wider mb-0.5 text-slate-900 dark:text-slate-200 flex items-center gap-1`}>
                                                 Avance Real
                                                 {estadoTarea.sinPlan && (
                                                     <span title={estadoTarea.sinFechaEntrega
@@ -2774,38 +2814,62 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     )}
                                                 </>
                                             ) : (
-                                                <span className={`font-black text-2xl drop-shadow ${estadoTarea.sinPlan ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}`}>{isInactive ? 0 : (it.Avance || 0)}%</span>
+                                                <span className={`font-black text-lg leading-none drop-shadow ${estadoTarea.sinPlan ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}`}>{isInactive ? 0 : (it.Avance || 0)}%</span>
                                             )}
                                         </div>
 
                                          {!isInactive && (
-                                            <div className="col-span-1 lg:col-span-6 border-t border-slate-200 dark:border-slate-800 pt-3">
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-slate-900 dark:text-slate-200 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
-                                                        Evidencias Cargadas
-                                                        {(() => {
-                                                            const totalEv = (carpetasTarea[it.Id]?.length || 0) + (archivosRaizTarea[it.Id]?.length || 0);
-                                                            return totalEv > 0 ? (
-                                                                <span className="bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/40 px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-normal uppercase flex items-center gap-1">
-                                                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                                                                    Con Evidencias
-                                                                </span>
-                                                            ) : (
-                                                                <span className="bg-slate-400/10 text-slate-500 dark:text-slate-400 border border-slate-400/30 px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-normal uppercase">
-                                                                    Sin Evidencias
-                                                                </span>
-                                                            );
-                                                        })()}
+                                            <div className="col-span-1 lg:col-span-6 border-t border-slate-200 dark:border-slate-800 pt-2">
+                                                {/* El contenido pesado (carpetas, archivos, ayuda) queda plegado: en
+                                                    pantalla solo se ve esta barra con el badge de cuantas evidencias
+                                                    tiene la tarea. El drop sigue enganchado al contenedor completo,
+                                                    asi que arrastrar sobre la barra plegada tambien sube archivos. */}
+                                                <div
+                                                    className={`rounded-lg border transition-colors ${
+                                                        dragOverTarea === it.Id
+                                                            ? 'border-amber-500/70 bg-amber-500/10 ring-2 ring-amber-500/30'
+                                                            : theme==='dark'?'bg-slate-950/40 border-slate-800':'bg-slate-100 border-slate-200'
+                                                    }`}
+                                                    onDragEnter={!isFinalizado && puedeGestionar ? (e) => handleDragEnterTarea(e, it.Id) : undefined}
+                                                    onDragLeave={!isFinalizado && puedeGestionar ? (e) => handleDragLeaveTarea(e, it.Id) : undefined}
+                                                    onDragOver={!isFinalizado && puedeGestionar ? handleDragOverTarea : undefined}
+                                                    onDrop={!isFinalizado && puedeGestionar ? (e) => manejarDropTarea(e, it) : undefined}
+                                                >
+                                                    <div className="flex flex-wrap items-center gap-1.5 px-2 py-1.5">
+                                                        <button
+                                                            onClick={() => setEvidenciasAbiertas(prev => ({ ...prev, [it.Id]: !evidenciasAbierta }))}
+                                                            title={evidenciasAbierta ? 'Ocultar las evidencias de esta tarea' : 'Mostrar las evidencias de esta tarea'}
+                                                            className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200 hover:text-amber-600 dark:hover:text-yellow-400 transition-colors"
+                                                        >
+                                                            <svg className={`w-3 h-3 transition-transform ${evidenciasAbierta ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
+                                                            {evidenciasAbierta ? 'Ocultar evidencias' : 'Mostrar evidencias'}
+                                                        </button>
+                                                        {totalEvidencias > 0 ? (
+                                                            <span className="bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/40 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase flex items-center gap-1">
+                                                                <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                                                {totalEvidencias}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="bg-slate-400/10 text-slate-500 dark:text-slate-400 border border-slate-400/30 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase">
+                                                                Sin evidencias
+                                                            </span>
+                                                        )}
+                                                        <span className="flex-1" />
+                                                        {totalEvidencias > 0 && (
+                                                            <button onClick={() => { setModalEvidences(archivosRaizTarea[it.Id] || []); setActiveEvidenciaIndex(0); }} className="text-[10px] bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-2 py-1 rounded border border-yellow-500/30 transition-colors flex items-center gap-1 font-semibold">
+                                                                Visualizador
+                                                            </button>
+                                                        )}
                                                         {!isFinalizado && puedeGestionar && (
                                                             <button
                                                                 onClick={() => setFileManagerTarea(it.Id)}
                                                                 title="Adjuntar evidencias de esta tarea"
-                                                                className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-colors border border-amber-500/40"
+                                                                className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-colors border border-amber-500/40"
                                                             >
-                                                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                                                                 </svg>
-                                                                Adjuntar evidencias
+                                                                Adjuntar
                                                             </button>
                                                         )}
                                                         {/* "Ir a Repositorio": si la tarea tiene evidencias (posiblemente en
@@ -2817,48 +2881,23 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                                 ? manejarIrRepositorio(it.Id)
                                                                 : abrirRepositorioTarea(it.Id)}
                                                             title="Abrir la carpeta de esta tarea en SharePoint"
-                                                            className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-colors ${theme==='dark'?'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700':'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}`}
+                                                            className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded border transition-colors ${theme==='dark'?'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700':'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}`}
                                                         >
-                                                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                                             </svg>
-                                                            Ir a Repositorio
+                                                            Repositorio
                                                         </button>
-                                                    </span>
-                                                    <div className="flex gap-2 items-center">
-                                                        {(() => {
-                                                            const totalEv = (carpetasTarea[it.Id]?.length || 0) + (archivosRaizTarea[it.Id]?.length || 0);
-                                                            if (totalEv === 0) return null;
-                                                            return (
-                                                                <>
-                                                                    <span className={`text-[10px] font-bold px-2 py-1 rounded border ${theme==='dark'?'bg-slate-950/60 text-slate-300 border-slate-700':'bg-white text-slate-600 border-slate-300'}`}>
-                                                                        {totalEv} elemento{totalEv !== 1 ? 's' : ''}
-                                                                    </span>
-                                                                    <button onClick={() => { setModalEvidences(archivosRaizTarea[it.Id] || []); setActiveEvidenciaIndex(0); }} className="text-[10px] bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-2 py-1 rounded border border-yellow-500/30 transition-colors shadow flex items-center gap-1 font-semibold">
-                                                                        Ver Visualizador
-                                                                    </button>
-                                                                </>
-                                                            );
-                                                        })()}
                                                     </div>
-                                                </div>
 
-                                                <div
-                                                    className={`space-y-3 p-3 rounded-lg border transition-colors ${
-                                                        dragOverTarea === it.Id
-                                                            ? 'border-amber-500/70 bg-amber-500/10 ring-2 ring-amber-500/30'
-                                                            : theme==='dark'?'bg-slate-950/40 border-slate-800':'bg-slate-100 border-slate-200'
-                                                    }`}
-                                                    onDragEnter={!isFinalizado && puedeGestionar ? (e) => handleDragEnterTarea(e, it.Id) : undefined}
-                                                    onDragLeave={!isFinalizado && puedeGestionar ? (e) => handleDragLeaveTarea(e, it.Id) : undefined}
-                                                    onDragOver={!isFinalizado && puedeGestionar ? handleDragOverTarea : undefined}
-                                                    onDrop={!isFinalizado && puedeGestionar ? (e) => manejarDropTarea(e, it) : undefined}
-                                                >
                                                     {dragOverTarea === it.Id && (
-                                                        <div className="pointer-events-none border-2 border-dashed rounded-lg p-4 text-center border-amber-500/60 text-amber-600 dark:text-yellow-400">
+                                                        <div className="pointer-events-none border-2 border-dashed rounded-lg m-2 p-3 text-center border-amber-500/60 text-amber-600 dark:text-yellow-400">
                                                             <p className="pointer-events-none text-xs font-bold">Suelta los archivos o carpetas aquí</p>
                                                         </div>
                                                     )}
+
+                                                    {evidenciasAbierta && (
+                                                      <div className={`space-y-3 px-2 pb-2 pt-2 border-t ${theme==='dark'?'border-slate-800':'border-slate-200'}`}>
                                                     {cargandoEvidencias[it.Id] ? (
                                                         <span className="text-yellow-500 text-xs italic block text-center">Consultando servidor...</span>
                                                     ) : (
@@ -2958,9 +2997,11 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                     {!isFinalizado && puedeGestionar && (
                                                         <div className={`pt-2 border-t ${theme==='dark'?'border-slate-800':'border-slate-200'}`}>
                                                             <p className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold text-center">
-                                                                Arrastra archivos aquí para subirlos a esta tarea. Usa "Adjuntar evidencias" para crear carpetas, renombrar, mover y descargar, o "Ir a Repositorio" para abrir la carpeta en SharePoint.
+                                                                Arrastra archivos aquí para subirlos a esta tarea. Usa "Adjuntar" para crear carpetas, renombrar, mover y descargar, o "Repositorio" para abrir la carpeta en SharePoint.
                                                             </p>
                                                         </div>
+                                                    )}
+                                                      </div>
                                                     )}
                                                 </div>
                                             </div>
@@ -2968,9 +3009,24 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                     </div>
 
                                      {!isInactive && (
-                                        <div className="col-span-1 lg:col-span-6 mt-5 pt-4 border-t border-slate-200 dark:border-slate-800">
-                                            <div className="flex justify-between items-center mb-3">
-                                                <span className="text-slate-900 dark:text-slate-200 text-[10px] font-bold uppercase tracking-wider">Historial de Comentarios</span>
+                                        <div className="col-span-1 lg:col-span-6 mt-1.5">
+                                            {/* Igual que las evidencias: el historial solo ocupa altura cuando
+                                                el usuario lo pide. El badge dice cuantos comentarios hay. */}
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                <button
+                                                    onClick={() => setComentariosAbiertos(prev => ({ ...prev, [it.Id]: !comentariosAbierto }))}
+                                                    title={comentariosAbierto ? 'Ocultar el historial de comentarios' : 'Mostrar el historial de comentarios'}
+                                                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200 hover:text-amber-600 dark:hover:text-yellow-400 transition-colors"
+                                                >
+                                                    <svg className={`w-3 h-3 transition-transform ${comentariosAbierto ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
+                                                    Comentarios
+                                                </button>
+                                                <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black border ${comentarios.length > 0
+                                                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-500/40'
+                                                    : 'bg-slate-400/10 text-slate-500 dark:text-slate-400 border-slate-400/30'}`}>
+                                                    {comentarios.length}
+                                                </span>
+                                                <span className="flex-1" />
                                                 {!isFinalizado && puedeAdministrar && !isEditing && (
                                                     <button onClick={() => toggleAlert(it)} className={`text-[10px] font-bold px-2 py-1 rounded border shadow-sm ${showAlert ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-200 border-slate-300 dark:border-slate-700'} transition-colors`}>
                                                         {showAlert ? 'Quitar Alerta' : 'Marcar Alerta'}
@@ -2978,54 +3034,58 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                                 )}
                                             </div>
 
-                                            <div className="space-y-2 mb-4 max-h-40 overflow-y-auto pr-2">
-                                                {(!it.HistorialComentarios || it.HistorialComentarios.length === 0) ? (
-                                                    <p className="text-slate-900 dark:text-slate-200 font-bold text-xs italic">No hay comentarios.</p>
-                                                ) : (
-                                                    it.HistorialComentarios.map((com, index) => (
-                                                        <div key={index} className={`p-3 rounded-lg border ${theme==='dark'?'bg-slate-950/20 border-slate-800':'bg-white border-slate-200'}`}>
-                                                            <div className="flex justify-between items-center mb-1 border-b border-slate-200 dark:border-slate-800 pb-1">
-                                                                <span className="text-yellow-600 dark:text-yellow-500 font-bold text-xs">{com.autor}</span>
-                                                                <span className="text-slate-900 dark:text-slate-200 font-bold text-[10px]">{new Date(com.fecha).toLocaleString()}</span>
-                                                            </div>
-                                                            <p className="text-slate-900 dark:text-slate-200 font-bold text-sm whitespace-pre-wrap">{com.texto}</p>
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
+                                            {comentariosAbierto && (
+                                                <>
+                                                    <div className="space-y-1.5 mt-2 mb-2 max-h-40 overflow-y-auto pr-2">
+                                                        {comentarios.length === 0 ? (
+                                                            <p className="text-slate-900 dark:text-slate-200 font-bold text-[11px] italic">No hay comentarios.</p>
+                                                        ) : (
+                                                            comentarios.map((com, index) => (
+                                                                <div key={index} className={`px-2 py-1.5 rounded-lg border ${theme==='dark'?'bg-slate-950/20 border-slate-800':'bg-white border-slate-200'}`}>
+                                                                    <div className="flex justify-between items-center mb-0.5 border-b border-slate-200 dark:border-slate-800 pb-0.5">
+                                                                        <span className="text-yellow-600 dark:text-yellow-500 font-bold text-[11px]">{com.autor}</span>
+                                                                        <span className="text-slate-900 dark:text-slate-200 font-bold text-[9px]">{new Date(com.fecha).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <p className="text-slate-900 dark:text-slate-200 font-bold text-[11px] whitespace-pre-wrap">{com.texto}</p>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
 
-                                            {!isFinalizado && puedeGestionar && (
-                                                <div className="flex gap-2">
-                                                    <textarea
-                                                        className={`${inputClasses} text-xs`}
-                                                        rows="1"
-                                                        placeholder="Escribe un comentario..."
-                                                        value={nuevosComentarios[it.Id] || ''}
-                                                        onChange={(e) => setNuevosComentarios({ ...nuevosComentarios, [it.Id]: e.target.value })}
-                                                    ></textarea>
-                                                    <button
-                                                        onClick={() => handleAgregarComentario(it.Id)}
-                                                        disabled={!nuevosComentarios[it.Id] || !nuevosComentarios[it.Id].trim()}
-                                                        className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-400 text-white text-xs font-bold px-4 rounded transition-colors shadow"
-                                                    >
-                                                        Agregar
-                                                    </button>
-                                                </div>
+                                                    {!isFinalizado && puedeGestionar && (
+                                                        <div className="flex gap-2">
+                                                            <textarea
+                                                                className={`${inputClasses} text-xs py-1`}
+                                                                rows="1"
+                                                                placeholder="Escribe un comentario..."
+                                                                value={nuevosComentarios[it.Id] || ''}
+                                                                onChange={(e) => setNuevosComentarios({ ...nuevosComentarios, [it.Id]: e.target.value })}
+                                                            ></textarea>
+                                                            <button
+                                                                onClick={() => handleAgregarComentario(it.Id)}
+                                                                disabled={!nuevosComentarios[it.Id] || !nuevosComentarios[it.Id].trim()}
+                                                                className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-400 text-white text-xs font-bold px-4 rounded transition-colors shadow"
+                                                            >
+                                                                Agregar
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="flex flex-col gap-2 min-w-[110px] justify-start pt-2 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 lg:pl-4">
+                                <div className="flex flex-col gap-1.5 min-w-[92px] justify-start pt-2 border-t lg:border-t-0 lg:pt-0 lg:border-l border-slate-200 dark:border-slate-800 lg:pl-3">
                                     {isFinalizado ? (
-                                        <span className="px-4 py-2.5 rounded-xl text-xs font-black text-center w-full shadow-md border bg-slate-500/10 border-slate-500/20 text-slate-900 dark:text-slate-200 font-bold flex items-center justify-center gap-1">
-                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                        <span className="px-2 py-1 rounded-lg text-[11px] text-center w-full shadow-sm border bg-slate-500/10 border-slate-500/20 text-slate-900 dark:text-slate-200 font-bold flex items-center justify-center gap-1">
+                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                                             Finalizado
                                         </span>
                                     ) : isInactive ? (
-                                        <button 
-                                            onClick={() => handleReactivarItem(it.Id)} 
-                                            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all w-full shadow-md border ${
+                                        <button
+                                            onClick={() => handleReactivarItem(it.Id)}
+                                            className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all w-full shadow-sm border ${
                                                 theme === 'dark' 
                                                     ? 'bg-green-600 hover:bg-green-500 text-white border-green-700' 
                                                     : 'bg-green-500 hover:bg-green-600 text-white border-green-600'
@@ -3035,16 +3095,16 @@ const CheckListDetalle = ({ checklistId, onAtras, role, currentUser, theme }) =>
                                         </button>
                                     ) : isEditing ? (
                                         <>
-                                            <button onClick={handleSaveEdit} className="bg-green-500/20 hover:bg-green-500/40 text-green-600 dark:text-green-300 border border-green-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Listo</button>
-                                            <button onClick={handleCancelEdit} className="bg-gray-500/20 hover:bg-gray-500/40 text-gray-600 dark:text-gray-300 border border-gray-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Cancelar</button>
+                                            <button onClick={handleSaveEdit} className="bg-green-500/20 hover:bg-green-500/40 text-green-600 dark:text-green-300 border border-green-500/30 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors w-full shadow-sm">Listo</button>
+                                            <button onClick={handleCancelEdit} className="bg-gray-500/20 hover:bg-gray-500/40 text-gray-600 dark:text-gray-300 border border-gray-500/30 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors w-full shadow-sm">Cancelar</button>
                                         </>
                                     ) : (
-                                        puedeGestionar && <button onClick={() => handleStartEdit(it)} className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm">Editar</button>
+                                        puedeGestionar && <button onClick={() => handleStartEdit(it)} className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors w-full shadow-sm">Editar</button>
                                     )}
                                     {!isInactive && !isFinalizado && puedeAdministrar && (
                                         <button
                                             onClick={() => openInactivateModal(it.Id)}
-                                            className="bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-355 border border-red-500/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors w-full shadow-sm"
+                                            className="bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-355 border border-red-500/20 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors w-full shadow-sm"
                                         >
                                             Inactivar
                                         </button>

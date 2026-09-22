@@ -505,27 +505,27 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                         <p>Aún no hay ítems en este checklist.</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-1.5">
                         {listadoOrdenado.map((it) => {
                             const isInactive = it.estado === 'Inactivo';
                             const isEditing = editingId === it.id;
 
                             return (
-                                <div 
-                                    key={it.id} 
-                                    className={`p-4 rounded-xl border transition-all ${
-                                        isInactive 
-                                            ? (theme === 'dark' ? 'border-dashed border-slate-700 bg-slate-950/70 shadow-sm' : 'border-dashed border-slate-300 bg-slate-100/95 shadow-sm') 
-                                            : isEditing ? 'border-yellow-500 ring-2 ring-yellow-400/20' 
+                                <div
+                                    key={it.id}
+                                    className={`px-3 py-2 rounded-lg border transition-all ${
+                                        isInactive
+                                            ? (theme === 'dark' ? 'border-dashed border-slate-700 bg-slate-950/70 shadow-sm' : 'border-dashed border-slate-300 bg-slate-100/95 shadow-sm')
+                                            : isEditing ? 'border-yellow-500 ring-2 ring-yellow-400/20'
                                             : theme==='dark' ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50/50 border-slate-200'
                                     }`}
                                 >
-                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                                        
-                                        <div className="flex-1 min-w-0 flex items-start gap-3">
-                                            <span className={`text-xs font-bold px-2 py-1 rounded mt-0.5 ${
-                                                isInactive 
-                                                    ? (theme === 'dark' ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-700') 
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 lg:gap-3">
+
+                                        <div className="flex-1 min-w-0 flex items-start gap-2">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded mt-px shrink-0 ${
+                                                isInactive
+                                                    ? (theme === 'dark' ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-700')
                                                     : 'bg-amber-600 text-white shadow'
                                             }`}>
                                                 #{numeroTarea(it)}
@@ -534,7 +534,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                                                 {isEditing ? (
                                                     <textarea className={`${inputClasses} text-xs font-semibold`} value={it.actividades} onChange={(e) => handleItemEdit(it.id, 'actividades', e.target.value)} rows="2" />
                                                 ) : (
-                                                    <p className={`font-bold text-sm leading-snug break-words ${
+                                                    <p className={`font-bold text-[13px] leading-snug break-words ${
                                                         isInactive 
                                                             ? (theme === 'dark' ? 'text-slate-900 dark:text-slate-200 font-bold line-through decoration-slate-500/80' : 'text-slate-900 dark:text-slate-200 font-bold line-through decoration-slate-400') 
                                                             : theme==='dark' ? 'text-yellow-400' : 'text-slate-900'
@@ -543,7 +543,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                                                     </p>
                                                 )}
                                                 {isInactive && (
-                                                    <div className={`text-xs font-bold mt-2 flex flex-wrap items-center gap-1 ${
+                                                    <div className={`text-[10px] font-bold mt-1 flex flex-wrap items-center gap-1 ${
                                                         theme === 'dark' ? 'text-red-400' : 'text-red-600'
                                                     }`} style={{ color: theme === 'light' ? '#b91c1c' : undefined }}>
                                                         <span>&#9888;</span>
@@ -556,7 +556,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                                         </div>
 
                                         {!isInactive && (
-                                            <div className="flex flex-wrap lg:flex-nowrap items-center gap-6 text-xs min-w-fit">
+                                            <div className="flex flex-wrap lg:flex-nowrap items-center gap-x-4 gap-y-1 text-[11px] min-w-fit">
                                                 <div className="w-44">
                                                     <span className="text-slate-900 dark:text-slate-200 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Responsable</span>
                                                     {isEditing ? (
@@ -577,7 +577,7 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                                                     <span className="text-slate-900 dark:text-slate-200 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Entregable</span>
                                                     <span className="truncate block font-semibold max-w-[140px]" title={it.entregable}>{it.entregable || '-'}</span>
                                                 </div>
-                                                <div className={`p-2 rounded border w-36 ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-300'}`}>
+                                                <div className={`px-2 py-1 rounded border w-36 ${theme === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-300'}`}>
                                                     <span className="text-slate-900 dark:text-slate-200 block text-[9px] font-bold uppercase tracking-wider mb-0.5">Fechas Plan</span>
                                                     {isEditing ? (
                                                         <div className="space-y-1">
@@ -594,11 +594,11 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                                             </div>
                                         )}
 
-                                        <div className="flex items-center gap-2 min-w-[145px] justify-end">
+                                        <div className="flex items-center gap-1.5 min-w-[130px] justify-end">
                                             {isInactive ? (
-                                                <button 
-                                                    onClick={() => handleReactivarItem(it.id)} 
-                                                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-colors w-full shadow-md border ${
+                                                <button
+                                                    onClick={() => handleReactivarItem(it.id)}
+                                                    className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-colors w-full shadow-sm border ${
                                                         theme === 'dark' 
                                                             ? 'bg-green-600 hover:bg-green-500 text-white border-green-700' 
                                                             : 'bg-green-500 hover:bg-green-600 text-white border-green-600'
@@ -624,8 +624,8 @@ const CrearCheckList = ({ onAtras, currentUser, currentUserName, currentRole, te
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <button onClick={() => { setEditingId(it.id); setBackupItem({ ...it }); }} className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-2.5 py-1.5 rounded text-xs font-bold transition-colors flex-1">{"Editar"}</button>
-                                                    <button onClick={() => openInactivateModal(it.id)} className="bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/20 px-2.5 py-1.5 rounded text-xs font-bold transition-colors flex-1">{"Inactivar"}</button>
+                                                    <button onClick={() => { setEditingId(it.id); setBackupItem({ ...it }); }} className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-2 py-1 rounded text-[11px] font-bold transition-colors flex-1">{"Editar"}</button>
+                                                    <button onClick={() => openInactivateModal(it.id)} className="bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/20 px-2 py-1 rounded text-[11px] font-bold transition-colors flex-1">{"Inactivar"}</button>
                                                 </>
                                             )}
                                         </div>

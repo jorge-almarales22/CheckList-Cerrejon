@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { calcularEsperadoChecklist, calcularRealChecklist, esAprobado, esPendiente, esRechazado, esHistorico } from '../utils/calculations';
 import { getRequestDigest, deleteSPListItem } from '../utils/sharepointApi';
+import { useFiltroPersistente } from '../utils/filtrosPersistentes';
 import GerenciaPieCharts from './GerenciaPieCharts';
 import SPIBadge from './SPIBadge';
 import dibujoSvg from '../assets/dibujoSvg.svg';
@@ -53,12 +54,14 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
     const [loading, setLoading] = useState(true);
     const [showTemplateModal, setShowTemplateModal] = useState(false);
 
-    const [filtroAlerta, setFiltroAlerta] = useState(false);
-    const [columnFilters, setColumnFilters] = useState({});
-    const [verSolicitudes, setVerSolicitudes] = useState(false); // ver la bandeja de aprobaciones
+    // Todos los filtros de esta tabla se recuerdan entre visitas (ver
+    // useFiltroPersistente): el usuario los deja puestos como en Excel.
+    const [filtroAlerta, setFiltroAlerta] = useFiltroPersistente('panel.alerta', false);
+    const [columnFilters, setColumnFilters] = useFiltroPersistente('panel.columnas', {});
+    const [verSolicitudes, setVerSolicitudes] = useFiltroPersistente('panel.solicitudes', false); // ver la bandeja de aprobaciones
     // Buscador global: filtra por cualquier campo del checklist (nombre, gerencia,
     // superintendencia, tipo, creador, equipos, tareas, comentarios, etc.).
-    const [busquedaGlobal, setBusquedaGlobal] = useState('');
+    const [busquedaGlobal, setBusquedaGlobal] = useFiltroPersistente('panel.busqueda', '');
 
     // Eliminación de un checklist (solo administradores).
     const [checklistAEliminar, setChecklistAEliminar] = useState(null);
@@ -145,6 +148,16 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
 
     // Eliminar un checklist es exclusivo de los administradores.
     const puedeEliminar = role === 'Administrador';
+
+    // Como los filtros sobreviven a la recarga, hace falta una salida visible:
+    // si no, quien vuelve dias despues ve la tabla vacia sin saber por que.
+    const filtrosColumnaActivos = Object.values(columnFilters).reduce((total, sel) => total + (sel?.size || 0), 0);
+    const hayFiltrosActivos = filtrosColumnaActivos > 0 || filtroAlerta || busquedaGlobal.trim() !== '';
+    const limpiarFiltros = () => {
+        setColumnFilters({});
+        setFiltroAlerta(false);
+        setBusquedaGlobal('');
+    };
 
     // Todas las incorporaciones aprobadas son visibles para toda la empresa: ya no
     // se filtra por responsable, rol en los metadatos ni creador. Quien puede
@@ -293,6 +306,16 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                         <label className={`flex items-center gap-2 text-sm font-bold cursor-pointer border px-3 py-2 rounded-lg shrink-0 whitespace-nowrap ${theme==='dark'?'bg-slate-950/85 border-slate-800':'bg-slate-100 border-slate-300'}`}>
                             <input type="checkbox" checked={filtroAlerta} onChange={(e) => setFiltroAlerta(e.target.checked)} className="accent-yellow-500" /> Solo con Alertas
                         </label>
+                        {hayFiltrosActivos && (
+                            <button
+                                onClick={limpiarFiltros}
+                                title="Quitar todos los filtros aplicados a la tabla"
+                                className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-extrabold border transition-colors ${theme === 'dark' ? 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'}`}
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                                Limpiar filtros
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

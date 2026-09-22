@@ -7,11 +7,11 @@
     <link rel="shortcut icon" href="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/img/fabiconCerrejon.png" type="image/png">
     <link rel="apple-touch-icon" href="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/img/fabiconCerrejon.png">
     <title>Incorporaci&oacute;n de Activos</title>
-  <script type="module" crossorigin src="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/assets/index-CKuCn1tz.js"></script>
-  <link rel="stylesheet" crossorigin href="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/assets/index-Gt9Wzc-A.css">
+  <script type="module" crossorigin src="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/assets/index-BPxmro0w.js"></script>
+  <link rel="stylesheet" crossorigin href="/sites/co-lmn-sgia/ac/SiteAssets/Incorporaciones/assets/index-CzHh8-No.css">
 </head>
 <body>
     <div id="root"></div>
-        <!-- SOURCE - solo para desarrollo. Para produccion usa dist/index.html -->
+        <!-- SOURCE - solo para desarrollo. Para produccion usa dist/index.html -->
 </body>
 </html>
