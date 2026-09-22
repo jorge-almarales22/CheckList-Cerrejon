@@ -328,22 +328,28 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                 </div>
             ) : (
                 <div className={`rounded-3xl border ${cardClass}`}>
-                    <div className="overflow-x-clip">
-                        <table className="checklist-table w-full text-left border-separate border-spacing-0">
+                    {/* Scroll propio en ambos ejes: el lateral deja alcanzar la columna de
+                        acciones cuando no cabe todo, y el vertical mantiene util el thead
+                        sticky (con overflow-x el sticky pasa a medirse contra este
+                        contenedor, no contra la pagina). */}
+                    <div className="overflow-auto max-h-[70vh] rounded-3xl">
+                        <table className="checklist-table w-full min-w-[820px] text-left border-separate border-spacing-0">
                             <thead className={`sticky top-0 z-20 -mt-px shadow-[0_2px_0_0_rgba(0,0,0,0.08),0_4px_8px_-2px_rgba(0,0,0,0.18)] ${theme==='dark'?'bg-slate-900':'bg-slate-100'}`}>
                                 <tr className={`${theme==='dark'?'text-white':'text-slate-900'} text-xs uppercase font-extrabold tracking-wider`}>
-                                    <th className="compact-table-header rounded-tl-3xl p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 whitespace-nowrap">ID</th>
+                                    {/* El ancho del ID se fija en el th: en la celda el navegador lo
+                                        ignoraba y colapsaba la columna partiendo el codigo letra por letra. */}
+                                    <th className="compact-table-header rounded-tl-3xl p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 whitespace-nowrap w-[92px] min-w-[92px]">ID</th>
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[0])} />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[1])} />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[2])} />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[3])} visibilityClass="hidden lg:table-cell" />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[4])} visibilityClass="hidden xl:table-cell" />
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[5])} visibilityClass="hidden md:table-cell" />
-                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 hidden lg:table-cell">EQ(S).</th>
-                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 hidden md:table-cell">FEC. INICIO</th>
-                                    <th className="compact-table-header p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 hidden md:table-cell">FEC. FIN</th>
+                                    <th className="compact-table-header p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 hidden lg:table-cell">EQ(S).</th>
+                                    <th className="compact-table-header p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 hidden md:table-cell">FEC. INICIO</th>
+                                    <th className="compact-table-header p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 hidden md:table-cell">FEC. FIN</th>
                                     <FilterableHeader {...propsFiltroColumna(COLUMN_FILTERS[6])} visibilityClass="hidden lg:table-cell" />
-                                    <th className="compact-table-header rounded-tr-3xl p-2 md:p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-center">ACCIONES</th>
+                                    <th className="compact-table-header rounded-tr-3xl p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-center">ACCIONES</th>
                                 </tr>
                             </thead>
                             <tbody className="text-[11px] md:text-sm">
@@ -365,11 +371,11 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                         <tr
                                             key={chk.ID_x002d_checklist}
                                             className={`transition-colors cursor-pointer ${rowClass}`}
-                                            onDoubleClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)}
-                                            title="Doble clic para abrir"
+                                            onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)}
+                                            title="Clic para abrir"
                                         >
-                                            <td className="p-2 md:p-3 text-xs font-bold text-slate-900 dark:text-slate-200 whitespace-nowrap align-top">{chk.ID_x002d_checklist || '-'}</td>
-                                            <td className="p-2 md:p-3 font-bold break-words min-w-[180px] max-w-[400px] align-top" title={chk.Name}>
+                                            <td className="p-2 text-[11px] font-bold text-slate-900 dark:text-slate-200 break-all leading-tight align-top">{chk.ID_x002d_checklist || '-'}</td>
+                                            <td className="p-2 font-bold break-words min-w-[150px] max-w-[260px] align-top" title={chk.Name}>
                                                 <div className="flex flex-wrap gap-1 mb-1">
                                                     {rechazado && <span className="bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-black">NO APROBADO</span>}
                                                     {pendiente && <span className="bg-amber-500 text-black px-2 py-0.5 rounded text-[10px] font-black">PENDIENTE</span>}
@@ -381,35 +387,38 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                                     <p className="mt-1 text-[10px] font-bold text-red-600 dark:text-red-400 normal-case">Motivo: {chk.AprobacionComentario}</p>
                                                 )}
                                             </td>
-                                            <td className="p-2 md:p-3">
+                                            <td className="p-2">
                                                 <div className="flex flex-col gap-1.5 text-xs text-slate-900 dark:text-slate-100 font-bold">
                                                     <span>Plan: <span className="font-black text-base">{promCalc}%</span></span>
                                                     <SPIBadge real={promReal} esperado={promCalc} />
                                                 </div>
                                             </td>
-                                            <td className="p-2 md:p-3 w-[88px]">
+                                            <td className="p-2 w-[88px]">
                                                 <div className="flex items-center gap-2 text-xs font-bold">
                                                     <span className={`font-black text-base ${isDelayed ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>{promReal}%</span>
                                                     {chk.Estado === 'Finalizado' && <span className="bg-green-500/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded text-[10px] font-extrabold">COMPLETADO</span>}
                                                 </div>
                                             </td>
-                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden lg:table-cell">{chk.Metadata?.gerencia || '-'}</td>
-                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden xl:table-cell w-[130px] truncate max-w-[130px]" title={chk.Metadata?.superintendencia || ''}>{chk.Metadata?.superintendencia || '-'}</td>
-                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold hidden md:table-cell">{chk.Tipo || '-'}</td>
-                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold max-w-[150px] break-words hidden lg:table-cell" title={(chk.Metadata?.equipos || []).filter(Boolean).join(', ')}>
+                                            <td className="p-2 text-xs text-slate-900 dark:text-slate-200 font-bold hidden lg:table-cell">{chk.Metadata?.gerencia || '-'}</td>
+                                            <td className="p-2 text-[11px] text-slate-900 dark:text-slate-200 font-bold hidden xl:table-cell w-[110px] truncate max-w-[110px]" title={chk.Metadata?.superintendencia || ''}>{chk.Metadata?.superintendencia || '-'}</td>
+                                            <td className="p-2 text-[11px] text-slate-900 dark:text-slate-200 font-bold hidden md:table-cell">{chk.Tipo || '-'}</td>
+                                            {/* Los equipos se truncan a una linea: en varias incorporaciones son
+                                                una lista larga que estiraba la altura de toda la fila. El listado
+                                                completo queda en el tooltip. */}
+                                            <td className="p-2 text-[11px] text-slate-900 dark:text-slate-200 font-bold w-[120px] max-w-[120px] truncate hidden lg:table-cell" title={(chk.Metadata?.equipos || []).filter(Boolean).join(', ')}>
                                                 {(chk.Metadata?.equipos || []).filter(Boolean).join(', ') || '-'}
                                             </td>
-                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold whitespace-nowrap hidden md:table-cell">{chk.Metadata?.fechaInicioDiligenciamiento || '-'}</td>
-                                            <td className="p-2 md:p-3 text-xs text-slate-900 dark:text-slate-200 font-bold whitespace-nowrap hidden md:table-cell">
+                                            <td className="p-2 text-xs text-slate-900 dark:text-slate-200 font-bold whitespace-nowrap hidden md:table-cell">{chk.Metadata?.fechaInicioDiligenciamiento || '-'}</td>
+                                            <td className="p-2 text-xs text-slate-900 dark:text-slate-200 font-bold whitespace-nowrap hidden md:table-cell">
                                                 {chk.Estado === 'Finalizado' ? (chk.Metadata?.fechaFinDiligenciamiento || '-') : 'En curso'}
                                             </td>
-                                            <td className="p-2 md:p-3 hidden lg:table-cell">
+                                            <td className="p-2 hidden lg:table-cell">
                                                 {chk.CreadoPor ? (
-                                                    <div className="flex items-center gap-2 max-w-[220px]">
-                                                        <img src={USERPHOTO(chk.CreadoPor)} onError={(e) => { e.target.src = AVATAR_FALLBACK; }} className="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-700 object-cover bg-slate-200 shrink-0" alt="" />
+                                                    <div className="flex items-center gap-1.5 max-w-[160px]">
+                                                        <img src={USERPHOTO(chk.CreadoPor)} onError={(e) => { e.target.src = AVATAR_FALLBACK; }} className="w-6 h-6 rounded-full border border-slate-300 dark:border-slate-700 object-cover bg-slate-200 shrink-0" alt="" />
                                                         <div className="min-w-0">
-                                                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate" title={chk.CreadoPorNombre || chk.CreadoPor}>{chk.CreadoPorNombre || chk.CreadoPor}</p>
-                                                            <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate" title={chk.CreadoPor}>{chk.CreadoPor}</p>
+                                                            <p className="text-[11px] font-bold text-slate-900 dark:text-slate-100 truncate" title={chk.CreadoPorNombre || chk.CreadoPor}>{chk.CreadoPorNombre || chk.CreadoPor}</p>
+                                                            <p className="text-[9px] font-semibold text-slate-500 dark:text-slate-400 truncate" title={chk.CreadoPor}>{chk.CreadoPor}</p>
                                                         </div>
                                                     </div>
                                                 ) : esHistorico(chk) ? (
@@ -424,20 +433,23 @@ const CheckListAll = ({ onView, role, currentUser, theme }) => {
                                                     <span className="text-xs font-semibold text-slate-400">—</span>
                                                 )}
                                             </td>
-                                            <td className="p-2 md:p-3 text-center">
-                                                <div className="flex items-center justify-center gap-2">
+                                            <td className="p-2 text-center">
+                                                {/* La fila entera abre el checklist con un clic, asi que cada
+                                                    boton corta la propagacion: sin esto, "Eliminar" abriria el
+                                                    detalle ademas de lanzar la confirmacion. */}
+                                                <div className="flex items-center justify-center gap-1.5">
                                                     {chk.Estado === 'Finalizado' ? (
-                                                        <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-300 border border-green-500/20 px-3 md:px-4 py-2 rounded-lg font-bold text-xs transition-colors shadow-sm">
+                                                        <button onClick={(e) => { e.stopPropagation(); onView('checklist_detalle', chk.ID_x002d_checklist); }} className="bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-300 border border-green-500/20 px-2.5 py-1.5 rounded-lg font-bold text-[11px] transition-colors shadow-sm">
                                                             Ver
                                                         </button>
                                                     ) : (
-                                                        <button onClick={() => onView('checklist_detalle', chk.ID_x002d_checklist)} className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-3 md:px-4 py-2 rounded-lg font-bold text-xs transition-colors shadow-sm">
-                                                            Ver / Gestionar
+                                                        <button onClick={(e) => { e.stopPropagation(); onView('checklist_detalle', chk.ID_x002d_checklist); }} className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-300 border border-blue-500/20 px-2.5 py-1.5 rounded-lg font-bold text-[11px] transition-colors shadow-sm whitespace-nowrap">
+                                                            Gestionar
                                                         </button>
                                                     )}
                                                     {puedeEliminar && (
                                                         <button
-                                                            onClick={() => { setChecklistAEliminar(chk); setConfirmNombre(''); }}
+                                                            onClick={(e) => { e.stopPropagation(); setChecklistAEliminar(chk); setConfirmNombre(''); }}
                                                             title="Eliminar este checklist"
                                                             aria-label={`Eliminar el checklist ${chk.Name || ''}`}
                                                             className="bg-red-600/10 hover:bg-red-600/20 text-red-600 dark:text-red-300 border border-red-500/25 p-2 rounded-lg transition-colors shadow-sm"
